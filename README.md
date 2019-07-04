@@ -1,4 +1,4 @@
-## There are two ways to run the DeepFRET GUI:
+## How to launch the DeepFRET GUI
 
 Option 1:
 This option is the easiest for cross-platform compatibility

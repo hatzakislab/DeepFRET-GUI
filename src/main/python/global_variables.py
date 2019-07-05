@@ -10,7 +10,7 @@ class GlobalVariables:
     APPNAME = "DeepFRET"
     APPVERSION = "0.9.0 (Beta)"
     AUTHORS = "created by Johannes Thomsen"
-    LICENSE = "DeepFRET is free software, distributed under the terms of the GNU General Public License v3 (GPL-3)"
+    LICENSE = "DeepFRET is free software, distributed under the terms of the MIT open source license"
     CONFIGNAME = "config.ini"
 
     # List of possible user-configurable options (i.e. available keys), so they'll be available with autocomplete and refactoring

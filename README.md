@@ -1,21 +1,34 @@
+![screenshot](screenshot.png)
+
+#### DeepFRET
+A fully open-source, all-inclusive software platform for doing total internal reflection microscopy (TIRFm) single molecule FRET (smFRET) fast and efficiently. The key feature is reverse-loading of ASCII traces, and TensorFlow-powered automatic trace sorting. Features include
+
+- Advanced trace sorting
+- Optical correction factors
+- Hidden Markov model fitting and lifetime plotting
+- Memory-free movie batch loading
+- Distribution plotting and fitting
+- Backwards-compatibility with iSMS-exported data
+
 #### How to launch the DeepFRET GUI
 
-##### Option 1
+##### Option A:
 This option is the easiest for cross-platform compatibility
 1. Download the repository contents. Install requirements.txt either globally or in a venv (strongly recommended)
-2. Launch src/main/python/main.py
+2. Run `src/main/python/main.py`
 
-##### Option 2:
+##### Option B:
 Download a pre-compiled application (currently only available for MacOS)
 
-
-#### How to modify the DeepFRET GUI:
-1. Create a venv with `python3 -m venv venv` in the current directory.
-2. Activate environment with `source venv/bin/activate` if on MacOS/Linux or `call venv\scripts\activate.bat`
-3. Install fbs and PyQt5 with `pip install fbs PyQt5==5.9.2`
-4. Install all other packages with `pip install requirements.txt -r`
-5. Download the pyinstaller hooks and overwrite those in `venv/lib/python3.7/site-packages/PyInstaller/hooks/`
-6. Overwrite the /src with the one in this repository
+#### How to modify and compile the DeepFRET GUI:
+1. Download all contents to a directory.
+2. Open a terminal and navigate to the root of the directory.
+3. Create a venv with `python3 -m venv venv` in the current directory.
+4. Activate environment with `source venv/bin/activate` if on MacOS/Linux or `call venv\scripts\activate.bat` if on Windows.
+5. While still in the environment, install all packages with `pip install requirements.txt -r`
+6. Unzip the `hooks.zip` and overwrite the files in `venv/lib/python3.7/site-packages/PyInstaller/hooks/`.
 7. While still in the venv, write `fbs freeze` and wait for the process to finish. If everything went well, there will be a `target/` directory with the DeepFRET application inside.
 
-This build process should be cross-platform, but has only been tested on MacOS
+If the above steps worked, you can now edit any part of the code, and re-compile it (or just run it from the main.py script, if desired). The .ui files for the interface can be edited through Qt Creator and converted with `generate_ui.py` 
+
+The whole process should be cross-platform, but has only been tested on MacOS.

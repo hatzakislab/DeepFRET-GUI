@@ -4,7 +4,7 @@ multiprocessing.freeze_support()
 import time
 import os
 import pandas as pd
-from typing import Union
+from typing import Union, Tuple
 
 
 def pairwise(array):
@@ -70,13 +70,16 @@ def m_append(objects: tuple, to: tuple, method="append"):
     else:
         raise ValueError("Method must be 'append' or 'extend'")
 
-def seek_line(path, line_start, timeout = 10):
+def seek_line(line_starts: Union[str, Tuple[str, str]], path : str, timeout: int = 10):
     """Seeks the file until specified line start is encountered in the start of the line."""
     with open(path, encoding = "utf-8") as f:
         n = 0
-        line = f.readline()
-        while not line.startswith(line_start):
+        if isinstance(line_starts, str):
+            line_starts = line_starts,
+        s = [False] * len(line_starts)
+        while not any(s):
             line = f.readline()
+            s = [line.startswith(ls) for ls in line_starts]
             n += 1
             if n > timeout:
                 return None

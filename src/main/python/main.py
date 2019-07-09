@@ -1,4 +1,5 @@
 import multiprocessing
+
 multiprocessing.freeze_support()
 
 import os
@@ -25,6 +26,7 @@ import matplotlib.figure
 import pandas as pd
 import numpy as np
 import time
+import re
 import scipy.stats
 import scipy.signal
 import warnings
@@ -2301,15 +2303,25 @@ class TraceWindow(BaseWindow):
                     df.columns = colnames
         # Else DeepFRET trace compatibility
         else:
-            df = lib.misc.csv_skip_to(full_filename, line="D-Dexc", sep="\s+")
-        try:
-            pair_n = int(
-                lib.misc.seek_line(full_filename, "FRET pair").split("#")[-1]
+            df = lib.misc.csv_skip_to(
+                path=full_filename, line="D-Dexc", sep="\s+"
             )
-            movie = lib.misc.seek_line(full_filename, "Movie filename").split(
-                ": "
-            )[-1]
-            bleaching = lib.misc.seek_line(full_filename, "Donor bleaches at")
+        try:
+            pair_n = lib.misc.seek_line(
+                path=full_filename, line_starts="FRET pair"
+            )
+            pair_n = int(pair_n.split("#")[-1])
+
+            movie = lib.misc.seek_line(
+                path=full_filename, line_starts="Movie filename"
+            )
+            movie = movie.split(": ")[-1]
+
+            bleaching = lib.misc.seek_line(
+                path=full_filename,
+                line_starts=("Donor bleaches at", "Bleaches at"),
+            )
+
         except AttributeError:
             return None
 
@@ -2371,15 +2383,12 @@ class TraceWindow(BaseWindow):
         trace.frames = np.arange(1, len(trace.grn.int) + 1, 1)
         trace.frames_max = trace.frames.max()
 
+        # TODO: revert mechanism to first bleaching or separate D/A bleaching for consistency throughout code (and speedups)
         try:
-            bleaching = bleaching.split(" ")
-            grn_bleach = bleaching[3]
-            red_bleach = bleaching[8].rstrip("\n")
-            trace.grn.bleach, trace.red.bleach = [
-                int(b) if b != "None" else None
-                for b in (grn_bleach, red_bleach)
-            ]
-
+            bleaching = re.findall(r'\d+', str(bleaching))
+            if any(bleaching): # check if list is not empty
+                trace.grn.bleach, trace.red.bleach = int(bleaching[0]), int(bleaching[-1]) # works for both 1 or 2 values by indexing both ways
+                trace.first_bleach = lib.misc.min_none((trace.grn.bleach, trace.red.bleach))
         except (ValueError, AttributeError):
             pass
 

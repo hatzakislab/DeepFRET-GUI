@@ -209,7 +209,7 @@ class MovieData:
         if self.currName is not None:
             return self.movies[self.currName]
 
-    def loadImg(self, path, name, setup, bg_correction):
+    def load_img(self, path, name, setup, bg_correction):
         """
         Loads currentMovie and extracts all parameters depending on the number of channels
 
@@ -246,7 +246,7 @@ class MovieData:
         )  # Scaling factor for ROI
 
         if setup == "dual":
-            c1, c2, c3, _ = imgdata.imageChannels(4)
+            c1, c2, c3, _ = imgdata.image_channels(4)
             self._data().acc.raw = self._data().img[
                 c1, :, :
             ]  # Red   (Dexc-Dem)
@@ -261,7 +261,7 @@ class MovieData:
             self._data().blu.exists = False
 
         elif setup == "2-color" or setup == "3-color":
-            top, btm, lft, rgt = imgdata.imageQuadrants(
+            top, btm, lft, rgt = imgdata.image_quadrants(
                 height=self._data().height, width=self._data().width
             )
 
@@ -308,7 +308,7 @@ class MovieData:
                 self._data().blu.exists = False
 
         elif setup == "2-color-inv":
-            top, btm, lft, rgt = imgdata.imageQuadrants(
+            top, btm, lft, rgt = imgdata.image_quadrants(
                 height=self._data().height, width=self._data().width
             )
 
@@ -354,12 +354,12 @@ class MovieData:
 
                     c.raw = c.raw[:, crop_h : h - crop_h, crop_w : w - crop_w]
                     c.mean = c.raw[0 : t // 20, :, :].mean(axis=0)
-                    c.mean = imgdata.zeroOneScale(c.mean)
-                    c.mean_nobg = imgdata.subtractBackground(
+                    c.mean = imgdata.zero_one_scale(c.mean)
+                    c.mean_nobg = imgdata.subtract_background(
                         c.mean, by="row", return_bg_only=False
                     )
                 else:
-                    c.mean = imgdata.zeroOneScale(c.mean)
+                    c.mean = imgdata.zero_one_scale(c.mean)
                     c.mean_nobg = c.mean
 
         if self._data().red.exists:

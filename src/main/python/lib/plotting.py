@@ -1,4 +1,5 @@
 import multiprocessing
+
 multiprocessing.freeze_support()
 
 from global_variables import GlobalVariables as gvars
@@ -17,7 +18,29 @@ import lib.misc
 import lib.math
 
 
-def drawEmptyImshow(img_ax):
+class OOMFormatter(ScalarFormatter):
+    """
+    Formats the axes with a constant number.
+
+    Example:
+    ax.yaxis.set_major_formatter(OOMFormatter(4, "%1.1f"))
+    """
+
+    def __init__(self, order=0, fformat="%1.1f", offset=True, mathText=True):
+        self.oom = order
+        self.fformat = fformat
+        ScalarFormatter.__init__(self, useOffset=offset, useMathText=mathText)
+
+    def _set_orderOfMagnitude(self, nothing):
+        self.orderOfMagnitude = self.oom
+
+    def _set_format(self, vmin, vmax):
+        self.format = self.fformat
+        if self._useMathText:
+            self.format = "$%s$" % matplotlib.ticker._mathdefault(self.format)
+
+
+def empty_imshow(img_ax):
     """
     Draws an empty canvas on a given image ax.
     """
@@ -47,29 +70,7 @@ def drawEmptyImshow(img_ax):
     return img_ax
 
 
-class OOMFormatter(ScalarFormatter):
-    """
-    Formats the axes with a constant number.
-
-    Example:
-    ax.yaxis.set_major_formatter(OOMFormatter(4, "%1.1f"))
-    """
-
-    def __init__(self, order=0, fformat="%1.1f", offset=True, mathText=True):
-        self.oom = order
-        self.fformat = fformat
-        ScalarFormatter.__init__(self, useOffset=offset, useMathText=mathText)
-
-    def _set_orderOfMagnitude(self, nothing):
-        self.orderOfMagnitude = self.oom
-
-    def _set_format(self, vmin, vmax):
-        self.format = self.fformat
-        if self._useMathText:
-            self.format = "$%s$" % matplotlib.ticker._mathdefault(self.format)
-
-
-def majorFormatterInLabel(ax, axis, axis_label, major_formatter):
+def major_formatter_in_label(ax, axis, axis_label, major_formatter):
     """
     Places an exponent formatter (like 10e3) in the axis label.
     """
@@ -85,7 +86,7 @@ def majorFormatterInLabel(ax, axis, axis_label, major_formatter):
     axis.set_label_text(axis_label + " (" + exponent + ")")
 
 
-def plotRoi(
+def plot_rois(
     spots,
     img_ax,
     color,
@@ -108,7 +109,7 @@ def plotRoi(
     )
 
 
-def plotRoiColoc(
+def plot_roi_coloc(
     spots_coloc,
     img_ax,
     color1,
@@ -147,13 +148,13 @@ def plotRoiColoc(
         )
 
 
-def pointDensity(xdata, ydata, kernel="gaussian", bandwidth=0.1):
+def point_density(xdata, ydata, kernel="gaussian", bandwidth=0.1):
     """
-    This function only evaluates density in the exact points. See contour2D function for continuous KDE.
+    This function only evaluates density in the exact points. See contour_2d function for continuous KDE.
 
     Example
     -------
-    c = pointDensity(xdata = xdata, ydata = ydata, kernel = "linear", bandwidth = 0.1)
+    c = point_density(xdata = xdata, ydata = ydata, kernel = "linear", bandwidth = 0.1)
     plt.scatter(xdata, ydata, c = c, cmap = "magma")
     """
 
@@ -167,21 +168,22 @@ def pointDensity(xdata, ydata, kernel="gaussian", bandwidth=0.1):
     kernel_sk = sklearn.neighbors.KernelDensity(
         kernel=kernel, bandwidth=bandwidth
     ).fit(list(zip(*positions)))
-    Z = np.exp(kernel_sk.score_samples(list(zip(*positions))))
+    z = np.exp(kernel_sk.score_samples(list(zip(*positions))))
+    return z
 
-    return Z
 
-
-def plotShadedCategory(y, ax, alpha, colors=None):
+def plot_shaded_category(y, ax, alpha, colors=None):
     """
     Plots a color for every class segment in a timeseries
 
     Parameters
     ----------
-    y_:
+    y:
         One-hot coded or categorical labels
     ax:
         Ax for plotting
+    alpha:
+        Alpha of shading
     colors:
         Colors to cycle through
     """
@@ -208,7 +210,7 @@ def plotShadedCategory(y, ax, alpha, colors=None):
         )
 
 
-def plotPredictions(yi_pred, ax):
+def plot_predictions(yi_pred, ax):
     """
     Plots Keras predictions as probabilities with shaded argmax overlays
     """
@@ -221,7 +223,7 @@ def plotPredictions(yi_pred, ax):
         "mediumvioletred",
     )
     p, confidence = lib.math.seq_probabilities(yi_pred, skip_threshold=0.5)
-    plotShadedCategory(y=yi_pred, ax=ax, colors=clrs, alpha=0.3)
+    plot_shaded_category(y=yi_pred, ax=ax, colors=clrs, alpha=0.3)
 
     patches = []
     for i in range(yi_pred.shape[-1]):

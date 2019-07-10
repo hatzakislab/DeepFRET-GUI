@@ -33,8 +33,8 @@ class GlobalVariables:
 
     keys_contrastBoxHiVals = key_contrastBoxHiBluVal, key_contrastBoxHiGrnVal, key_contrastBoxHiRedVal
 
-    key_alphaFactor = "alphaFactor"
-    key_deltaFactor = "deltaFactor"
+    key_alphaFactor = "alpha_factor"
+    key_deltaFactor = "delta_factor"
     key_gammaFactor = "gammaFactor"
     key_betaFactor = "betaFactor"
 

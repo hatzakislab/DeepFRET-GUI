@@ -1,4 +1,5 @@
 import multiprocessing
+
 multiprocessing.freeze_support()
 
 import time
@@ -54,28 +55,31 @@ def m_append(objects: tuple, to: tuple, method="append"):
         Tuple of objects to append
     to:
         Tuple of lists to append to, in the given order
-    action:
-        Type of list method to be used for appending
+    method:
+        Whether to use append or extend method for list
     """
 
     if len(objects) != len(to):
         raise ValueError("Tuples must be of equal length")
 
     if method == "append":
-        for object, ls in zip(objects, to):
-            ls.append(object)
+        for o, ls in zip(objects, to):
+            ls.append(o)
     elif method == "extend":
-        for object, ls in zip(objects, to):
-            ls.extend(object)
+        for o, ls in zip(objects, to):
+            ls.extend(o)
     else:
         raise ValueError("Method must be 'append' or 'extend'")
 
-def seek_line(line_starts: Union[str, Tuple[str, str]], path : str, timeout: int = 10):
+
+def seek_line(
+    line_starts: Union[str, Tuple[str, str]], path: str, timeout: int = 10
+):
     """Seeks the file until specified line start is encountered in the start of the line."""
-    with open(path, encoding = "utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         n = 0
         if isinstance(line_starts, str):
-            line_starts = line_starts,
+            line_starts = (line_starts,)
         s = [False] * len(line_starts)
         while not any(s):
             line = f.readline()
@@ -85,11 +89,12 @@ def seek_line(line_starts: Union[str, Tuple[str, str]], path : str, timeout: int
                 return None
         return line
 
-def csv_skip_to(path, line, timeout = 10, **kwargs):
+
+def csv_skip_to(path, line, timeout=10, **kwargs):
     """Seeks the file until specified header is encountered in the start of the line."""
     if os.stat(path).st_size == 0:
         raise ValueError("File is empty")
-    with open(path, encoding = "utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         n = 0
         pos = 0
         cur_line = f.readline()

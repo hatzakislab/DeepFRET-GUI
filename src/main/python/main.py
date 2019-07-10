@@ -1487,7 +1487,7 @@ class MainWindow(BaseWindow):
                         array=self.data.movies.keys(),
                     )
 
-                    self.data.loadImg(
+                    self.data.load_img(
                         path=full_filename,
                         name=uniqueName,
                         setup=self.imgMode,
@@ -1549,7 +1549,7 @@ class MainWindow(BaseWindow):
                 if self.currName in self.data.movies:
                     continue
 
-                self.data.loadImg(
+                self.data.load_img(
                     path=full_filename,
                     name=os.path.basename(full_filename),
                     setup=self.imgMode,
@@ -1650,17 +1650,17 @@ class MainWindow(BaseWindow):
 
         if self.getConfig(gvars.key_fitSpots):
             if find_npairs > 0:
-                spots = lib.imgdata.findSpots(
+                spots = lib.imgdata.find_spots(
                     channel.mean_nobg, value=20, method="laplacian_of_gaussian"
                 )  # hardcoded value for now
 
                 # Sort spots based on intensity
                 real_spots = []
                 for spot in spots:
-                    masks = lib.imgdata.circleMask(
+                    masks = lib.imgdata.circle_mask(
                         yx=spot, indices=mov.indices, **gvars.cmask_p
                     )
-                    intensity, bg = lib.imgdata.getTiffStackIntensity(
+                    intensity, bg = lib.imgdata.tiff_stack_intensity(
                         channel.mean_nobg, *masks, raw=True
                     )
                     if intensity > bg * 1.05:
@@ -1671,7 +1671,7 @@ class MainWindow(BaseWindow):
 
         else:
             if find_npairs > 0:
-                channel.spots = lib.imgdata.findSpots(
+                channel.spots = lib.imgdata.find_spots(
                     channel.mean_nobg,
                     value=find_npairs,
                     method="peak_local_max",
@@ -1780,37 +1780,37 @@ class MainWindow(BaseWindow):
 
                     # Blue
                     if mov.blu.exists and yx_blu is not None:
-                        masks_blu = lib.imgdata.circleMask(
+                        masks_blu = lib.imgdata.circle_mask(
                             yx=yx_blu, indices=mov.indices, **gvars.cmask_p
                         )
-                        trace.blu.int, trace.blu.bg = lib.imgdata.getTiffStackIntensity(
+                        trace.blu.int, trace.blu.bg = lib.imgdata.tiff_stack_intensity(
                             mov.blu.raw, *masks_blu, raw=True
                         )
 
                     # Green
                     if mov.grn.exists and yx_grn is not None:
-                        masks_grn = lib.imgdata.circleMask(
+                        masks_grn = lib.imgdata.circle_mask(
                             yx=yx_grn, indices=mov.indices, **gvars.cmask_p
                         )
-                        trace.grn.int, trace.grn.bg = lib.imgdata.getTiffStackIntensity(
+                        trace.grn.int, trace.grn.bg = lib.imgdata.tiff_stack_intensity(
                             mov.grn.raw, *masks_grn, raw=True
                         )
 
                     # Red
-                    masks_red = lib.imgdata.circleMask(
+                    masks_red = lib.imgdata.circle_mask(
                         yx=yx_red, indices=mov.indices, **gvars.cmask_p
                     )
-                    trace.red.int, trace.red.bg = lib.imgdata.getTiffStackIntensity(
+                    trace.red.int, trace.red.bg = lib.imgdata.tiff_stack_intensity(
                         mov.red.raw, *masks_red, raw=True
                     )
 
                     # Acceptor (if FRET)
                     if mov.acc.exists:
-                        trace.acc.int, trace.acc.bg = lib.imgdata.getTiffStackIntensity(
+                        trace.acc.int, trace.acc.bg = lib.imgdata.tiff_stack_intensity(
                             mov.acc.raw, *masks_red, raw=True
                         )
-                        trace.fret = lib.math.calcFRET(trace.intensities())
-                        trace.stoi = lib.math.calcStoi(trace.intensities())
+                        trace.fret = lib.math.calc_E(trace.intensities())
+                        trace.stoi = lib.math.calc_S(trace.intensities())
 
                     trace.frames = np.arange(1, len(trace.red.int) + 1)
                     trace.frames_max = max(trace.frames)
@@ -1917,7 +1917,7 @@ class MainWindow(BaseWindow):
             ):  # type: ImageChannel, QDoubleSpinBox, QDoubleSpinBox
                 clip_lo = float(lo.value() / sensitivity)
                 clip_hi = float(hi.value() / sensitivity)
-                c.rgba = lib.imgdata.rescaleIntensity(
+                c.rgba = lib.imgdata.rescale_intensity(
                     c.mean, range=(clip_lo, clip_hi)
                 )
 
@@ -1933,7 +1933,7 @@ class MainWindow(BaseWindow):
                         img.rgba.fill(1)
                     ax.imshow(img.rgba, cmap=img.cmap, vmin=0)
                 else:
-                    lib.plotting.drawEmptyImshow(ax)
+                    lib.plotting.empty_imshow(ax)
 
             # Blended channels
             if len(self.canvas.axes_blend) == 3:
@@ -1949,13 +1949,13 @@ class MainWindow(BaseWindow):
                 c1, c2 = pair
                 if c1.rgba is not None and c2.rgba is not None:
                     ax.imshow(
-                        lib.imgdata.lightBlend(
+                        lib.imgdata.light_blend(
                             c1.rgba, c2.rgba, cmap1=c1.cmap, cmap2=c2.cmap
                         ),
                         vmin=0,
                     )
                 else:
-                    lib.plotting.drawEmptyImshow(ax)
+                    lib.plotting.empty_imshow(ax)
 
             for ax in self.canvas.axes_all:
                 ax.set_xticks(())
@@ -1965,7 +1965,7 @@ class MainWindow(BaseWindow):
             # if (
             #     mov.blu.n_spots > 0
             # ):  # and self.interface.spotsBluSpinBox.value() > 0:
-            #     lib.plotting.plotRoi(
+            #     lib.plotting.plot_rois(
             #         mov.blu.spots,
             #         self.canvas.ax_blu,
             #         color=gvars.color_white,
@@ -1976,7 +1976,7 @@ class MainWindow(BaseWindow):
             if (
                 mov.grn.n_spots > 0
             ):  # and self.interface.spotsGrnSpinBox.value() > 0:
-                lib.plotting.plotRoi(
+                lib.plotting.plot_rois(
                     mov.grn.spots,
                     self.canvas.ax_grn,
                     color=gvars.color_white,
@@ -1987,7 +1987,7 @@ class MainWindow(BaseWindow):
             if (
                 mov.red.n_spots > 0
             ):  # and self.interface.spotsRedSpinBox.value() > 0:
-                lib.plotting.plotRoi(
+                lib.plotting.plot_rois(
                     mov.red.spots,
                     self.canvas.ax_red,
                     color=gvars.color_white,
@@ -1998,7 +1998,7 @@ class MainWindow(BaseWindow):
             if (
                 mov.coloc_grn_red.spots is not None
             ):  # and self.interface.spotsGrnSpinBox.value() > 0 and self.interface.spotsRedSpinBox.value() > 0:
-                lib.plotting.plotRoiColoc(
+                lib.plotting.plot_roi_coloc(
                     mov.coloc_grn_red.spots,
                     img_ax=self.canvas.ax_grn_red,
                     color1=gvars.color_green,
@@ -2014,7 +2014,7 @@ class MainWindow(BaseWindow):
                 if (
                     mov.coloc_blu_grn.spots is not None
                 ):  # and self.interface.spotsBluSpinBox.value() > 0 and self.interface.spotsGrnSpinBox.value() > 0:
-                    lib.plotting.plotRoiColoc(
+                    lib.plotting.plot_roi_coloc(
                         mov.coloc_blu_grn.spots,
                         img_ax=self.canvas.ax_blu_grn,
                         color1=gvars.color_blue,
@@ -2025,7 +2025,7 @@ class MainWindow(BaseWindow):
                 if (
                     mov.coloc_blu_red.spots is not None
                 ):  # and self.interface.spotsBluSpinBox.value() > 0 and self.interface.spotsRedSpinBox.value() > 0:
-                    lib.plotting.plotRoiColoc(
+                    lib.plotting.plot_roi_coloc(
                         mov.coloc_blu_red.spots,
                         img_ax=self.canvas.ax_blu_red,
                         color1=gvars.color_blue,
@@ -2035,7 +2035,7 @@ class MainWindow(BaseWindow):
 
         else:
             for ax in self.canvas.axes_all:
-                lib.plotting.drawEmptyImshow(ax)
+                lib.plotting.empty_imshow(ax)
 
         self.canvas.draw()
         self.refreshInterface()
@@ -2377,8 +2377,8 @@ class TraceWindow(BaseWindow):
                 trace.acc.bg = zeros
                 trace.red.bg = zeros
 
-        trace.fret = lib.math.calcFRET(trace.intensities())
-        trace.stoi = lib.math.calcStoi(trace.intensities())
+        trace.fret = lib.math.calc_E(trace.intensities())
+        trace.stoi = lib.math.calc_S(trace.intensities())
 
         trace.frames = np.arange(1, len(trace.grn.int) + 1, 1)
         trace.frames_max = trace.frames.max()
@@ -2426,10 +2426,10 @@ class TraceWindow(BaseWindow):
 
         if self.currName is not None and len(self.data.traces) > 0:
             trace = self.currentTrace()
-            F_DA, I_DD, I_DA, I_AA = lib.math.correctDA(
+            F_DA, I_DD, I_DA, I_AA = lib.math.correct_DA(
                 trace.intensities(), alpha=alpha, delta=delta
             )
-            fret = lib.math.calcFRET(trace.intensities(), alpha, delta)
+            fret = lib.math.calc_E(trace.intensities(), alpha, delta)
             X = np.column_stack((I_DD, F_DA))
             X = sklearn.preprocessing.scale(X)
 
@@ -2518,7 +2518,7 @@ class TraceWindow(BaseWindow):
             if all_eq:
                 X = np.array(
                     [
-                        lib.math.correctDA(
+                        lib.math.correct_DA(
                             trace.intensities(), alpha=alpha, delta=delta
                         )
                         for trace in traces
@@ -2536,7 +2536,7 @@ class TraceWindow(BaseWindow):
                 Y = []
                 for n, trace in enumerate(traces):
                     xi = np.column_stack(
-                        lib.math.correctDA(
+                        lib.math.correct_DA(
                             trace.intensities(), alpha=alpha, delta=delta
                         )
                     )
@@ -2794,9 +2794,9 @@ class TraceWindow(BaseWindow):
             I_AA = trace.red.int[xmin:xmax]
 
             if factor == "alpha":
-                trace.a_factor = lib.math.alphaFactor(I_DD, I_DA)
+                trace.a_factor = lib.math.alpha_factor(I_DD, I_DA)
             if factor == "delta":
-                trace.d_factor = lib.math.deltaFactor(I_DD, I_DA, I_AA)
+                trace.d_factor = lib.math.delta_factor(I_DD, I_DA, I_AA)
 
             self.refreshPlot()
 
@@ -2856,7 +2856,7 @@ class TraceWindow(BaseWindow):
             alpha = self.getConfig(gvars.key_alphaFactor)
             delta = self.getConfig(gvars.key_deltaFactor)
             factors = alpha, delta
-            F_DA, I_DD, I_DA, I_AA = lib.math.correctDA(
+            F_DA, I_DD, I_DA, I_AA = lib.math.correct_DA(
                 trace.intensities(), *factors
             )
             zeros = np.zeros(len(F_DA))
@@ -2945,7 +2945,7 @@ class TraceWindow(BaseWindow):
 
                 self.setFormatter((F_DA, I_DD, I_DA, I_AA))
 
-                lib.plotting.majorFormatterInLabel(
+                lib.plotting.major_formatter_in_label(
                     ax=ax,
                     axis="y",
                     axis_label=label,
@@ -2954,8 +2954,8 @@ class TraceWindow(BaseWindow):
 
             # Continue drawing FRET specifics
             if self.canvas.ax_setup != "bypass":
-                fret = lib.math.calcFRET(trace.intensities(), *factors)
-                stoi = lib.math.calcStoi(trace.intensities(), *factors)
+                fret = lib.math.calc_E(trace.intensities(), *factors)
+                stoi = lib.math.calc_S(trace.intensities(), *factors)
 
                 ax_E = self.canvas.ax_fret
                 ax_S = self.canvas.ax_stoi
@@ -3005,7 +3005,7 @@ class TraceWindow(BaseWindow):
                     self.canvas.ax_alx.axvspan(xmin, xmax, alpha=0.2, zorder=10)
 
             if hasattr(self.canvas, "ax_ml") and trace.y_pred is not None:
-                lib.plotting.plotPredictions(trace.y_pred, ax=self.canvas.ax_ml)
+                lib.plotting.plot_predictions(trace.y_pred, ax=self.canvas.ax_ml)
 
         else:
             for ax in self.canvas.axes:
@@ -3130,7 +3130,7 @@ class HistogramWindow(BaseWindow):
 
         E_app, S_app = [], []
         for trace in checkedTraces:
-            E, S = lib.math.dropBleachedFrames(
+            E, S = lib.math.drop_bleached_frames(
                 intensities=trace.intensities(),
                 bleaches=trace.bleaches(),
                 alpha=alpha,
@@ -3139,15 +3139,15 @@ class HistogramWindow(BaseWindow):
             )
             E_app.extend(E)
             S_app.extend(S)
-        self.E_un, self.S_un = lib.math.trimES(E_app, S_app)
+        self.E_un, self.S_un = lib.math.trim_ES(E_app, S_app)
 
         if len(self.E_un) > 0:
-            beta, gamma = lib.math.betaGammaFactor(
+            beta, gamma = lib.math.beta_gamma_factor(
                 E_app=self.E_un, S_app=self.S_un
             )
             E_real, S_real, = [], []
             for trace in checkedTraces:
-                E, S = lib.math.dropBleachedFrames(
+                E, S = lib.math.drop_bleached_frames(
                     intensities=trace.intensities(),
                     bleaches=trace.bleaches(),
                     alpha=alpha,
@@ -3158,7 +3158,7 @@ class HistogramWindow(BaseWindow):
                 )
                 E_real.extend(E)
                 S_real.extend(S)
-            self.E, self.S = lib.math.trimES(E_real, S_real)
+            self.E, self.S = lib.math.trim_ES(E_real, S_real)
             self.beta = beta
             self.gamma = gamma
 
@@ -3261,7 +3261,7 @@ class HistogramWindow(BaseWindow):
 
         self.canvas.ax_ctr.clear()
 
-        c = lib.math.contour2D(
+        c = lib.math.contour_2d(
             xdata=E,
             ydata=S,
             bandwidth=bandwidth / 200,
@@ -3486,7 +3486,7 @@ class TransitionDensityWindow(BaseWindow):
             self.inspector.setInspectorConfigs(params)
 
             if self.fret_before is not None and len(self.fret_before) > 0:
-                cont = lib.math.contour2D(
+                cont = lib.math.contour_2d(
                     xdata=self.fret_before,
                     ydata=self.fret_after,
                     bandwidth=bandwidth / 200,

@@ -11,7 +11,7 @@ import itertools
 import pandas as pd
 
 
-def imageQuadrants(height, width):
+def image_quadrants(height, width):
     """
     Returns indices for quadrants of image, given height and width.
     For example, img[top, left] will return the top left quadrant of the image
@@ -31,7 +31,7 @@ def imageQuadrants(height, width):
     return top, bottom, left, right
 
 
-def imageChannels(cmax):
+def image_channels(cmax):
     """
     Given a currentMovie where images from different channels occur in the sequence
     frame1: c1_1, c2_1, c3_1, c4_1
@@ -42,7 +42,7 @@ def imageChannels(cmax):
     [0::4], [1::4], [2::4], [3::4]
 
     Example:
-    c1, c2, c3, c4 = imageChannels(cmax = 4)
+    c1, c2, c3, c4 = image_channels(cmax = 4)
     """
 
     channels = []
@@ -52,7 +52,7 @@ def imageChannels(cmax):
     return channels
 
 
-def subtractBackground(arr, deg=2, s=1e4, by="row", return_bg_only=False, **filter_kwargs):
+def subtract_background(arr, deg=2, s=1e4, by= "row", return_bg_only=False, **filter_kwargs):
     """
     Subtracts background with a row-wise spline fit or filter, to correct for non-uniform illumination profile
 
@@ -105,7 +105,7 @@ def subtractBackground(arr, deg=2, s=1e4, by="row", return_bg_only=False, **filt
     return bg if return_bg_only else arr - bg
 
 
-def zeroOneScale(arr: np.ndarray):
+def zero_one_scale(arr: np.ndarray):
     """
     Scales all values to the range [0, 1].
 
@@ -122,7 +122,7 @@ def zeroOneScale(arr: np.ndarray):
     return normalized
 
 
-def rescaleIntensity(image: np.ndarray, range):
+def rescale_intensity(image: np.ndarray, range):
     """
     Rescales image intensity by clipping the range, followed by normalization.
 
@@ -137,11 +137,11 @@ def rescaleIntensity(image: np.ndarray, range):
     -------
     Image with rescaled intensity for imshow
     """
-    image = zeroOneScale(image.clip(*range))
+    image = zero_one_scale(image.clip(*range))
     return image
 
 
-def checkCircleOverlap(y1, x1, y2, x2, squared_radius, overlap_factor):
+def check_circle_overlap(y1, x1, y2, x2, squared_radius, overlap_factor):
     """
     Checks if circles overlap, given coordinates and radius.
     Coordinates are expected in the same matrix notation as given by skimage.
@@ -173,7 +173,7 @@ def checkCircleOverlap(y1, x1, y2, x2, squared_radius, overlap_factor):
         return False, None
 
 
-def lightBlend(image1, image2, cmap1, cmap2):
+def light_blend(image1, image2, cmap1, cmap2):
     """
     Lighten blend of two images
 
@@ -199,7 +199,7 @@ def lightBlend(image1, image2, cmap1, cmap2):
     return screen
 
 
-def addBlend(image1, image2, blend_degree):
+def add_blend(image1, image2, blend_degree):
     """
     Additive blending of two images
 
@@ -219,9 +219,9 @@ def addBlend(image1, image2, blend_degree):
     return np.sqrt((1 - blend_degree) * image1 ** 2 + blend_degree * image2 ** 2)
 
 
-def overlayBlend(image1, image2):
+def overlay_blend(image1, image2):
     """
-    Overlay lightBlend of two images
+    Overlay light_blend of two images
 
     Parameters
     ----------
@@ -239,9 +239,9 @@ def overlayBlend(image1, image2):
     return blend
 
 
-def softBlend(image1, image2):
+def soft_blend(image1, image2):
     """
-    Soft light lightBlend of two images
+    Soft light light_blend of two images
 
     Parameters
     ----------
@@ -257,7 +257,7 @@ def softBlend(image1, image2):
     return (1 - 2 * image2) * image1 ** 2 + 2 * image1 * image2
 
 
-def findSpots(image, value, method="laplacian_of_gaussian") -> np.ndarray:
+def find_spots(image, value, method= "laplacian_of_gaussian") -> np.ndarray:
     """
 
     Parameters
@@ -404,7 +404,7 @@ def coloc_fraction(green, red, bluegreen, bluered, greenred, all):
     return (bluered + bluegreen - all) / (red + green - greenred)
 
 
-def circleMask(inner_area, outer_area, gap_space, yx, indices):
+def circle_mask(inner_area, outer_area, gap_space, yx, indices):
     """
     Calculates a circular pixel mask for extracting intensities
     
@@ -439,7 +439,7 @@ def circleMask(inner_area, outer_area, gap_space, yx, indices):
     return center, bg_ring
 
 
-def getTiffStackIntensity(array, roi_mask, bg_mask, raw=True):
+def tiff_stack_intensity(array, roi_mask, bg_mask, raw=True):
     """
     Extracts intensities from TIFF stack, given ROI and BG masks.
     Intensities are calculated as medians of all pixel values within the ROIs.

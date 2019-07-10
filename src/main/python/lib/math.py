@@ -1,7 +1,9 @@
 import multiprocessing
+
 multiprocessing.freeze_support()
 
 import matplotlib
+import matplotlib.ticker
 import sklearn.neighbors
 
 import itertools
@@ -27,7 +29,7 @@ def leastsq_line(x: np.ndarray, y: np.ndarray) -> Tuple[float, float]:
     return slope, intercept
 
 
-def correctDA(intensities, alpha=0, delta=0):
+def correct_DA(intensities, alpha=0, delta=0):
     """
     Calculates corrected Dexc-Aem intensity, for use in E and S calculations
     """
@@ -41,7 +43,7 @@ def correctDA(intensities, alpha=0, delta=0):
     return F_DA, I_DD, I_DA, I_AA
 
 
-def calcFRET(intensities, alpha=0, delta=0, clip_range=(-0.3, 1.3)):
+def calc_E(intensities, alpha=0, delta=0, clip_range=(-0.3, 1.3)):
     """
     Calculates raw FRET efficiency from donor (Dexc-Dem) and acceptor (Dexc-Aem).
     Note that iSMS has the option of subtracting background or not, and calculate E (apparent E) from that.
@@ -49,7 +51,7 @@ def calcFRET(intensities, alpha=0, delta=0, clip_range=(-0.3, 1.3)):
 
     cmin, cmax = clip_range
 
-    F_DA, I_DD, I_DA, I_AA = correctDA(intensities, alpha, delta)
+    F_DA, I_DD, I_DA, I_AA = correct_DA(intensities, alpha, delta)
 
     E = F_DA / (I_DD + F_DA)
     E = np.clip(E, cmin, cmax, out=E)
@@ -58,16 +60,16 @@ def calcFRET(intensities, alpha=0, delta=0, clip_range=(-0.3, 1.3)):
     return E
 
 
-def calcStoi(
+def calc_S(
     intensities, alpha=0, delta=0, beta=1, gamma=1, clip_range=(-0.3, 1.3)
 ):
     """
-    Calculates raw calcStoi from donor (Dexc-Dem), acceptor (Dexc-Aem) and direct emission of acceptor ("ALEX", Aexc-Aem)
+    Calculates raw calc_S from donor (Dexc-Dem), acceptor (Dexc-Aem) and direct emission of acceptor ("ALEX", Aexc-Aem)
     Note that iSMS has the option of subtracting background or not, and calculate S (apparent S) from that.
     """
     cmin, cmax = clip_range
 
-    F_DA, I_DD, I_DA, I_AA = correctDA(intensities, alpha, delta)
+    F_DA, I_DD, I_DA, I_AA = correct_DA(intensities, alpha, delta)
 
     inv_beta = 1 / beta
 
@@ -78,14 +80,16 @@ def calcStoi(
     return S
 
 
-def correctedES(intensities, alpha, delta, beta, gamma, clip_range=(-0.3, 1.3)):
+def corrected_ES(
+    intensities, alpha, delta, beta, gamma, clip_range=(-0.3, 1.3)
+):
     """
     Calculates the fully corrected FRET and stoichiometry, given all the correction factors.
     This is only used for the combined 2D histogram, not for single traces.
     """
     cmin, cmax = clip_range
 
-    F_DA, I_DD, I_DA, I_AA = correctDA(intensities, alpha, delta)
+    F_DA, I_DD, I_DA, I_AA = correct_DA(intensities, alpha, delta)
     F_DD = gamma * I_DD
     F_AA = (1 / beta) * I_AA
 
@@ -98,7 +102,7 @@ def correctedES(intensities, alpha, delta, beta, gamma, clip_range=(-0.3, 1.3)):
     return E, S
 
 
-def dropBleachedFrames(
+def drop_bleached_frames(
     intensities, bleaches, max_frames=None, alpha=0, delta=0, beta=1, gamma=1
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
@@ -107,10 +111,10 @@ def dropBleachedFrames(
     bleach = min_real(bleaches)
 
     if beta == 1 and gamma == 1:
-        E_trace = calcFRET(intensities, alpha, delta)
-        S_trace = calcStoi(intensities, alpha, delta)
+        E_trace = calc_E(intensities, alpha, delta)
+        S_trace = calc_S(intensities, alpha, delta)
     else:
-        E_trace, S_trace = correctedES(intensities, alpha, delta, beta, gamma)
+        E_trace, S_trace = corrected_ES(intensities, alpha, delta, beta, gamma)
 
     E_trace_ = E_trace[:bleach][:max_frames]
     S_trace_ = S_trace[:bleach][:max_frames]
@@ -118,7 +122,7 @@ def dropBleachedFrames(
     return E_trace_, S_trace_
 
 
-def alphaFactor(DD, DA):
+def alpha_factor(DD, DA):
     """
     Alpha factor for donor-only population.
     Use the donor and acceptor intensities minus background.
@@ -128,7 +132,7 @@ def alphaFactor(DD, DA):
     return alpha
 
 
-def deltaFactor(DD, DA, AA):
+def delta_factor(DD, DA, AA):
     """
     Delta factor for acceptor-only population.
     Use the donor and acceptor intensities minus background.
@@ -138,7 +142,7 @@ def deltaFactor(DD, DA, AA):
     return delta
 
 
-def betaGammaFactor(E_app, S_app):
+def beta_gamma_factor(E_app, S_app):
     """
     Calculates global beta and gamma factors from apparent E and S (alpha and delta already applied).
     """
@@ -158,12 +162,12 @@ def betaGammaFactor(E_app, S_app):
     return beta, gamma
 
 
-def trimES(E: list, S: list):
+def trim_ES(E: list, S: list):
     """
     Trims out-of-range values of E/S values
     """
     E, S = np.array(E), np.array(S)
-    idx = ((S > -0.3) & (S < 1.3))
+    idx = (S > -0.3) & (S < 1.3)
     E, S = E[idx], S[idx]
     return E, S
 
@@ -276,9 +280,6 @@ def fit_gaussian_mixture(arr, k_states):
         Input data (wil be unravelled to single-sample shape)
     k_states:
         Maximum number of states to test for:
-    auto:
-        If true, best number of gaussians is is based on minimized BIC, and k_states becomes the upper limit to fit.
-        If false, only k states are tested.
 
     Returns
     -------
@@ -459,7 +460,7 @@ def min_real(ls) -> Union[Union[int, float], None]:
     return val
 
 
-def contour2D(
+def contour_2d(
     xdata,
     ydata,
     bandwidth=0.1,
@@ -478,10 +479,10 @@ def contour2D(
 
     Example
     -------
-    X, Y, Z, levels = countour_2d(x, y, shade_lowest = False)
+    x, y, z, levels = countour_2d(x, y, shade_lowest = False)
 
     fig, ax = plt.subplots()
-    c = ax.contourf(X,Y,Z, levels=levels, cmap = "inferno")
+    c = ax.contourf(x,y,z, levels=levels, cmap = "inferno")
 
     Alternatively, unpack like
 
@@ -495,28 +496,28 @@ def contour2D(
         kernel = "epanechnikov"
 
     if bandwidth == "auto":
-        bandwidth = (len(xdata) * 4 / 4.0) ** (-1.0 / (6))
+        bandwidth = (len(xdata) * 4 / 4.0) ** (-1.0 / 6)
 
     # Stretch the min/max values to make sure that the KDE goes beyond the outermost points
     meanx = np.mean(xdata) * extend_grid
     meany = np.mean(ydata) * extend_grid
 
     # Create a grid for KDE
-    X, Y = np.mgrid[
+    x, y = np.mgrid[
         min(xdata) - meanx : max(xdata) + meanx : complex(resolution),
         min(ydata) - meany : max(ydata) + meany : complex(resolution),
     ]
 
-    positions = np.vstack([X.ravel(), Y.ravel()])
+    positions = np.vstack([x.ravel(), y.ravel()])
     values = np.vstack([xdata, ydata])
 
     # Define KDE with specified bandwidth
     kernel_sk = sklearn.neighbors.KernelDensity(
         kernel=kernel, bandwidth=bandwidth
     ).fit(list(zip(*values)))
-    Z = np.exp(kernel_sk.score_samples(list(zip(*positions))))
+    z = np.exp(kernel_sk.score_samples(list(zip(*positions))))
 
-    Z = np.reshape(Z.T, X.shape)
+    z = np.reshape(z.T, x.shape)
 
     if not shade_lowest:
         n_colors += 1
@@ -526,14 +527,14 @@ def contour2D(
     if type(cbins) == np.ndarray:
         levels = cbins
     elif cbins is "auto":
-        levels = locator.tick_values(Z.min(), Z.max())
+        levels = locator.tick_values(z.min(), z.max())
     else:
         raise ValueError
 
     if not shade_lowest:
         levels = levels[1:]
 
-    return X, Y, Z, levels
+    return x, y, z, levels
 
 
 def estimate_bw(n, d, factor):

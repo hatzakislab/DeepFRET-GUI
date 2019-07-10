@@ -1,7 +1,7 @@
 ![screenshot](screenshot.png)
 
 #### DeepFRET
-A fully open-source, all-inclusive software platform for doing total internal reflection microscopy (TIRFm) single molecule FRET (smFRET) fast and efficiently. The key feature is reverse-loading of ASCII traces, and TensorFlow-powered automatic trace sorting. Features include
+A fully open-source, all-inclusive software platform for doing total internal reflection microscopy (TIRFm) single molecule FRET (smFRET) fast and efficiently. The key feature is reverse-loading of ASCII traces, and *TensorFlow-powered automatic trace sorting*. Features include
 
 - Advanced trace sorting
 - Optical correction factors
@@ -9,6 +9,14 @@ A fully open-source, all-inclusive software platform for doing total internal re
 - Memory-free movie batch loading
 - Distribution plotting and fitting
 - Backwards-compatibility with iSMS-exported data
+
+If you used this and liked it, please cite:
+
+```
+Citation coming soon
+```
+
+If you'd like to play around with just the TensorFlow model, please go to https://github.com/komodovaran/DeepFRET-Model
 
 #### How to launch the DeepFRET GUI
 
@@ -29,6 +37,6 @@ Download a pre-compiled application (currently only available for MacOS)
 6. Unzip the `hooks.zip` and overwrite the files in `venv/lib/python3.7/site-packages/PyInstaller/hooks/`.
 7. While still in the venv, write `fbs freeze` and wait for the process to finish. If everything went well, there will be a `target/` directory with the DeepFRET application inside.
 
-If the above steps worked, you can now edit any part of the code, and re-compile it (or just run it from the main.py script, if desired). The .ui files for the interface can be edited through Qt Creator and converted with `generate_ui.py` 
+If the above steps worked, you can now edit any part of the code, and re-compile it (or just run it from the main.py script, if desired). The `.ui` files for the interface can be edited through Qt Creator and converted with `generate_ui.py` 
 
 The whole process should be cross-platform, but has only been tested on MacOS.

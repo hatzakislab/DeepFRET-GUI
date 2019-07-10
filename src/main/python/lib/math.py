@@ -163,7 +163,7 @@ def trimES(E: list, S: list):
     Trims out-of-range values of E/S values
     """
     E, S = np.array(E), np.array(S)
-    idx = (S > -0.3) & (S < 1.3)
+    idx = ((S > -0.3) & (S < 1.3))
     E, S = E[idx], S[idx]
     return E, S
 

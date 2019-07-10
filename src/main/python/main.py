@@ -3137,8 +3137,8 @@ class HistogramWindow(BaseWindow):
                 delta=delta,
                 max_frames=n_first_frames,
             )
-            E_app.append(E)
-            S_app.append(S)
+            E_app.extend(E)
+            S_app.extend(S)
         self.E_un, self.S_un = lib.math.trimES(E_app, S_app)
 
         if len(self.E_un) > 0:
@@ -3156,8 +3156,8 @@ class HistogramWindow(BaseWindow):
                     gamma=gamma,
                     max_frames=n_first_frames,
                 )
-                E_real.append(E)
-                S_real.append(S)
+                E_real.extend(E)
+                S_real.extend(S)
             self.E, self.S = lib.math.trimES(E_real, S_real)
             self.beta = beta
             self.gamma = gamma
@@ -3753,7 +3753,7 @@ class AppContext(ApplicationContext):
 
     def load_resources(self):
         self.keras_model = keras.models.load_model(
-            self.get_resource("sim_v3_9_best_model.h5")
+            self.get_resource("model.h5")
         )
         self.config = ConfigObj(self.get_resource("config.ini"))
 

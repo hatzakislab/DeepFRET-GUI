@@ -136,6 +136,11 @@ class PreferencesWindow(QDialog):
         """
         self.readConfigFromFile()
         value = self.config.get(key)
+
+        if value is None:
+            qWarning("{} = {} returned NoneType. Ensure that the correct value is set in the GUI".format(key, value))
+            return 0
+
         if value in self.boolMaps:  # To handle 0/1/True/False as ints
             value = self.boolMaps[value]
         else:

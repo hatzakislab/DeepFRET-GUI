@@ -10,7 +10,7 @@ from lib.math import estimate_bw
 matplotlib.use("qt5agg")
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.ticker import ScalarFormatter
+from matplotlib.ticker import MaxNLocator
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Patch
 import sklearn.neighbors
@@ -18,43 +18,11 @@ import lib.misc
 import lib.math
 
 
-class OOMFormatter(ScalarFormatter):
-    """
-    Formats the axes with a constant number.
-
-    Example:
-    ax.yaxis.set_major_formatter(OOMFormatter(4, "%1.1f"))
-    """
-
-    def __init__(self, order=0, fformat="%1.1f", offset=True, mathText=True):
-        self.oom = order
-        self.fformat = fformat
-        ScalarFormatter.__init__(self, useOffset=offset, useMathText=mathText)
-
-    def _set_orderOfMagnitude(self, nothing):
-        self.orderOfMagnitude = self.oom
-
-    def _set_format(self, vmin, vmax):
-        self.format = self.fformat
-        if self._useMathText:
-            self.format = "$%s$" % matplotlib.ticker._mathdefault(self.format)
-
-
 def empty_imshow(img_ax):
     """
     Draws an empty canvas on a given image ax.
     """
     empty_arr = np.ndarray(shape=(200, 200))
-    img_ax.tick_params(
-        axis="both",
-        which="both",
-        bottom="off",
-        top="off",
-        labelbottom="off",
-        right="off",
-        left="off",
-        labelleft="off",
-    )
     img_ax.set_facecolor(gvars.color_hud_black)
     img_ax.imshow(empty_arr, alpha=0)
     img_ax.fill_between(
@@ -67,6 +35,16 @@ def empty_imshow(img_ax):
     )
     img_ax.set_xlim(0, 200)
     img_ax.set_ylim(0, 200)
+    img_ax.tick_params(
+        axis="both",
+        which="both",
+        bottom=False,
+        top=False,
+        labelbottom=False,
+        right=False,
+        left=False,
+        labelleft=False,
+    )
     return img_ax
 
 
@@ -84,6 +62,19 @@ def major_formatter_in_label(ax, axis, axis_label, major_formatter):
     exponent = axis.get_offset_text().get_text()
 
     axis.set_label_text(axis_label + " (" + exponent + ")")
+
+
+def set_axis_exp_ylabel(ax, label, values):
+    """
+    Formats axis y-label to hold the exponent for space saving
+    """
+    m = np.max(values)
+    e = np.floor(np.log10(np.abs(m)))
+    ax.ticklabel_format(style = 'sci', scilimits = (0,0), axis = 'both')
+    ax.yaxis.get_offset_text().set_visible(False)
+    ax.yaxis.major.formatter._useMathText = True
+    ax.yaxis.set_major_locator(MaxNLocator(nbins = 3, integer = False))
+    ax.set_ylabel("{} ($10^{:.0f}$)".format(label, e))
 
 
 def plot_rois(

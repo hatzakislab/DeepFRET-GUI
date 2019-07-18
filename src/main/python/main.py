@@ -70,7 +70,8 @@ ignore_warnings = {
     "matplotlib_2": RuntimeWarning,
 }
 
-# Small hack to allow duplicate module keys by removing the last 2 characters of name
+# Small hack to allow duplicate module keys by removing the last 2 characters of name.
+# This is to not drown in warnings. Can be safely disabled.
 for module, category in ignore_warnings.items():
     warnings.filterwarnings("ignore", category=category, module=module[:-2])
 
@@ -2846,11 +2847,6 @@ class TraceWindow(BaseWindow):
         if self.currName is not None:
             self.currentTrace().xdata = []
 
-    def setFormatter(self, values):
-        """Adjusts the intensity exponent according to maximum value"""
-        m = np.max(values)
-        e = np.floor(np.log10(np.abs(m)))
-        self.formatter = lib.plotting.OOMFormatter(e, "%1.1f")
 
     def refreshPlot(self):
         """
@@ -2947,15 +2943,7 @@ class TraceWindow(BaseWindow):
                 ax.plot(trace.frames, int_, color=color)
                 ax.set_ylim(0 - int_.max() * 0.1, int_.max() * 1.1)
                 ax.yaxis.label.set_color(gvars.color_gui_text)
-
-                self.setFormatter((F_DA, I_DD, I_DA, I_AA))
-
-                lib.plotting.major_formatter_in_label(
-                    ax=ax,
-                    axis="y",
-                    axis_label=label,
-                    major_formatter=self.formatter,
-                )
+                lib.plotting.set_axis_exp_ylabel(ax = ax, label = label, values = int_)
 
             # Continue drawing FRET specifics
             if self.canvas.ax_setup != "bypass":
@@ -3036,6 +3024,11 @@ class HistogramWindow(BaseWindow):
         self.xpts = np.linspace(-0.3, 1.3, 300)
         self.gauss_params = None
         self.bics = None
+
+        self.alpha = None
+        self.delta = None
+        self.beta = None
+        self.gamma = None
 
         self.ui = Ui_HistogramWindow()
         self.ui.setupUi(self)
@@ -3167,6 +3160,10 @@ class HistogramWindow(BaseWindow):
             self.beta = beta
             self.gamma = gamma
 
+        self.alpha = alpha
+        self.delta = delta
+
+
     def fitGaussians(self, states):
         """
         Fits multiple gaussians to the E data
@@ -3284,26 +3281,13 @@ class HistogramWindow(BaseWindow):
             0.5, color="black", alpha=0.3, lw=0.5, ls="--", zorder=2
         )
 
-        sample_txt = "N = {}\n".format(self.n_samples)
+        n_equals_txt = "N = {}\n".format(self.n_samples)
         if not np.isnan(self.trace_median_len):
-            sample_txt += "(median length {:.0f})".format(self.trace_median_len)
+            n_equals_txt += "(median length {:.0f})".format(self.trace_median_len)
 
         self.canvas.ax_ctr.text(
-            x=0, y=0.9, s=sample_txt, color=gvars.color_gui_text
+            x=0, y=0.9, s=n_equals_txt, color=gvars.color_gui_text
         )
-        for n, (factor, name) in enumerate(
-            zip(
-                (self.alpha, self.delta, self.beta, self.gamma),
-                ("alpha", "delta", "beta", "gamma"),
-            )
-        ):
-            self.canvas.ax_ctr.text(
-                x=0.0,
-                y=0.15 - 0.05 * n,
-                s=r"$\{}$ = {:.2f}".format(name, factor),
-                color=gvars.color_gui_text,
-                zorder=10,
-            )
 
         if self.gauss_params is not None:
             for n, gauss_params in enumerate(self.gauss_params):
@@ -3318,7 +3302,19 @@ class HistogramWindow(BaseWindow):
                     zorder=10,
                 )
 
-        # self.plotDefaultElements()
+        for n, (factor, name) in enumerate(
+            zip(
+                (self.alpha, self.delta, self.beta, self.gamma),
+                ("alpha", "delta", "beta", "gamma"),
+            )
+        ):
+            self.canvas.ax_ctr.text(
+                x = 0.0,
+                y = 0.15 - 0.05 * n,
+                s = r"$\{}$ = {:.2f}".format(name, factor),
+                color = gvars.color_gui_text,
+                zorder = 10)
+
 
     def refreshPlot(self, autofit=False):
 

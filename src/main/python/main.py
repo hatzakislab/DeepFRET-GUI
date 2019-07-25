@@ -139,7 +139,11 @@ class PreferencesWindow(QDialog):
         value = self.config.get(key)
 
         if value is None:
-            qWarning("{} = {} returned NoneType. Ensure that the correct value is set in the GUI".format(key, value))
+            qWarning(
+                "{} = {} returned NoneType. Ensure that the correct value is set in the GUI".format(
+                    key, value
+                )
+            )
             return 0
 
         if value in self.boolMaps:  # To handle 0/1/True/False as ints
@@ -1347,9 +1351,9 @@ class MainWindow(BaseWindow):
         self.labels = (
             # self.ui.labelColocBlueGreenSpots,
             # self.ui.labelColocBlueRedSpots,
-            self.ui.labelColocGreenRedSpots,
             # self.ui.labelColocAllSpots,
             # self.ui.labelBlueSpots,
+            self.ui.labelColocGreenRedSpots,
             self.ui.labelGreenSpots,
             self.ui.labelRedSpots,
         )
@@ -1627,23 +1631,23 @@ class MainWindow(BaseWindow):
             self.getConfig(gvars.key_colocTolerance)
         )
 
-        if channel == "blue":
-            channel = mov.blu
-            spinBox = self.ui.spotsBluSpinBox
-            pairs = (mov.blu, mov.grn), (mov.blu, mov.red)
-            colocs = mov.coloc_blu_grn, mov.coloc_blu_red
+        # if channel == "blue":
+        #     channel = mov.blu
+        #     spinBox = self.ui.spotsBluSpinBox
+        #     pairs = (mov.blu, mov.grn), (mov.blu, mov.red)
+        #     colocs = mov.coloc_blu_grn, mov.coloc_blu_red
 
-        elif channel == "green":
+        if channel == "green":
             channel = mov.grn
             spinBox = self.ui.spotsGrnSpinBox
-            pairs = (mov.blu, mov.grn), (mov.grn, mov.red)
-            colocs = mov.coloc_blu_grn, mov.coloc_grn_red
+            pairs = ((mov.grn, mov.red),)  # (mov.blu, mov.grn),
+            colocs = (mov.coloc_grn_red,)  # mov.coloc_blu_grn,
 
         elif channel == "red":
             channel = mov.red
             spinBox = self.ui.spotsRedSpinBox
-            pairs = (mov.blu, mov.red), (mov.grn, mov.red)
-            colocs = mov.coloc_blu_red, mov.coloc_grn_red
+            pairs = ((mov.grn, mov.red),)  # (mov.blu, mov.red)
+            colocs = (mov.coloc_grn_red,)  # mov.coloc_blu_red,
         else:
             raise ValueError("Invalid color")
 
@@ -1827,7 +1831,7 @@ class MainWindow(BaseWindow):
         """
         for name in self.data.movies.keys():
             self.currName = name
-            for c in "blue", "green", "red":
+            for c in "green", "red":  # blue
                 self.colocalizeSpotsSingleMovie(c)
             self.getTracesSingleMovie()
 
@@ -2053,19 +2057,19 @@ class MainWindow(BaseWindow):
         if self.currName is not None:
             mov = self.currentMovie()
 
-            if mov.coloc_frac is not None:
-                self.ui.labelColocFractionVal.setText(
-                    "{:.1f}".format(mov.coloc_frac)
-                )
-            else:
-                self.ui.labelColocFractionVal.setText(str("-"))
+            # if mov.coloc_frac is not None:
+            #     self.ui.labelColocFractionVal.setText(
+            #         "{:.1f}".format(mov.coloc_frac)
+            #     )
+            # else:
+            #     self.ui.labelColocFractionVal.setText(str("-"))
 
             channels = (
-                mov.coloc_blu_grn,
-                mov.coloc_blu_red,
+                # mov.coloc_blu_grn,
+                # mov.coloc_blu_red,
                 mov.coloc_grn_red,
-                mov.coloc_all,
-                mov.blu,
+                # mov.coloc_all,
+                # mov.blu,
                 mov.grn,
                 mov.red,
             )
@@ -2073,23 +2077,29 @@ class MainWindow(BaseWindow):
             for channel, label in zip(channels, self.labels):
                 label.setText(str(channel.n_spots))
 
-            self.ui.spotsBluSpinBox.setDisabled(not mov.blu.exists)
+            # self.ui.spotsBluSpinBox.setDisabled(not mov.blu.exists)
             self.ui.spotsGrnSpinBox.setDisabled(not mov.grn.exists)
             self.ui.spotsRedSpinBox.setDisabled(not mov.red.exists)
 
             if self.batchLoaded:
-                self.disableSpinBoxes(("blue", "green", "red"))
+                self.disableSpinBoxes(
+                    (
+                        # "blue",
+                        "green",
+                        "red",
+                    )
+                )
 
         else:
             for label in self.labels:
                 label.setText(str("-"))
-            self.ui.labelColocFractionVal.setText(str("-"))
+            # self.ui.labelColocFractionVal.setText(str("-"))
 
         # Repaint all labels
         for label in self.labels:
             label.repaint()
 
-        self.ui.labelColocFractionVal.repaint()
+        # self.ui.labelColocFractionVal.repaint()
 
     def findTracesAndShow(self):
         """
@@ -2391,10 +2401,15 @@ class TraceWindow(BaseWindow):
 
         # TODO: revert mechanism to first bleaching or separate D/A bleaching for consistency throughout code (and speedups)
         try:
-            bleaching = re.findall(r'\d+', str(bleaching))
-            if any(bleaching): # check if list is not empty
-                trace.grn.bleach, trace.red.bleach = int(bleaching[0]), int(bleaching[-1]) # works for both 1 or 2 values by indexing both ways
-                trace.first_bleach = lib.misc.min_none((trace.grn.bleach, trace.red.bleach))
+            bleaching = re.findall(r"\d+", str(bleaching))
+            if any(bleaching):  # check if list is not empty
+                trace.grn.bleach, trace.red.bleach = (
+                    int(bleaching[0]),
+                    int(bleaching[-1]),
+                )  # works for both 1 or 2 values by indexing both ways
+                trace.first_bleach = lib.misc.min_none(
+                    (trace.grn.bleach, trace.red.bleach)
+                )
         except (ValueError, AttributeError):
             pass
 
@@ -2437,7 +2452,7 @@ class TraceWindow(BaseWindow):
             )
             fret = lib.math.calc_E(trace.intensities(), alpha, delta)
             X = np.column_stack((I_DD, F_DA))
-            X = sklearn.preprocessing.scale(X)
+            X = sklearn.preprocessing.robust_scale(X)
 
             try:
                 idealized, time, transitions = lib.math.fit_hmm(
@@ -2847,7 +2862,6 @@ class TraceWindow(BaseWindow):
         if self.currName is not None:
             self.currentTrace().xdata = []
 
-
     def refreshPlot(self):
         """
         Refreshes plot for TraceWindow.
@@ -2943,7 +2957,9 @@ class TraceWindow(BaseWindow):
                 ax.plot(trace.frames, int_, color=color)
                 ax.set_ylim(0 - int_.max() * 0.1, int_.max() * 1.1)
                 ax.yaxis.label.set_color(gvars.color_gui_text)
-                lib.plotting.set_axis_exp_ylabel(ax = ax, label = label, values = int_)
+                lib.plotting.set_axis_exp_ylabel(
+                    ax=ax, label=label, values=int_
+                )
 
             # Continue drawing FRET specifics
             if self.canvas.ax_setup != "bypass":
@@ -2998,7 +3014,9 @@ class TraceWindow(BaseWindow):
                     self.canvas.ax_alx.axvspan(xmin, xmax, alpha=0.2, zorder=10)
 
             if hasattr(self.canvas, "ax_ml") and trace.y_pred is not None:
-                lib.plotting.plot_predictions(trace.y_pred, ax=self.canvas.ax_ml)
+                lib.plotting.plot_predictions(
+                    trace.y_pred, ax=self.canvas.ax_ml
+                )
 
         else:
             for ax in self.canvas.axes:
@@ -3163,7 +3181,6 @@ class HistogramWindow(BaseWindow):
         self.alpha = alpha
         self.delta = delta
 
-
     def fitGaussians(self, states):
         """
         Fits multiple gaussians to the E data
@@ -3283,7 +3300,9 @@ class HistogramWindow(BaseWindow):
 
         n_equals_txt = "N = {}\n".format(self.n_samples)
         if not np.isnan(self.trace_median_len):
-            n_equals_txt += "(median length {:.0f})".format(self.trace_median_len)
+            n_equals_txt += "(median length {:.0f})".format(
+                self.trace_median_len
+            )
 
         self.canvas.ax_ctr.text(
             x=0, y=0.9, s=n_equals_txt, color=gvars.color_gui_text
@@ -3309,12 +3328,12 @@ class HistogramWindow(BaseWindow):
             )
         ):
             self.canvas.ax_ctr.text(
-                x = 0.0,
-                y = 0.15 - 0.05 * n,
-                s = r"$\{}$ = {:.2f}".format(name, factor),
-                color = gvars.color_gui_text,
-                zorder = 10)
-
+                x=0.0,
+                y=0.15 - 0.05 * n,
+                s=r"$\{}$ = {:.2f}".format(name, factor),
+                color=gvars.color_gui_text,
+                zorder=10,
+            )
 
     def refreshPlot(self, autofit=False):
 

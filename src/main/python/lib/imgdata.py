@@ -406,7 +406,7 @@ def coloc_fraction(green, red, bluegreen, bluered, greenred, all):
 
 def circle_mask(inner_area, outer_area, gap_space, yx, indices):
     """
-    Calculates a circular pixel mask for extracting intensities
+    Calculates a circular pixel mask for extracting get_intensities
     
     Parameters
     ----------
@@ -441,7 +441,7 @@ def circle_mask(inner_area, outer_area, gap_space, yx, indices):
 
 def tiff_stack_intensity(array, roi_mask, bg_mask, raw=True):
     """
-    Extracts intensities from TIFF stack, given ROI and BG masks.
+    Extracts get_intensities from TIFF stack, given ROI and BG masks.
     Intensities are calculated as medians of all pixel values within the ROIs.
 
     Parameters
@@ -453,11 +453,11 @@ def tiff_stack_intensity(array, roi_mask, bg_mask, raw=True):
     bg_mask:
         Numpy mask for background
     raw:
-        Whether to return raw signal/background intensities. Otherwise will return signal-background and background as zeroes.
+        Whether to return raw signal/background get_intensities. Otherwise will return signal-background and background as zeroes.
 
     Returns
     -------
-    Center and background intensities
+    Center and background get_intensities
     """
     if len(array.shape) == 3:  # tiff-stack
         roi_pixel_sum_intensity = np.sum(array[:, roi_mask], axis=1)

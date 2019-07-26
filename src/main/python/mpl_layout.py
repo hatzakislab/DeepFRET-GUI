@@ -56,22 +56,6 @@ class MatplotlibCanvas(FigureCanvas):
             else:
                 raise ValueError
 
-        if ax_setup == "3-color":
-            if ax_window == "img":
-                self.setupThreeColorImageLayout()
-            elif ax_window == "trace":
-                self.setupThreeColorTraceLayout()
-            else:
-                raise ValueError
-
-        if ax_setup == "bypass":
-            if ax_window == "img":
-                self.setupThreeColorImageLayout()
-            elif ax_window == "trace":
-                self.setupThreeColorTraceBypassLayout()
-            else:
-                raise ValueError
-
         if ax_setup == "plot":
             if ax_window == "jointgrid":
                 self.setupJointGridLayout()
@@ -96,23 +80,6 @@ class MatplotlibCanvas(FigureCanvas):
 
         self.fig.subplots_adjust(left=0.05, right=0.95, hspace = 0, wspace = 0.04)  # Increase to add space between plot and GUI
 
-    def setupThreeColorImageLayout(self):
-        """
-        5-view layout for quad view microscope setup (blue, green, red, green/blue, green/red).
-        """
-        self.ax_blu = self.fig.add_subplot(231)  # Blue
-        self.ax_grn = self.fig.add_subplot(232)  # Green
-        self.ax_red = self.fig.add_subplot(233)  # Red
-        self.ax_blu_grn = self.fig.add_subplot(234)  # Blend Blue/Green
-        self.ax_blu_red = self.fig.add_subplot(235)  # Blend Blue/Red
-        self.ax_grn_red = self.fig.add_subplot(236)  # Blend Green/Red
-
-        self.axes_single = self.ax_blu, self.ax_grn, self.ax_red
-        self.axes_blend = self.ax_blu_grn, self.ax_blu_red, self.ax_grn_red
-        self.axes_all = self.ax_blu, self.ax_grn, self.ax_red, self.ax_blu_grn, self.ax_blu_red, self.ax_grn_red
-
-        self.fig.subplots_adjust(left=0.05, right=0.95, hspace = 0.04)  # Increase to add space between plot and GUI
-
     def setupTwoColorTraceLayout(self):
         """
         Setup for viewing traces with 2 colors.
@@ -134,37 +101,6 @@ class MatplotlibCanvas(FigureCanvas):
         self.fig.subplots_adjust(hspace=0, left=0.06, right=0.94, top=0.96, bottom=0.04)
         self.traceOutlineColor()
 
-    def setupThreeColorTraceLayout(self):
-        """
-        Setup for viewing traces with 3 colors.
-        """
-        self.ax_grn = self.fig.add_subplot(511)  # Green
-        self.ax_red = self.ax_grn.twinx()  # Red
-        self.ax_alx = self.fig.add_subplot(512)  # ALEX
-        self.ax_blu = self.fig.add_subplot(513)  # Blue
-        self.ax_fret = self.fig.add_subplot(514)  # FRET
-        self.ax_stoi = self.fig.add_subplot(515)  # Stoichiometry (should be the bottom-most)
-
-        self.axes = self.ax_blu, self.ax_grn, self.ax_red, self.ax_alx, self.ax_fret, self.ax_stoi
-        self.axes_c = list(zip((self.ax_grn, self.ax_red, self.ax_alx, self.ax_blu), ("D", "A", "A-direct", "Blue")))
-
-        self.fig.subplots_adjust(hspace=0, left=0.06, right=0.94, top=0.96, bottom=0.04)
-        self.traceOutlineColor()
-
-    def setupThreeColorTraceBypassLayout(self):
-        """
-        Setup for viewing traces with 3 colors, without FRET.
-        """
-
-        self.ax_grn = self.fig.add_subplot(311)  # Green
-        self.ax_alx = self.fig.add_subplot(312)  # ALEX
-        self.ax_blu = self.fig.add_subplot(313)  # Blue
-
-        self.axes = self.ax_blu, self.ax_grn, self.ax_alx
-        self.axes_c = list(zip((self.ax_grn, self.ax_alx, self.ax_blu), ("Green", "Red", "Blue")))
-
-        self.fig.subplots_adjust(hspace=0, left=0.06, right=0.94, top=0.96, bottom=0.04)
-        self.traceOutlineColor()
 
     def setupSinglePlotLayout(self):
         """

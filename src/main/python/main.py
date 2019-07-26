@@ -62,18 +62,18 @@ from mpl_layout import PlotWidget, PolygonSelection
 
 from fbs_runtime.application_context import ApplicationContext
 
-ignore_warnings = {
-    "sklearn__": DeprecationWarning,
-    "numpy__": UserWarning,
-    "scipy.stats": RuntimeWarning,
-    "matplotlib_1": UserWarning,
-    "matplotlib_2": RuntimeWarning,
-}
-
-# Small hack to allow duplicate module keys by removing the last 2 characters of name.
-# This is to not drown in warnings. Can be safely disabled.
-for module, category in ignore_warnings.items():
-    warnings.filterwarnings("ignore", category=category, module=module[:-2])
+# ignore_warnings = {
+#     "sklearn__": DeprecationWarning,
+#     "numpy__": UserWarning,
+#     "scipy.stats": RuntimeWarning,
+#     "matplotlib_1": UserWarning,
+#     "matplotlib_2": RuntimeWarning,
+# }
+#
+# # Small hack to allow duplicate module keys by removing the last 2 characters of name.
+# # This is to not drown in warnings. Can be safely disabled.
+# for module, category in ignore_warnings.items():
+#     warnings.filterwarnings("ignore", category=category, module=module[:-2])
 
 
 class AboutWindow(QDialog):
@@ -120,12 +120,9 @@ class PreferencesWindow(QDialog):
             self.ui.radioButton_dual,
             self.ui.radioButton_2_col,
             self.ui.radioButton_2_col_inv,
-            self.ui.radioButton_3_col,
-            self.ui.radioButton_bypass,
         )
 
-        self.imgModes = "dual", "2-color", "2-color-inv", "3-color", "bypass"
-
+        self.imgModes = "dual", "2-color", "2-color-inv"
         self.boolMaps = {"True": 1, "1": 1, "False": 0, "0": 0}
 
         assert len(self.globalCheckBoxes) == len(gvars.keys_globalCheckBoxes)
@@ -892,71 +889,6 @@ class BaseWindow(QMainWindow):
         other.listModel.appendRow(item)
         other.listView.repaint()
 
-    # def saveSession(self):
-    #     """
-    #     Pickles all traces (not images!) of current session.
-    #     """
-    #     directory = self.getConfig(gvars.key_lastOpenedDir)
-    #     filename, _ = QFileDialog.getSaveFileName(
-    #         self, directory = directory
-    #     )  # type: str, str
-    #
-    #     if filename != "" and not filename.split("/")[-1].endswith(".txt"):
-    #         filename += ".session"
-    #
-    #         # Throw away currentMovie data to reduce size of session
-    #         for mov in MainWindow_.movies.values():
-    #             mov.img = None
-    #
-    #         with bz2.BZ2File(filename, "wb") as f:
-    #             state = (
-    #                 MainWindow_.data,
-    #                 TraceWindow_.traces,
-    #                 TraceWindow_.currName,
-    #             )
-    #             pickle.dump(state, f)
-    #
-    # def loadSession(self):
-    #     """
-    #     Loads pickled session back into the GUI.
-    #     """
-    #     if self.getConfig(gvars.key_lastOpenedDir) == "None":
-    #         directory = os.path.join(
-    #             os.path.join(os.path.expanduser("~")), "Desktop"
-    #         )
-    #     else:
-    #         directory = self.getConfig(gvars.key_lastOpenedDir)
-    #
-    #     filename, selectedFilter = QFileDialog.getOpenFileName(
-    #         self,
-    #         caption = "Open File",
-    #         directory = directory,
-    #         filter = "DeepFRET Session Files (*.session)",
-    #     )
-    #
-    #     if len(filename) > 0:
-    #         with bz2.BZ2File(filename, "rb") as f:
-    #             state = pickle.load(f)
-    #
-    #             MainWindow_.data, TraceWindow_.traces, TraceWindow_.currName = (
-    #                 state
-    #             )
-    #
-    #             for (
-    #                 name
-    #             ) in (
-    #                 TraceWindow_.traces
-    #             ):  # Iterate over all filenames and add to list
-    #                 item = QStandardItem(name)
-    #                 TraceWindow_.listModel.appendRow(item)
-    #                 TraceWindow_.currName = name
-    #                 item.setCheckable(True)
-    #
-    #             TraceWindow_.refreshPlot()
-    #             TraceWindow_.refreshInterface()
-    #             TraceWindow_.selectListViewTopRow()
-    #             TraceWindow_.show()
-
     def openFile(self):
         """Override in subclass."""
         pass
@@ -992,36 +924,17 @@ class BaseWindow(QMainWindow):
             if not path.split("/")[-1].endswith(".txt"):
                 path += ".txt"
 
-            columns = (
-                "blue",
-                "green",
-                "red",
-                "blue/green",
-                "blue/red",
-                "green/red",
-                "all_3",
-                "%",
-                "filename",
-            )
+            columns = ("green", "red", "green/red", "filename")
             d = {c: [] for c in columns}  # type: Dict[str, list]
 
             assert columns[-1] == "filename"
 
             for name, mov in MainWindow_.movies.items():
-                try:
-                    coloc_frac = np.round(mov.coloc_frac, 2)
-                except TypeError:
-                    coloc_frac = np.nan
 
                 data = (
-                    mov.blu.n_spots,
                     mov.grn.n_spots,
                     mov.red.n_spots,
-                    mov.coloc_blu_grn.n_spots,
-                    mov.coloc_blu_red.n_spots,
                     mov.coloc_grn_red.n_spots,
-                    mov.coloc_all.n_spots,
-                    coloc_frac,
                     name,
                 )
 
@@ -1100,7 +1013,7 @@ class BaseWindow(QMainWindow):
 
                 mov_txt = "Movie filename: {}".format(trace.movie)
                 id_txt = "FRET pair #{}".format(trace.n)
-                bl_txt = "Donor bleaches at: {} - Acceptor bleaches at: {}".format(
+                bl_txt = "Donor get_bleaches at: {} - Acceptor get_bleaches at: {}".format(
                     trace.grn.bleach, trace.red.bleach
                 )
 
@@ -1349,10 +1262,6 @@ class MainWindow(BaseWindow):
 
         # Spot counter labels
         self.labels = (
-            # self.ui.labelColocBlueGreenSpots,
-            # self.ui.labelColocBlueRedSpots,
-            # self.ui.labelColocAllSpots,
-            # self.ui.labelBlueSpots,
             self.ui.labelColocGreenRedSpots,
             self.ui.labelGreenSpots,
             self.ui.labelRedSpots,
@@ -1366,15 +1275,8 @@ class MainWindow(BaseWindow):
         self.setupSplitter(layout=self.ui.LayoutBox)
 
         # Spinbox triggers
-        self.spinBoxes = (
-            # self.ui.spotsBluSpinBox,
-            self.ui.spotsGrnSpinBox,
-            self.ui.spotsRedSpinBox,
-        )
+        self.spinBoxes = (self.ui.spotsGrnSpinBox, self.ui.spotsRedSpinBox)
 
-        # self.ui.spotsBluSpinBox.valueChanged.connect(
-        #     partial(self.displaySpotsSingle, "blue")
-        # )
         self.ui.spotsGrnSpinBox.valueChanged.connect(
             partial(self.displaySpotsSingle, "green")
         )
@@ -1384,22 +1286,15 @@ class MainWindow(BaseWindow):
 
         # Contrast boxes
         self.contrastBoxesLo = (
-            # self.ui.contrastBoxLoBlue,
             self.ui.contrastBoxLoGreen,
             self.ui.contrastBoxLoRed,
         )
         self.contrastBoxesHi = (
-            # self.ui.contrastBoxHiBlue,
             self.ui.contrastBoxHiGreen,
             self.ui.contrastBoxHiRed,
         )
         for contrastBox in self.contrastBoxesLo + self.contrastBoxesHi:
             contrastBox.valueChanged.connect(self.refreshPlot)
-
-        # Contrast box initial values
-        # self.ui.contrastBoxHiBlue.setValue(
-        #     self.getConfig(gvars.key_contrastBoxHiBluVal)
-        # )
         self.ui.contrastBoxHiGreen.setValue(
             self.getConfig(gvars.key_contrastBoxHiGrnVal)
         )
@@ -1409,10 +1304,6 @@ class MainWindow(BaseWindow):
 
         # Initialize DataHolder class
         self.data = MovieData()
-
-        # Disable some UI based on ax setup
-        # if self.canvas.ax_setup in ("dual", "2-color", "2-color-inv"):
-        #     self.ui.spotsBluSpinBox.setDisabled(True)
 
         self.show()
 
@@ -1438,9 +1329,7 @@ class MainWindow(BaseWindow):
         """
         Shortcut to obtain newTrace channel. See newTrace().
         """
-        if channel == "blue":
-            return self.newTrace(n).blu
-        elif channel == "green":
+        if channel == "green":
             return self.newTrace(n).grn
         elif channel == "red":
             return self.newTrace(n).red
@@ -1481,7 +1370,7 @@ class MainWindow(BaseWindow):
             filenames, selectedFilter = QFileDialog.getOpenFileNames(
                 self,
                 caption="Open File",
-                filter="Tiff currentMovie files (*.tif)",
+                filter="Tiff movie files (*.tif)",
                 directory=directory,
             )
 
@@ -1510,10 +1399,9 @@ class MainWindow(BaseWindow):
                     self.listModel.appendRow(item)
                     self.listView.repaint()  # refresh listView
 
-                    # Update progress bar after loading currentMovie
                     progressbar.increment()
 
-                # Select first currentMovie if loading into an empty listView
+                # Select first movie if loading into an empty listView
                 if self.currRow is None:
                     self.currRow = 0
                     self.selectListViewTopRow()
@@ -1528,7 +1416,7 @@ class MainWindow(BaseWindow):
             self.batchOpen()
 
     def batchOpen(self):
-        """Loads one currentMovie at a time and extracts traces, then clears the currentMovie from memory afterwards"""
+        """Loads one movie at a time and extracts traces, then clears the movie from memory afterwards"""
         # TraceWindow_.traces.clear()
         if self.getConfig(gvars.key_lastOpenedDir) == "None":
             directory = os.path.join(
@@ -1541,7 +1429,7 @@ class MainWindow(BaseWindow):
             self,
             caption="Open File",
             directory=directory,
-            filter="Tiff currentMovie files (*.tif)",
+            filter="Tiff movie files (*.tif)",
         )
 
         if len(filenames) > 0:
@@ -1566,31 +1454,18 @@ class MainWindow(BaseWindow):
                     bg_correction=self.getConfig(gvars.key_illuCorrect),
                 )
 
-                channels = ["blue", "green", "red"]
-                if self.currentMovie().acc.exists:
-                    channels.remove(
-                        "blue"
-                    )  # Can't have blue and FRET at the same time (at least not currently)
-
-                    for c in channels:
-                        self.colocalizeSpotsSingleMovie(
-                            channel=c, find_npairs="auto"
-                        )
-                else:
-                    for c in channels:
-                        self.colocalizeSpotsSingleMovie(
-                            channel=c, find_npairs="spinbox"
-                        )
+                for c in ("green", "red"):
+                    self.colocalizeSpotsSingleMovie(
+                        channel=c, find_npairs="spinbox"
+                    )
 
                 self.getTracesSingleMovie()
-
                 self.currentMovie().img = None
                 for c in self.currentMovie().channels + (
                     self.currentMovie().acc,
                 ):
                     c.raw = None
 
-                # For currentMovie
                 self.listModel.appendRow(QStandardItem(self.currName))
                 self.listView.repaint()
 
@@ -1624,30 +1499,24 @@ class MainWindow(BaseWindow):
 
     def colocalizeSpotsSingleMovie(self, channel, find_npairs="spinbox"):
         """
-        Find and colocalize spots for a single currentMovie (not displayed).
+        Find and colocalize spots for a single movie.
         """
         mov = self.currentMovie()
         tolerance = gvars.roi_coloc_tolerances.get(
             self.getConfig(gvars.key_colocTolerance)
         )
 
-        # if channel == "blue":
-        #     channel = mov.blu
-        #     spinBox = self.ui.spotsBluSpinBox
-        #     pairs = (mov.blu, mov.grn), (mov.blu, mov.red)
-        #     colocs = mov.coloc_blu_grn, mov.coloc_blu_red
-
         if channel == "green":
             channel = mov.grn
             spinBox = self.ui.spotsGrnSpinBox
-            pairs = ((mov.grn, mov.red),)  # (mov.blu, mov.grn),
-            colocs = (mov.coloc_grn_red,)  # mov.coloc_blu_grn,
+            pairs = ((mov.grn, mov.red),)
+            colocs = (mov.coloc_grn_red,)
 
         elif channel == "red":
             channel = mov.red
             spinBox = self.ui.spotsRedSpinBox
-            pairs = ((mov.grn, mov.red),)  # (mov.blu, mov.red)
-            colocs = (mov.coloc_grn_red,)  # mov.coloc_blu_red,
+            pairs = ((mov.grn, mov.red),)
+            colocs = (mov.coloc_grn_red,)
         else:
             raise ValueError("Invalid color")
 
@@ -1706,27 +1575,12 @@ class MainWindow(BaseWindow):
                 )
                 coloc.n_spots = len(coloc.spots)
 
-        if mov.coloc_blu_grn.n_spots > 0 and mov.coloc_grn_red.n_spots > 0:
-            mov.coloc_all.spots = lib.imgdata.colocalize_triple(
-                mov.coloc_blu_grn.spots, mov.coloc_grn_red.spots
-            )
-            mov.coloc_all.n_spots = len(mov.coloc_all.spots.index)
-
-            mov.coloc_frac = lib.imgdata.coloc_fraction(
-                bluegreen=mov.coloc_blu_grn.n_spots,
-                bluered=mov.coloc_blu_red.n_spots,
-                greenred=mov.coloc_grn_red.n_spots,
-                green=mov.grn.n_spots,
-                red=mov.red.n_spots,
-                all=mov.coloc_all.n_spots,
-            )
-        else:
-            mov.coloc_all.spots = mov.coloc_grn_red.spots
-            mov.coloc_all.n_spots = mov.coloc_grn_red.n_spots
+        mov.coloc_all.spots = mov.coloc_grn_red.spots
+        mov.coloc_all.n_spots = mov.coloc_grn_red.n_spots
 
     def displaySpotsSingle(self, channel):
         """
-        Displays colocalized spot for a single currentMovie.
+        Displays colocalized spot for a single movie.
         """
         self.getCurrentListObject()
 
@@ -1743,7 +1597,7 @@ class MainWindow(BaseWindow):
         )
         for name in self.data.movies.keys():
             self.currName = name
-            for c in "blue", "green", "red":
+            for c in "green", "red":
                 self.colocalizeSpotsSingleMovie(c)
             progressbar.increment()
 
@@ -1752,7 +1606,7 @@ class MainWindow(BaseWindow):
 
     def getTracesSingleMovie(self):
         """
-        Gets traces from colocalized ROIs, for a single currentMovie.
+        Gets traces from colocalized ROIs, for a single movie.
         """
         if self.currName is not None:
             mov = self.currentMovie()
@@ -1760,42 +1614,16 @@ class MainWindow(BaseWindow):
             # Clear all traces previously held traces whenever this is called
             mov.traces = {}
 
-            if (
-                mov.coloc_blu_grn.spots is not None
-                and mov.coloc_grn_red.spots is not None
-            ):
-                mov.coloc_all.spots = lib.imgdata.colocalize_triple(
-                    mov.coloc_blu_grn.spots, mov.coloc_grn_red.spots
-                )
-            elif mov.acc.exists:
-                mov.coloc_all.spots = mov.coloc_grn_red.spots
-            else:
-                mov.coloc_all.spots = mov.coloc_blu_red.spots
+            mov.coloc_all.spots = mov.coloc_grn_red.spots
 
             if mov.coloc_all.spots is None:
-                for c in "blue", "green", "red":
+                for c in "green", "red":
                     self.colocalizeSpotsSingleMovie(c)
             else:
                 for n, *row in mov.coloc_all.spots.itertuples():
-                    if len(row) == 6:
-                        yx_blu, yx_grn, yx_red = lib.misc.pairwise(row)
-                    elif mov.acc.exists:
-                        yx_grn, yx_red = lib.misc.pairwise(row)
-                        yx_blu = None
-                    else:
-                        yx_blu, yx_red = lib.misc.pairwise(row)
-                        yx_grn = None
+                    yx_grn, yx_red = lib.misc.pairwise(row)
 
                     trace = self.newTrace(n)
-
-                    # Blue
-                    if mov.blu.exists and yx_blu is not None:
-                        masks_blu = lib.imgdata.circle_mask(
-                            yx=yx_blu, indices=mov.indices, **gvars.cmask_p
-                        )
-                        trace.blu.int, trace.blu.bg = lib.imgdata.tiff_stack_intensity(
-                            mov.blu.raw, *masks_blu, raw=True
-                        )
 
                     # Green
                     if mov.grn.exists and yx_grn is not None:
@@ -1819,8 +1647,8 @@ class MainWindow(BaseWindow):
                         trace.acc.int, trace.acc.bg = lib.imgdata.tiff_stack_intensity(
                             mov.acc.raw, *masks_red, raw=True
                         )
-                        trace.fret = lib.math.calc_E(trace.intensities())
-                        trace.stoi = lib.math.calc_S(trace.intensities())
+                        trace.fret = lib.math.calc_E(trace.get_intensities())
+                        trace.stoi = lib.math.calc_S(trace.get_intensities())
 
                     trace.frames = np.arange(1, len(trace.red.int) + 1)
                     trace.frames_max = max(trace.frames)
@@ -1831,7 +1659,7 @@ class MainWindow(BaseWindow):
         """
         for name in self.data.movies.keys():
             self.currName = name
-            for c in "green", "red":  # blue
+            for c in "green", "red":
                 self.colocalizeSpotsSingleMovie(c)
             self.getTracesSingleMovie()
 
@@ -1902,17 +1730,14 @@ class MainWindow(BaseWindow):
                 )
             else:
                 contrast_lo = (
-                    # self.ui.contrastBoxLoBlue,
                     self.ui.contrastBoxLoGreen,
                     self.ui.contrastBoxLoRed,
                 )
                 contrast_hi = (
-                    # self.ui.contrastBoxHiBlue,
                     self.ui.contrastBoxHiGreen,
                     self.ui.contrastBoxHiRed,
                 )
                 keys = (
-                    # gvars.key_contrastBoxHiBluVal,
                     gvars.key_contrastBoxHiGrnVal,
                     gvars.key_contrastBoxHiRedVal,
                 )
@@ -1947,11 +1772,7 @@ class MainWindow(BaseWindow):
 
             # Blended channels
             if len(self.canvas.axes_blend) == 3:
-                pairs = (
-                    (mov.blu, mov.grn),
-                    (mov.blu, mov.red),
-                    (mov.grn, mov.red),
-                )
+                pairs = ((mov.grn, mov.red),)
             else:
                 pairs = ((mov.grn, mov.red),)
 
@@ -1970,17 +1791,6 @@ class MainWindow(BaseWindow):
             for ax in self.canvas.axes_all:
                 ax.set_xticks(())
                 ax.set_yticks(())
-
-            # Blue spots
-            # if (
-            #     mov.blu.n_spots > 0
-            # ):  # and self.interface.spotsBluSpinBox.value() > 0:
-            #     lib.plotting.plot_rois(
-            #         mov.blu.spots,
-            #         self.canvas.ax_blu,
-            #         color=gvars.color_white,
-            #         radius=roi_radius,
-            #     )
 
             # Green spots
             if (
@@ -2005,9 +1815,7 @@ class MainWindow(BaseWindow):
                 )
 
             # Colocalized spots
-            if (
-                mov.coloc_grn_red.spots is not None
-            ):  # and self.interface.spotsGrnSpinBox.value() > 0 and self.interface.spotsRedSpinBox.value() > 0:
+            if mov.coloc_grn_red.spots is not None:
                 lib.plotting.plot_roi_coloc(
                     mov.coloc_grn_red.spots,
                     img_ax=self.canvas.ax_grn_red,
@@ -2015,33 +1823,6 @@ class MainWindow(BaseWindow):
                     color2=gvars.color_red,
                     radius=roi_radius,
                 )
-
-            if (
-                self.imgMode == "3-color"
-                and mov.blu.exists
-                or self.imgMode == "bypass"
-            ):
-                if (
-                    mov.coloc_blu_grn.spots is not None
-                ):  # and self.interface.spotsBluSpinBox.value() > 0 and self.interface.spotsGrnSpinBox.value() > 0:
-                    lib.plotting.plot_roi_coloc(
-                        mov.coloc_blu_grn.spots,
-                        img_ax=self.canvas.ax_blu_grn,
-                        color1=gvars.color_blue,
-                        color2=gvars.color_green,
-                        radius=roi_radius,
-                    )
-
-                if (
-                    mov.coloc_blu_red.spots is not None
-                ):  # and self.interface.spotsBluSpinBox.value() > 0 and self.interface.spotsRedSpinBox.value() > 0:
-                    lib.plotting.plot_roi_coloc(
-                        mov.coloc_blu_red.spots,
-                        img_ax=self.canvas.ax_blu_red,
-                        color1=gvars.color_blue,
-                        color2=gvars.color_red,
-                        radius=roi_radius,
-                    )
 
         else:
             for ax in self.canvas.axes_all:
@@ -2057,38 +1838,16 @@ class MainWindow(BaseWindow):
         if self.currName is not None:
             mov = self.currentMovie()
 
-            # if mov.coloc_frac is not None:
-            #     self.ui.labelColocFractionVal.setText(
-            #         "{:.1f}".format(mov.coloc_frac)
-            #     )
-            # else:
-            #     self.ui.labelColocFractionVal.setText(str("-"))
-
-            channels = (
-                # mov.coloc_blu_grn,
-                # mov.coloc_blu_red,
-                mov.coloc_grn_red,
-                # mov.coloc_all,
-                # mov.blu,
-                mov.grn,
-                mov.red,
-            )
+            channels = (mov.coloc_grn_red, mov.grn, mov.red)
 
             for channel, label in zip(channels, self.labels):
                 label.setText(str(channel.n_spots))
 
-            # self.ui.spotsBluSpinBox.setDisabled(not mov.blu.exists)
             self.ui.spotsGrnSpinBox.setDisabled(not mov.grn.exists)
             self.ui.spotsRedSpinBox.setDisabled(not mov.red.exists)
 
             if self.batchLoaded:
-                self.disableSpinBoxes(
-                    (
-                        # "blue",
-                        "green",
-                        "red",
-                    )
-                )
+                self.disableSpinBoxes(("green", "red"))
 
         else:
             for label in self.labels:
@@ -2129,7 +1888,7 @@ class MainWindow(BaseWindow):
 
     def newTraceFromContainer(self, trace, n):
         """
-        Creates an empty currentMovie object to load traces into by transplanting a list of loaded TraceContainers
+        Creates an empty movie object to load traces into by transplanting a list of loaded TraceContainers
         """
         tracename = self.currName + "_" + str(n)
 
@@ -2147,10 +1906,6 @@ class MainWindow(BaseWindow):
         if "red" in channel:
             self.ui.spotsRedSpinBox.setDisabled(True)
             self.ui.spotsRedSpinBox.repaint()
-
-        # if "blue" in channel:
-        #     self.ui.spotsBluSpinBox.setDisabled(True)
-        #     self.ui.spotsBluSpinBox.repaint()
 
         if "green" in channel:
             self.ui.spotsGrnSpinBox.setDisabled(True)
@@ -2335,7 +2090,7 @@ class TraceWindow(BaseWindow):
 
             bleaching = lib.misc.seek_line(
                 path=full_filename,
-                line_starts=("Donor bleaches at", "Bleaches at"),
+                line_starts=("Donor get_bleaches at", "Bleaches at"),
             )
 
         except AttributeError:
@@ -2393,8 +2148,8 @@ class TraceWindow(BaseWindow):
                 trace.acc.bg = zeros
                 trace.red.bg = zeros
 
-        trace.fret = lib.math.calc_E(trace.intensities())
-        trace.stoi = lib.math.calc_S(trace.intensities())
+        trace.fret = lib.math.calc_E(trace.get_intensities())
+        trace.stoi = lib.math.calc_S(trace.get_intensities())
 
         trace.frames = np.arange(1, len(trace.grn.int) + 1, 1)
         trace.frames_max = trace.frames.max()
@@ -2448,9 +2203,9 @@ class TraceWindow(BaseWindow):
         if self.currName is not None and len(self.data.traces) > 0:
             trace = self.currentTrace()
             F_DA, I_DD, I_DA, I_AA = lib.math.correct_DA(
-                trace.intensities(), alpha=alpha, delta=delta
+                trace.get_intensities(), alpha=alpha, delta=delta
             )
-            fret = lib.math.calc_E(trace.intensities(), alpha, delta)
+            fret = lib.math.calc_E(trace.get_intensities(), alpha, delta)
             X = np.column_stack((I_DD, F_DA))
             X = sklearn.preprocessing.robust_scale(X)
 
@@ -2540,7 +2295,7 @@ class TraceWindow(BaseWindow):
                 X = np.array(
                     [
                         lib.math.correct_DA(
-                            trace.intensities(), alpha=alpha, delta=delta
+                            trace.get_intensities(), alpha=alpha, delta=delta
                         )
                         for trace in traces
                     ]
@@ -2558,7 +2313,7 @@ class TraceWindow(BaseWindow):
                 for n, trace in enumerate(traces):
                     xi = np.column_stack(
                         lib.math.correct_DA(
-                            trace.intensities(), alpha=alpha, delta=delta
+                            trace.get_intensities(), alpha=alpha, delta=delta
                         )
                     )
                     xi = lib.math.sample_max_normalize_3d(xi[:, 1:])
@@ -2618,7 +2373,7 @@ class TraceWindow(BaseWindow):
                             self.currentTrace().acc.bleach = clickedx
 
                         self.currentTrace().first_bleach = lib.math.min_real(
-                            self.currentTrace().bleaches()
+                            self.currentTrace().get_bleaches()
                         )
                         self.currentTrace().hmm = None
                         self.refreshPlot()
@@ -2872,7 +2627,7 @@ class TraceWindow(BaseWindow):
             delta = self.getConfig(gvars.key_deltaFactor)
             factors = alpha, delta
             F_DA, I_DD, I_DA, I_AA = lib.math.correct_DA(
-                trace.intensities(), *factors
+                trace.get_intensities(), *factors
             )
             zeros = np.zeros(len(F_DA))
 
@@ -2892,17 +2647,10 @@ class TraceWindow(BaseWindow):
             ):
                 channels = [trace.grn, trace.acc, trace.red]
                 colors = [gvars.color_green, gvars.color_red, gvars.color_red]
-                if self.canvas.ax_setup == "3-color":
-                    if trace.blu.int is not None:
-                        channels += trace.blu
-                        colors += gvars.color_blue
-                    else:
-                        self.canvas.ax_blu.set_yticks([])
-                        self.canvas.ax_blu.set_ylabel("Blue")
 
             elif self.canvas.ax_setup == "bypass":
-                channels = trace.grn, trace.red, trace.blu
-                colors = gvars.color_green, gvars.color_red, gvars.color_blue
+                channels = trace.grn, trace.red
+                colors = gvars.color_green, gvars.color_red
             else:
                 raise ValueError("Setup is not valid. Corrupted config.ini?")
 
@@ -2963,8 +2711,8 @@ class TraceWindow(BaseWindow):
 
             # Continue drawing FRET specifics
             if self.canvas.ax_setup != "bypass":
-                fret = lib.math.calc_E(trace.intensities(), *factors)
-                stoi = lib.math.calc_S(trace.intensities(), *factors)
+                fret = lib.math.calc_E(trace.get_intensities(), *factors)
+                stoi = lib.math.calc_S(trace.get_intensities(), *factors)
 
                 ax_E = self.canvas.ax_fret
                 ax_S = self.canvas.ax_stoi
@@ -3147,8 +2895,8 @@ class HistogramWindow(BaseWindow):
         E_app, S_app = [], []
         for trace in checkedTraces:
             E, S = lib.math.drop_bleached_frames(
-                intensities=trace.intensities(),
-                bleaches=trace.bleaches(),
+                intensities=trace.get_intensities(),
+                bleaches=trace.get_bleaches(),
                 alpha=alpha,
                 delta=delta,
                 max_frames=n_first_frames,
@@ -3164,8 +2912,8 @@ class HistogramWindow(BaseWindow):
             E_real, S_real, = [], []
             for trace in checkedTraces:
                 E, S = lib.math.drop_bleached_frames(
-                    intensities=trace.intensities(),
-                    bleaches=trace.bleaches(),
+                    intensities=trace.get_intensities(),
+                    bleaches=trace.get_bleaches(),
                     alpha=alpha,
                     delta=delta,
                     beta=beta,

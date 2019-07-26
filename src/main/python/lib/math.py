@@ -125,7 +125,7 @@ def drop_bleached_frames(
 def alpha_factor(DD, DA):
     """
     Alpha factor for donor-only population.
-    Use the donor and acceptor intensities minus background.
+    Use the donor and acceptor get_intensities minus background.
     """
     E_app = DA / (DD + DA)
     alpha = np.median(E_app / (1 - E_app))
@@ -135,7 +135,7 @@ def alpha_factor(DD, DA):
 def delta_factor(DD, DA, AA):
     """
     Delta factor for acceptor-only population.
-    Use the donor and acceptor intensities minus background.
+    Use the donor and acceptor get_intensities minus background.
     """
     S_app = (DD + DA) / (DD + DA + AA)
     delta = np.median(S_app / (1 - S_app))

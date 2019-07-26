@@ -162,13 +162,6 @@
       <property name="topMargin">
        <number>12</number>
       </property>
-      <item row="3" column="0">
-       <widget class="QRadioButton" name="radioButton_3_col">
-        <property name="text">
-         <string>QV 3-color - Blue &gt; FRET (A/D) &gt; Red (direct)</string>
-        </property>
-       </widget>
-      </item>
       <item row="2" column="0">
        <widget class="QRadioButton" name="radioButton_2_col_inv">
         <property name="text">
@@ -180,13 +173,6 @@
        <widget class="QRadioButton" name="radioButton_2_col">
         <property name="text">
          <string>QV 2-color - FRET (A/D) &gt; Red (direct)</string>
-        </property>
-       </widget>
-      </item>
-      <item row="4" column="0">
-       <widget class="QRadioButton" name="radioButton_bypass">
-        <property name="text">
-         <string>QV bypass - Blue &gt; Green &gt; Red</string>
         </property>
        </widget>
       </item>

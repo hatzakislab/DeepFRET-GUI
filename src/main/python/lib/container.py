@@ -24,36 +24,28 @@ class ImageContainer:
         self.height = None  # type: Union[None, int]
         self.roi_radius = None  # type: Union[None, int]
         self.channels = None  # type: Union[None, T[ImageChannel]]
-        self.coloc_frac = None  # type: float
+        self.coloc_frac = None  # type: Union[None, float]
 
         # Image color channels
-        self.blu = ImageChannel("blue")
         self.grn = ImageChannel("green")
         self.red = ImageChannel("red")
         self.acc = ImageChannel("red")
 
         # Colocalized channels
-        self.coloc_blu_grn = ColocalizedParticles("blue", "green")
         self.coloc_grn_red = ColocalizedParticles("green", "red")
-        self.coloc_blu_red = ColocalizedParticles("blue", "red")
         self.coloc_all = ColocalizedAll()
 
         # Blended channels
         self.grn_red_blend = None  # type: Union[None, np.ndarray]
-        self.blu_grn_blend = None  # type: Union[None, np.ndarray]
-        self.blu_red_blend = None  # type: Union[None, np.ndarray]
 
         # Create a class to store traces and associated information for every image name
         self.traces = {}
 
         # To iterate over all channels
         self.all = (
-            self.blu,
             self.grn,
             self.red,
-            self.coloc_blu_grn,
             self.coloc_grn_red,
-            self.coloc_blu_red,
             self.coloc_all,
         )
 
@@ -65,11 +57,11 @@ class ImageChannel:
 
     def __init__(self, color):
 
-        if color == "blue":
-            cmap = LinearSegmentedColormap.from_list(
-                "", ["black", gvars.color_blue]
-            )
-        elif color == "green":
+        # if color == "blue":
+        #     cmap = LinearSegmentedColormap.from_list(
+        #         "", ["black", gvars.color_blue]
+        #     )
+        if color == "green":
             cmap = LinearSegmentedColormap.from_list(
                 "", ["black", gvars.color_green]
             )
@@ -79,7 +71,7 @@ class ImageChannel:
             )
         else:
             raise ValueError(
-                "Invalid color. Available options are 'blue', 'green' or 'red'."
+                "Invalid color. Available options are 'green' or 'red'."
             )
 
         self.exists = True  # type: bool
@@ -139,7 +131,7 @@ class TraceContainer:
         self.is_checked = False  # type: bool
         self.xdata = []  # type: [int, int]
 
-        self.blu = TraceChannel("blue")
+        # self.blu = TraceChannel("blue")
         self.grn = TraceChannel("green")
         self.red = TraceChannel("red")
         self.acc = TraceChannel("red")
@@ -161,11 +153,11 @@ class TraceContainer:
         self.frames = None  # type: Union[None, int]
         self.frames_max = None  # type: Union[None, int]
 
-        self.channels = self.blu, self.grn, self.red, self.acc
+        self.channels = self.grn, self.red, self.acc
 
-    def intensities(self):
+    def get_intensities(self):
         """
-        Convenience function to return trace intensities
+        Convenience function to return trace get_intensities
         """
         grn_int = self.grn.int  # type: Union[None, np.ndarray]
         grn_bg = self.grn.bg  # type: Union[None, np.ndarray]
@@ -176,7 +168,7 @@ class TraceContainer:
 
         return grn_int, grn_bg, acc_int, acc_bg, red_int, red_bg
 
-    def bleaches(self):
+    def get_bleaches(self):
         """
         Convenience function to return trace bleaching times
         """
@@ -197,13 +189,13 @@ class MovieData:
         self.currName = None
 
     def get(self, name) -> ImageContainer:
-        """Shortcut to return the metadata of selected currentMovie."""
+        """Shortcut to return the metadata of selected movie."""
         if self.currName is not None:
             return self.movies[name]
 
     def _data(self) -> ImageContainer:
         """
-        Shortcut for returning the metadata of currentMovie currently being loaded, for internal use.
+        Shortcut for returning the metadata of movie currently being loaded, for internal use.
         Frontend should use get() instead
         """
         if self.currName is not None:
@@ -211,7 +203,7 @@ class MovieData:
 
     def load_img(self, path, name, setup, bg_correction):
         """
-        Loads currentMovie and extracts all parameters depending on the number of channels
+        Loads movie and extracts all parameters depending on the number of channels
 
         Parameters
         ----------
@@ -258,25 +250,23 @@ class MovieData:
             ]  # Green (Dexc-Dem)
 
             self._data().channels = self._data().grn, self._data().red
-            self._data().blu.exists = False
 
         elif setup == "2-color" or setup == "3-color":
             top, btm, lft, rgt = imgdata.image_quadrants(
                 height=self._data().height, width=self._data().width
             )
 
-            # for snapshots, channels ordered (blue, green, red channels)
             if (
                 self._data().img.shape[3] == 3
                 and self._data().img.shape[0] < 99
             ):
-                self._data().blu.raw = self._data().img[:, btm, lft, 0]
+                # self._data().blu.raw = self._data().img[:, btm, lft, 0]
                 self._data().grn.raw = self._data().img[:, top, lft, 1]
                 self._data().red.raw = self._data().img[:, top, rgt, 2]
                 self._data().acc.raw = self._data().img[:, top, rgt, 1]
 
                 self._data().channels = (
-                    self._data().blu,
+                    # self._data().blu,
                     self._data().grn,
                     self._data().red,
                 )
@@ -286,13 +276,13 @@ class MovieData:
                 self._data().img.shape[3] == 3
                 and self._data().img.shape[0] > 99
             ):
-                self._data().blu.raw = self._data().img[:, btm, lft, 2]
+                # self._data().blu.raw = self._data().img[:, btm, lft, 2]
                 self._data().grn.raw = self._data().img[:, top, lft, 0]
                 self._data().red.raw = self._data().img[:, top, rgt, 1]
                 self._data().acc.raw = self._data().img[:, top, rgt, 0]
 
                 self._data().channels = (
-                    self._data().blu,
+                    # self._data().blu,
                     self._data().grn,
                     self._data().red,
                 )
@@ -305,7 +295,7 @@ class MovieData:
 
                 self._data().channels = self._data().grn, self._data().red
 
-                self._data().blu.exists = False
+                # self._data().blu.exists = False
 
         elif setup == "2-color-inv":
             top, btm, lft, rgt = imgdata.image_quadrants(
@@ -319,7 +309,7 @@ class MovieData:
                 self._data().red.raw = self._data().img[:, btm, lft, 1]
 
                 self._data().channels = self._data().grn, self._data().red
-                self._data().blu.exists = False
+                # self._data().blu.exists = False
 
             else:
                 raise ValueError("Format not supported.")
@@ -328,15 +318,15 @@ class MovieData:
         elif setup == "bypass":
             self._data().grn.raw = self._data().img[:, :, :, 0]
             self._data().red.raw = self._data().img[:, :, :, 1]
-            self._data().blu.raw = self._data().img[:, :, :, 2]
+            # self._data().blu.raw = self._data().img[:, :, :, 2]
 
             self._data().channels = (
-                self._data().blu,
+                # self._data().blu,
                 self._data().grn,
                 self._data().red,
             )
 
-            self._data().blu.exists = True
+            # self._data().blu.exists = True
             self._data().red.exists = True
             self._data().acc.exists = False
 

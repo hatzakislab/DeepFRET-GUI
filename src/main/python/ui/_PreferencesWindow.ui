@@ -165,21 +165,21 @@
       <item row="2" column="0">
        <widget class="QRadioButton" name="radioButton_2_col_inv">
         <property name="text">
-         <string>QV 2-color (inverted) - FRET (A/D) &gt; Red (direct)</string>
+         <string>Quad View (inverted 2-channel)</string>
         </property>
        </widget>
       </item>
       <item row="1" column="0">
        <widget class="QRadioButton" name="radioButton_2_col">
         <property name="text">
-         <string>QV 2-color - FRET (A/D) &gt; Red (direct)</string>
+         <string>Quad Viw (2-channel)</string>
         </property>
        </widget>
       </item>
       <item row="0" column="0">
        <widget class="QRadioButton" name="radioButton_dual">
         <property name="text">
-         <string>DC - FRET (A) &gt; FRET (D) &gt; Red (ALEX) &gt; Blank</string>
+         <string>Dual Cam (interleaved videos)</string>
         </property>
        </widget>
       </item>

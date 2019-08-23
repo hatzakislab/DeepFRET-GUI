@@ -11,6 +11,7 @@ from PyQt5.QtWidgets import *
 import numpy as np
 import pandas as pd
 from lib.misc import timeit
+from matplotlib.gridspec import GridSpec
 
 
 class MatplotlibCanvas(FigureCanvas):
@@ -63,6 +64,8 @@ class MatplotlibCanvas(FigureCanvas):
                 self.setupDoubleAxesPlotLayout()
             elif ax_window == "single":
                 self.setupSinglePlotLayout()
+            elif ax_window == "dynamic":
+                self.setupDynamicGridLayout()
             else:
                 raise ValueError
 
@@ -101,6 +104,15 @@ class MatplotlibCanvas(FigureCanvas):
         self.fig.subplots_adjust(hspace=0, left=0.06, right=0.94, top=0.96, bottom=0.04)
         self.traceOutlineColor()
 
+
+    def setupDynamicGridLayout(self):
+        """
+        Sets up a dynamic grid with post-adjustable number of subplots
+        """
+        self.gs = GridSpec(1, 1)
+        self.fig.add_subplot(self.gs[0])
+        self.axes = self.figure.axes
+        self.fig.subplots_adjust(hspace=0, left=0.1, right=0.90, top=0.90, bottom=0.1)
 
     def setupSinglePlotLayout(self):
         """

@@ -33,7 +33,7 @@ def image_quadrants(height, width):
 
 def image_channels(cmax):
     """
-    Given a currentMovie where images from different channels occur in the sequence
+    Given a movie where images from different channels occur in the sequence
     frame1: c1_1, c2_1, c3_1, c4_1
     frame2: c1_2, c2_2, c3_2, c4_2
     frame3: c1_3, c2_3, c3_3, c4_3

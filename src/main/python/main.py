@@ -23,12 +23,15 @@ matplotlib.use("qt5agg")
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import matplotlib.colors
 import matplotlib.figure
+import matplotlib.gridspec
+import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import time
 import re
 import scipy.stats
 import scipy.signal
+import scipy.optimize
 import warnings
 import sklearn.preprocessing
 import keras.models
@@ -1013,7 +1016,7 @@ class BaseWindow(QMainWindow):
 
                 mov_txt = "Movie filename: {}".format(trace.movie)
                 id_txt = "FRET pair #{}".format(trace.n)
-                bl_txt = "Donor get_bleaches at: {} - Acceptor get_bleaches at: {}".format(
+                bl_txt = "Donor bleaches at: {} - Acceptor bleaches at: {}".format(
                     trace.grn.bleach, trace.red.bleach
                 )
 
@@ -1329,7 +1332,9 @@ class MainWindow(BaseWindow):
         """
         Shortcut to obtain newTrace channel. See newTrace().
         """
-        if channel == "green":
+        if channel == "blue":
+            return self.newTrace(n).blu
+        elif channel == "green":
             return self.newTrace(n).grn
         elif channel == "red":
             return self.newTrace(n).red
@@ -1394,6 +1399,8 @@ class MainWindow(BaseWindow):
                     )
 
                     item = QStandardItem(uniqueName)
+                    item.setCheckable(False)
+
                     self.currName = uniqueName
                     self.currDir = os.path.dirname(full_filename)
                     self.listModel.appendRow(item)
@@ -1454,10 +1461,21 @@ class MainWindow(BaseWindow):
                     bg_correction=self.getConfig(gvars.key_illuCorrect),
                 )
 
-                for c in ("green", "red"):
-                    self.colocalizeSpotsSingleMovie(
-                        channel=c, find_npairs="spinbox"
-                    )
+                channels = ["blue", "green", "red"]
+                if self.currentMovie().acc.exists:
+                    channels.remove(
+                        "blue"
+                    )  # Can't have blue and FRET at the same time (at least not currently)
+
+                    for c in channels:
+                        self.colocalizeSpotsSingleMovie(
+                            channel=c, find_npairs="auto"
+                        )
+                else:
+                    for c in channels:
+                        self.colocalizeSpotsSingleMovie(
+                            channel=c, find_npairs="spinbox"
+                        )
 
                 self.getTracesSingleMovie()
                 self.currentMovie().img = None
@@ -1499,7 +1517,7 @@ class MainWindow(BaseWindow):
 
     def colocalizeSpotsSingleMovie(self, channel, find_npairs="spinbox"):
         """
-        Find and colocalize spots for a single movie.
+        Find and colocalize spots for a single currentMovie (not displayed).
         """
         mov = self.currentMovie()
         tolerance = gvars.roi_coloc_tolerances.get(
@@ -1614,16 +1632,42 @@ class MainWindow(BaseWindow):
             # Clear all traces previously held traces whenever this is called
             mov.traces = {}
 
-            mov.coloc_all.spots = mov.coloc_grn_red.spots
+            if (
+                mov.coloc_blu_grn.spots is not None
+                and mov.coloc_grn_red.spots is not None
+            ):
+                mov.coloc_all.spots = lib.imgdata.colocalize_triple(
+                    mov.coloc_blu_grn.spots, mov.coloc_grn_red.spots
+                )
+            elif mov.acc.exists:
+                mov.coloc_all.spots = mov.coloc_grn_red.spots
+            else:
+                mov.coloc_all.spots = mov.coloc_blu_red.spots
 
             if mov.coloc_all.spots is None:
-                for c in "green", "red":
+                for c in "blue", "green", "red":
                     self.colocalizeSpotsSingleMovie(c)
             else:
                 for n, *row in mov.coloc_all.spots.itertuples():
-                    yx_grn, yx_red = lib.misc.pairwise(row)
+                    # if len(row) == 6:
+                    #     yx_blu, yx_grn, yx_red = lib.misc.pairwise(row)
+                    if mov.acc.exists:
+                        yx_grn, yx_red = lib.misc.pairwise(row)
+                        # yx_blu = None
+                    else:
+                        yx_blu, yx_red = lib.misc.pairwise(row)
+                        yx_grn = None
 
                     trace = self.newTrace(n)
+
+                    # Blue
+                    # if mov.blu.exists and yx_blu is not None:
+                    #     masks_blu = lib.imgdata.circle_mask(
+                    #         yx=yx_blu, indices=mov.indices, **gvars.cmask_p
+                    #     )
+                    #     trace.blu.int, trace.blu.bg = lib.imgdata.tiff_stack_intensity(
+                    #         mov.blu.raw, *masks_blu, raw=True
+                    #     )
 
                     # Green
                     if mov.grn.exists and yx_grn is not None:
@@ -1659,8 +1703,9 @@ class MainWindow(BaseWindow):
         """
         for name in self.data.movies.keys():
             self.currName = name
-            for c in "green", "red":
+            for c in "green", "red":  # blue
                 self.colocalizeSpotsSingleMovie(c)
+
             self.getTracesSingleMovie()
 
         self.resetCurrentName()
@@ -1772,7 +1817,11 @@ class MainWindow(BaseWindow):
 
             # Blended channels
             if len(self.canvas.axes_blend) == 3:
-                pairs = ((mov.grn, mov.red),)
+                pairs = (
+                    (mov.blu, mov.grn),
+                    (mov.blu, mov.red),
+                    (mov.grn, mov.red),
+                )
             else:
                 pairs = ((mov.grn, mov.red),)
 
@@ -1815,7 +1864,9 @@ class MainWindow(BaseWindow):
                 )
 
             # Colocalized spots
-            if mov.coloc_grn_red.spots is not None:
+            if (
+                mov.coloc_grn_red.spots is not None
+            ):  # and self.interface.spotsGrnSpinBox.value() > 0 and self.interface.spotsRedSpinBox.value() > 0:
                 lib.plotting.plot_roi_coloc(
                     mov.coloc_grn_red.spots,
                     img_ax=self.canvas.ax_grn_red,
@@ -1823,6 +1874,33 @@ class MainWindow(BaseWindow):
                     color2=gvars.color_red,
                     radius=roi_radius,
                 )
+
+            if (
+                self.imgMode == "3-color"
+                and mov.blu.exists
+                or self.imgMode == "bypass"
+            ):
+                if (
+                    mov.coloc_blu_grn.spots is not None
+                ):  # and self.interface.spotsBluSpinBox.value() > 0 and self.interface.spotsGrnSpinBox.value() > 0:
+                    lib.plotting.plot_roi_coloc(
+                        mov.coloc_blu_grn.spots,
+                        img_ax=self.canvas.ax_blu_grn,
+                        color1=gvars.color_blue,
+                        color2=gvars.color_green,
+                        radius=roi_radius,
+                    )
+
+                if (
+                    mov.coloc_blu_red.spots is not None
+                ):  # and self.interface.spotsBluSpinBox.value() > 0 and self.interface.spotsRedSpinBox.value() > 0:
+                    lib.plotting.plot_roi_coloc(
+                        mov.coloc_blu_red.spots,
+                        img_ax=self.canvas.ax_blu_red,
+                        color1=gvars.color_blue,
+                        color2=gvars.color_red,
+                        radius=roi_radius,
+                    )
 
         else:
             for ax in self.canvas.axes_all:
@@ -1838,16 +1916,38 @@ class MainWindow(BaseWindow):
         if self.currName is not None:
             mov = self.currentMovie()
 
-            channels = (mov.coloc_grn_red, mov.grn, mov.red)
+            # if mov.coloc_frac is not None:
+            #     self.ui.labelColocFractionVal.setText(
+            #         "{:.1f}".format(mov.coloc_frac)
+            #     )
+            # else:
+            #     self.ui.labelColocFractionVal.setText(str("-"))
+
+            channels = (
+                # mov.coloc_blu_grn,
+                # mov.coloc_blu_red,
+                mov.coloc_grn_red,
+                # mov.coloc_all,
+                # mov.blu,
+                mov.grn,
+                mov.red,
+            )
 
             for channel, label in zip(channels, self.labels):
                 label.setText(str(channel.n_spots))
 
+            # self.ui.spotsBluSpinBox.setDisabled(not mov.blu.exists)
             self.ui.spotsGrnSpinBox.setDisabled(not mov.grn.exists)
             self.ui.spotsRedSpinBox.setDisabled(not mov.red.exists)
 
             if self.batchLoaded:
-                self.disableSpinBoxes(("green", "red"))
+                self.disableSpinBoxes(
+                    (
+                        # "blue",
+                        "green",
+                        "red",
+                    )
+                )
 
         else:
             for label in self.labels:
@@ -1913,7 +2013,8 @@ class MainWindow(BaseWindow):
 
     def _debug(self):
         """Debug for MainWindow."""
-        pass
+        print(self.currName)
+        print(self.data.movies.keys())
 
 
 class TraceWindow(BaseWindow):
@@ -2090,7 +2191,7 @@ class TraceWindow(BaseWindow):
 
             bleaching = lib.misc.seek_line(
                 path=full_filename,
-                line_starts=("Donor get_bleaches at", "Bleaches at"),
+                line_starts=("Donor bleaches at", "Bleaches at"),
             )
 
         except AttributeError:
@@ -2302,8 +2403,13 @@ class TraceWindow(BaseWindow):
                 )  # shape is (n_traces) if traces have uneven length
                 X = np.swapaxes(X, 1, 2)
                 X = lib.math.sample_max_normalize_3d(X[:, :, 1:])
+
+                # Fix single sample dimension
+                if len(X.shape) == 2:
+                    X = X[np.newaxis, :, :]
+
                 Y = lib.math.predict_batch(
-                    X,
+                    X=X,
                     model=model,
                     progressbar=progressbar,
                     batch_size=batch_size,
@@ -2316,8 +2422,8 @@ class TraceWindow(BaseWindow):
                             trace.get_intensities(), alpha=alpha, delta=delta
                         )
                     )
-                    xi = lib.math.sample_max_normalize_3d(xi[:, 1:])
-                    yi = lib.math.predict_single(xi, model=model)
+                    xi = lib.math.sample_max_normalize_3d(X=xi[:, 1:])
+                    yi = lib.math.predict_single(xi=xi, model=model)
                     Y.append(yi)
                     if n % batch_size == 0:
                         progressbar.increment()
@@ -3123,13 +3229,20 @@ class TransitionDensityWindow(BaseWindow):
         self.fret_lifetime = None
         self.n_samples = None
         self.selected_data = None
+        self.tdp_df = None
+        self.colors = "red", "green", "blue", "orange", "purple", "yellow", "cyan", "pink"
         self.data = MainWindow_.data
+
+        # dynamically created once plot is refreshed
+        self.tdp_ax = None
+        self.hist_axes = None
 
         self.ui = Ui_TransitionDensityWindow()
         self.ui.setupUi(self)
+        self.ui.nClustersSpinBox.valueChanged.connect(self.refreshPlot)
 
         self.setupFigureCanvas(
-            ax_setup="plot", ax_window="single", width=1, height=1
+            ax_setup="plot", ax_window="dynamic", width=1, height=1
         )
         self.setupPlot()
 
@@ -3148,42 +3261,48 @@ class TransitionDensityWindow(BaseWindow):
         """
         self.canvas.fig.set_facecolor(gvars.color_gui_bg)
 
-        for spine in self.canvas.ax.spines.values():
-            spine.set_edgecolor(gvars.color_gui_text)
-            spine.set_linewidth(0.5)
+        for ax in self.canvas.axes:
+            ax.tick_params(
+                colors=gvars.color_gui_text,
+                width=0.5,
+                axis="both",
+                which="both",
+                bottom=False,
+                top=False,
+                left=False,
+                right=False,
+            )
 
-        self.canvas.ax.tick_params(
-            colors=gvars.color_gui_text,
-            width=0.5,
-            axis="both",
-            which="both",
-            bottom=False,
-            top=False,
-            left=False,
-            right=False,
-        )
-
-        self.ins_ax = inset_axes(
-            parent_axes=self.canvas.ax, width="25%", height="25%", loc=3
-        )
-
-        for ax in self.canvas.ax, self.ins_ax:
             for spine in ax.spines.values():
                 spine.set_edgecolor(gvars.color_gui_text)
                 spine.set_linewidth(0.5)
 
+    def plotDefaultElementsLeft(self):
+        """
+        Re-plot non-persistent plot settings for left (TDP)
+        """
+        self.tdp_ax.set_xlim(-0.15, 1.15)
+        self.tdp_ax.set_ylim(-0.15, 1.15)
+        self.tdp_ax.set_xlabel(xlabel="E", color=gvars.color_gui_text)
+        self.tdp_ax.set_ylabel(ylabel="E + 1", color=gvars.color_gui_text)
+
+    def plotDefaultElementsRight(self):
+        """
+        Re-plot non-persistent plot settings for right (histograms)
+        """
+        pass
+
     def plotDefaultElements(self):
         """
-        Re-plot non-persistent plot settings (otherwise will be overwritten by ax.clear())
+        Re-plots non-persistent plot settings for all axes
         """
-        self.canvas.ax.set_xlim(-0.15, 1.15)
-        self.canvas.ax.set_ylim(-0.15, 1.15)
-        self.canvas.ax.set_xlabel(xlabel="E", color=gvars.color_gui_text)
-        self.canvas.ax.set_ylabel(ylabel="E + 1", color=gvars.color_gui_text)
+        for ax in self.canvas.axes:
+            ax.set_xticks(())
+            ax.set_yticks(())
 
-        self.ins_ax.set_xticks(())
-        self.ins_ax.set_yticks(())
-        self.ins_ax.patch.set_alpha(0.7)
+            for spine in ax.spines.values():
+                spine.set_edgecolor(gvars.color_gui_text)
+                spine.set_linewidth(0.5)
 
     def setPooledLifetimes(self):
         """
@@ -3203,105 +3322,156 @@ class TransitionDensityWindow(BaseWindow):
             self.fret_lifetime = transitions["lifetime"]
             self.fret_before = transitions["y_before"]
             self.fret_after = transitions["y_after"]
+
         except ValueError:
             self.fret_lifetime = None
             self.fret_before = None
             self.fret_after = None
 
-    def refreshInsetPlot(self):
-        """
-        Refreshes inset plot for TransitionWindow
-        """
-        if self.selected_data is not None:
-            lifetimes = self.selected_data.dropna()["z"]
-            loc, scale = scipy.stats.expon.fit(lifetimes)
-            xpts = np.linspace(min(lifetimes), max(lifetimes), 50)
-            ypts = scipy.stats.expon.pdf(xpts, *(loc, scale))
-            self.ins_ax.clear()
-            self.ins_ax.hist(
-                lifetimes,
-                density=True,
-                bins=20,
-                color="#00948D",
-                label="Lifetime: {:.1f}".format(scale),
-                histtype="stepfilled",
-            )
-            l = self.ins_ax.legend(
-                prop={"size": 9, "weight": "bold"}, frameon=False
-            )
-            self.ins_ax.plot(xpts, ypts, color="red", ls="--")
 
-            for item in l.legendHandles:
-                item.set_visible(False)
-            for text in l.get_texts():
-                text.set_color(gvars.color_gui_text)
-            self.ins_ax.set_zorder(2)
-        else:
-            self.ins_ax.set_zorder(-1)
+    def setClusteredTransitions(self):
+        if self.fret_before is not None:
+            n_clusters = self.ui.nClustersSpinBox.value()
+
+            tdp_df = pd.DataFrame({"E_bf"    : self.fret_before,
+                                   "E_af"    : self.fret_after,
+                                   "lifetime": self.fret_lifetime})
+
+            tdp_df.dropna(inplace = True)
+
+            up_diag = tdp_df[tdp_df["E_bf"] < tdp_df["E_af"]]  # 0
+            lw_diag = tdp_df[tdp_df["E_bf"] > tdp_df["E_af"]]  # 1
+
+            halves = up_diag, lw_diag
+            for n, half in enumerate(halves):
+                m = sklearn.cluster.KMeans(n_clusters = n_clusters)
+                m.fit(half[["E_bf", "E_af"]])
+                half["label"] = m.labels_ + n_clusters * n
+
+            diags = pd.concat(halves)
+            tdp_df["label"] = diags["label"]
+
+            self.tdp_df = tdp_df
+
+    def setupDynamicGridAxes(self):
+        """
+        Sets up dynamic gridspec for changing number of subplots on the fly.
+        Remember to add the axes at the end of plotting
+        """
+
+        n_rows = self.ui.nClustersSpinBox.value()
+
+        # Outer grid
+        self.gs = matplotlib.gridspec.GridSpec(
+            1, 2, wspace=0.1, hspace=0.1
+        )
+
+        # Left grid (1)
+        tdp_subplot = matplotlib.gridspec.GridSpecFromSubplotSpec(
+            nrows=1, ncols=1, subplot_spec=self.gs[0], wspace=0, hspace=0
+        )
+        self.tdp_ax = plt.Subplot(self.canvas.fig, tdp_subplot[0])
+
+        # Right grid (2-column dynamic)
+        n_hists = n_rows * 2
+        hist_subplots = matplotlib.gridspec.GridSpecFromSubplotSpec(
+            nrows=n_rows,
+            ncols=2,
+            subplot_spec=self.gs[1],
+            wspace=0,
+            hspace=0,
+        )
+        self.hist_axes = [
+            plt.Subplot(self.canvas.fig, hist_subplots[n])
+            for n in range(n_hists)
+        ]
+        self.canvas.axes = self.hist_axes + [self.tdp_ax]
+
+    def plotTransitionDensity(self, params):
+        """
+        Plots TDP contents
+        """
+        bandwidth, resolution, n_colors, overlay_pts, pts_alpha = params
+
+        self.tdp_ax.plot([-1, 2], [-1, 2], color = "lightgrey", ls = "--")
+        if self.fret_before is not None and len(self.fret_before) > 0:
+            cont = lib.math.contour_2d(
+                xdata = self.fret_before,
+                ydata = self.fret_after,
+                bandwidth = bandwidth / 200,
+                resolution = resolution,
+                kernel = "linear",
+                n_colors = n_colors,
+            )
+            self.tdp_ax.contourf(*cont, cmap = "viridis")
+            self.tdp_ax.text(
+                x = 0,
+                y = 0.9,
+                s = "N = {}\n({} transitions)".format(
+                    self.n_samples, len(self.fret_lifetime)
+                ),
+                color = gvars.color_gui_text,
+            )
+
+            for i, cluster in self.tdp_df.groupby("label"):
+                xi = self.tdp_df["E_bf"][self.tdp_df["label"] == i]
+                yi = self.tdp_df["E_af"][self.tdp_df["label"] == i]
+
+                self.tdp_ax.scatter(
+                    x = xi,
+                    y = yi,
+                    s = 20,
+                    color = self.colors[i],
+                    edgecolor = "black",
+                    alpha = pts_alpha / 20 if overlay_pts else 0,
+                )
+
+            self.canvas.fig.add_subplot(self.tdp_ax)
+
+    def plotHistograms(self):
+        """
+        Plots histogram contents
+        """
+        if self.fret_before is not None:
+            bins = np.arange(0, np.max(self.fret_lifetime), 1)
+            xpts = np.linspace(0, np.max(self.fret_lifetime) + 1, 50)
+
+            for i, cluster in self.tdp_df.groupby("label"):
+                hx, hy, _, norm_c = lib.math.histpoints_w_err(cluster["lifetime"], bins = bins, normalized = False, least_count = 1)
+                popt, pcov = scipy.optimize.curve_fit(lib.math.single_exp_fit, xdata = hx, ydata = hy)
+                self.hist_axes[i].hist(cluster["lifetime"], bins = bins, color = self.colors[i], density = True)
+                self.hist_axes[i].plot(xpts, lib.math.single_exp_fit(xpts, *popt), "-", color = "black")
+
+            for ax in self.hist_axes:
+                self.canvas.fig.add_subplot(ax)
+
 
     def refreshPlot(self):
         """
         Refreshes plot for TransitionWindow
         """
-        self.canvas.ax.clear()
+        self.canvas.fig.clear()
+        self.setupDynamicGridAxes()
 
         try:
-            self.refreshInsetPlot()
             self.setPooledLifetimes()
 
             params = self.inspector.returnInspectorValues()
-            bandwidth, resolution, n_colors, overlay_pts, pts_alpha = params
             self.inspector.setInspectorConfigs(params)
 
-            if self.fret_before is not None and len(self.fret_before) > 0:
-                cont = lib.math.contour_2d(
-                    xdata=self.fret_before,
-                    ydata=self.fret_after,
-                    bandwidth=bandwidth / 200,
-                    resolution=resolution,
-                    kernel="linear",
-                    n_colors=n_colors,
-                )
-                self.canvas.ax.contourf(*cont, cmap="viridis")
-                self.canvas.ax.text(
-                    x=0,
-                    y=0.9,
-                    s="N = {}\n({} transitions)".format(
-                        self.n_samples, len(self.fret_lifetime)
-                    ),
-                    color=gvars.color_gui_text,
-                )
+            self.setClusteredTransitions()
+            self.plotTransitionDensity(params)
+            self.plotHistograms()
 
-                if overlay_pts:
-                    alpha = pts_alpha / 20
-                else:
-                    alpha = 0
-                pts = self.canvas.ax.scatter(
-                    self.fret_before,
-                    self.fret_after,
-                    s=20,
-                    color="black",
-                    alpha=alpha,
-                )
-                self.selector = PolygonSelection(
-                    ax=self.canvas.ax,
-                    collection=pts,
-                    z=self.fret_lifetime,
-                    parent=TransitionDensityWindow_,
-                )
-
+            # Adjust defaults
+            self.plotDefaultElementsLeft()
+            self.plotDefaultElementsRight()
             self.plotDefaultElements()
+
             self.canvas.draw()
 
-        except (AttributeError, ValueError):
+        except AttributeError:
             pass
-
-    def keyPressEvent(self, event):
-        """Press esc to refresh plot and reset the polygon selection tool"""
-        key = event.key()
-        if key == Qt.Key_Escape:
-            self.selected_data = None
-            self.refreshPlot()
 
     def showEvent(self, QShowEvent):
         """
@@ -3317,7 +3487,7 @@ class TransitionDensityWindow(BaseWindow):
         )
 
     def _debug(self):
-        pass
+        self.refreshPlot()
 
 
 class DensityWindowInspector(SheetInspector):

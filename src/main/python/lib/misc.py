@@ -31,6 +31,12 @@ def all_nonetype(ls):
     """Returns True if all values in iterable are None"""
     return all(v is None for v in ls)
 
+def merge_tuples(*t):
+    """
+    Merges any number of tuples into one flattened
+    """
+    return tuple(j for i in (t) for j in (i if isinstance(i, tuple) else (i,)))
+
 
 def timeit(method):
     """Decorator to time functions and methods for optimization"""

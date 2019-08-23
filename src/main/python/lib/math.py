@@ -19,6 +19,13 @@ import sklearn.cluster
 import sklearn.mixture
 import hmmlearn.hmm
 
+pd.options.mode.chained_assignment = None  # default='warn'
+
+def single_exp_fit(x, scale):
+    """
+    Single exponential fit.
+    """
+    return scipy.stats.expon.pdf(x, loc = 0, scale = scale)
 
 def leastsq_line(x: np.ndarray, y: np.ndarray) -> Tuple[float, float]:
     """
@@ -31,7 +38,7 @@ def leastsq_line(x: np.ndarray, y: np.ndarray) -> Tuple[float, float]:
 
 def correct_DA(intensities, alpha=0, delta=0):
     """
-    Calculates corrected Dexc-Aem intensity, for use in E and S calculations
+    Calculates corrected Dexc-Aem intensity, for use in E and S calculations.
     """
     grn_int, grn_bg, acc_int, acc_bg, red_int, red_bg = intensities
 
@@ -182,10 +189,6 @@ def fit_hmm(X, y, n_components_max=3, bic_tol=20):
         Observed y, e.g. FRET
     bic_tol:
         Heuristic tolerance value for BIC to prevent overfitting. Increase to punish overfitting more.
-    exclude_endpoint_transitions:
-        Whether to calculate lifetimes for first and last transition
-        Normally not done, because the transitions are artificially shortened
-        by the observation window
 
     Returns
     -------
@@ -352,14 +355,22 @@ def seq_probabilities(yi, skip_threshold=0.5, skip_column=0):
     """
     assert len(yi.shape) == 2
 
-    p = yi[yi[:, skip_column] < skip_threshold]  # Discard rows above threshold
+    # Discard frames where bleaching (column 0) is above threshold (0.5)
+    p = yi[yi[:, skip_column] < skip_threshold]
     if len(p) > 0:
-        p = p.sum(axis=0) / len(p)  # Sum rows for each class
-        p = p / p.sum()  # Normalize probabilities to 1
+        # Sum frame values for each class
+        p = p.sum(axis=0) / len(p)
+
+        # Normalize to 1
+        p = p / p.sum()
+
+        # don't ignore bleached frames entirely,
+        # as it's easier to deal with a tiny number of edge cases
         # p[skip_column] = 0
     else:
         p = np.zeros(yi.shape[1])
 
+    # sum static and dynamic smFRET scores (they shouldn't compete)
     confidence = p[[2, 3]].sum()
     return p, confidence
 
@@ -555,3 +566,49 @@ def estimate_bw(n, d, factor):
     Optimal smoothing bandwidth
     """
     return ((n * (d + 2) / 4.0) ** (-1.0 / (d + 4))) * factor ** 2
+
+
+def histpoints_w_err(data, bins, normalized, remove_empty_bins = True, least_count = 5):
+    """
+    Converts unbinned data to x,y-curvefitable points with Poisson errors.
+
+    Parameters
+    ----------
+    data:
+        Unbinned input data
+    bins:
+        Number of bins, or defined bins
+    normalized:
+        Whether to normalize histogram (use normalization factor for plots)
+    remove_empty_bins:
+        Whether to remove bins with less than a certain number of counts,
+        to assume roughly gaussian errors on points (default 5)
+    least_count:
+        See above. Default is 5, according to theory
+
+    Returns
+    -------
+    x, y, y-error points and normalization constant
+
+    """
+    counts, bin_edges = np.histogram(data, bins = bins, density = normalized)
+    bin_centers = (bin_edges[1:] + bin_edges[:-1]) / 2
+    bin_err = np.sqrt(counts)
+
+    # Get the normalization constant
+    unnorm_counts, bin_edges = np.histogram(data, bins = bins, density = False)
+
+    # Generate fitting points
+    if remove_empty_bins:
+        true_counts, _ = np.histogram(data, bins,
+                                      density = False)  # regardless of normalization, get actual counts per bin
+        x = bin_centers[true_counts >= int(
+            least_count)]  # filter along counts, to remove any value in the same position as an empty bin
+        y = counts[true_counts >= int(least_count)]
+        sy = bin_err[true_counts >= int(least_count)]
+    else:
+        x, y, sy = bin_centers, counts, bin_err
+
+    norm_const = np.sum(unnorm_counts * (bin_edges[1] - bin_edges[0]))
+
+    return x, y, sy, norm_const

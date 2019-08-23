@@ -27,11 +27,15 @@ class ImageContainer:
         self.coloc_frac = None  # type: Union[None, float]
 
         # Image color channels
+        self.blu = ImageChannel("blue")
         self.grn = ImageChannel("green")
         self.red = ImageChannel("red")
         self.acc = ImageChannel("red")
 
         # Colocalized channels
+        self.coloc_blu_grn = ColocalizedParticles("blue", "green")
+        self.coloc_blu_red = ColocalizedParticles("blue", "red")
+
         self.coloc_grn_red = ColocalizedParticles("green", "red")
         self.coloc_all = ColocalizedAll()
 
@@ -57,11 +61,11 @@ class ImageChannel:
 
     def __init__(self, color):
 
-        # if color == "blue":
-        #     cmap = LinearSegmentedColormap.from_list(
-        #         "", ["black", gvars.color_blue]
-        #     )
-        if color == "green":
+        if color == "blue":
+            cmap = LinearSegmentedColormap.from_list(
+                "", ["black", gvars.color_blue]
+            )
+        elif color == "green":
             cmap = LinearSegmentedColormap.from_list(
                 "", ["black", gvars.color_green]
             )
@@ -71,7 +75,7 @@ class ImageChannel:
             )
         else:
             raise ValueError(
-                "Invalid color. Available options are 'green' or 'red'."
+                "Invalid color. Available options are 'green' or 'red' (or 'blue' for compatibility reasons)."
             )
 
         self.exists = True  # type: bool
@@ -239,15 +243,16 @@ class MovieData:
 
         if setup == "dual":
             c1, c2, c3, _ = imgdata.image_channels(4)
+
             self._data().acc.raw = self._data().img[
                 c1, :, :
-            ]  # Red   (Dexc-Dem)
+            ]  # Acceptor   (Dexc-Aem)
             self._data().red.raw = self._data().img[
                 c2, :, :
             ]  # ALEX  (Aexc-Aem)
             self._data().grn.raw = self._data().img[
                 c3, :, :
-            ]  # Green (Dexc-Dem)
+            ]  # Donor (Dexc-Dem)
 
             self._data().channels = self._data().grn, self._data().red
 

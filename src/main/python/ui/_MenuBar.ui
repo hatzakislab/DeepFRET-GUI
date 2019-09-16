@@ -175,7 +175,6 @@
     <addaction name="actionTraceWindow"/>
     <addaction name="actionHistogramWindow"/>
     <addaction name="actionTransitionDensityWindow"/>
-    <addaction name="actionLifetimes"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">

@@ -568,7 +568,7 @@ def estimate_bw(n, d, factor):
     return ((n * (d + 2) / 4.0) ** (-1.0 / (d + 4))) * factor ** 2
 
 
-def histpoints_w_err(data, bins, normalized, remove_empty_bins = True, least_count = 5):
+def histpoints_w_err(data, bins, density, remove_empty_bins = False, least_count = 5):
     """
     Converts unbinned data to x,y-curvefitable points with Poisson errors.
 
@@ -578,7 +578,7 @@ def histpoints_w_err(data, bins, normalized, remove_empty_bins = True, least_cou
         Unbinned input data
     bins:
         Number of bins, or defined bins
-    normalized:
+    density:
         Whether to normalize histogram (use normalization factor for plots)
     remove_empty_bins:
         Whether to remove bins with less than a certain number of counts,
@@ -591,7 +591,7 @@ def histpoints_w_err(data, bins, normalized, remove_empty_bins = True, least_cou
     x, y, y-error points and normalization constant
 
     """
-    counts, bin_edges = np.histogram(data, bins = bins, density = normalized)
+    counts, bin_edges = np.histogram(data, bins = bins, density = density)
     bin_centers = (bin_edges[1:] + bin_edges[:-1]) / 2
     bin_err = np.sqrt(counts)
 

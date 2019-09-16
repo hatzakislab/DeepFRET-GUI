@@ -20,7 +20,6 @@ import lib.plotting
 from global_variables import GlobalVariables as gvars
 
 matplotlib.use("qt5agg")
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import matplotlib.colors
 import matplotlib.figure
 import matplotlib.gridspec
@@ -32,6 +31,7 @@ import re
 import scipy.stats
 import scipy.signal
 import scipy.optimize
+import scipy.special
 import warnings
 import sklearn.preprocessing
 import keras.models
@@ -826,7 +826,7 @@ class BaseWindow(QMainWindow):
         """
         Opens URL in default browser.
         """
-        url = QUrl("http://nano.ku.dk/english/research/nanoenzymes/")
+        url = QUrl("https://github.com/komodovaran/DeepFRET-GUI/issues")
         if not QDesktopServices.openUrl(url):
             QMessageBox.warning(self, "Open Url", "Could not open url")
 
@@ -1129,13 +1129,7 @@ class BaseWindow(QMainWindow):
             if not path.split("/")[-1].endswith(".txt"):
                 path += ".txt"
 
-            df = pd.DataFrame(
-                {
-                    "E_before": TransitionDensityWindow_.fret_before,
-                    "E_after": TransitionDensityWindow_.fret_after,
-                    "lifetime": TransitionDensityWindow_.fret_lifetime,
-                }
-            )
+            df = TransitionDensityWindow_.tdp_df
 
             with open(path, "w") as f:
                 f.write(
@@ -3230,7 +3224,16 @@ class TransitionDensityWindow(BaseWindow):
         self.n_samples = None
         self.selected_data = None
         self.tdp_df = None
-        self.colors = "red", "green", "blue", "orange", "purple", "yellow", "cyan", "pink"
+        self.colors = (
+            "#66c2a5",
+            "#fc8d62",
+            "#8da0cb",
+            "#e78ac3",
+            "#a6d854",
+            "#ffd92f",
+            "#e5c494",
+            "#b3b3b3",
+        )
         self.data = MainWindow_.data
 
         # dynamically created once plot is refreshed
@@ -3242,7 +3245,7 @@ class TransitionDensityWindow(BaseWindow):
         self.ui.nClustersSpinBox.valueChanged.connect(self.refreshPlot)
 
         self.setupFigureCanvas(
-            ax_setup="plot", ax_window="dynamic", width=1, height=1
+            ax_setup="plot", ax_window="dynamic", width=2, height=2
         )
         self.setupPlot()
 
@@ -3328,23 +3331,26 @@ class TransitionDensityWindow(BaseWindow):
             self.fret_before = None
             self.fret_after = None
 
-
     def setClusteredTransitions(self):
         if self.fret_before is not None:
             n_clusters = self.ui.nClustersSpinBox.value()
 
-            tdp_df = pd.DataFrame({"E_bf"    : self.fret_before,
-                                   "E_af"    : self.fret_after,
-                                   "lifetime": self.fret_lifetime})
+            tdp_df = pd.DataFrame(
+                {
+                    "E_bf": self.fret_before,
+                    "E_af": self.fret_after,
+                    "lifetime": self.fret_lifetime,
+                }
+            )
 
-            tdp_df.dropna(inplace = True)
+            tdp_df.dropna(inplace=True)
 
             up_diag = tdp_df[tdp_df["E_bf"] < tdp_df["E_af"]]  # 0
             lw_diag = tdp_df[tdp_df["E_bf"] > tdp_df["E_af"]]  # 1
 
             halves = up_diag, lw_diag
             for n, half in enumerate(halves):
-                m = sklearn.cluster.KMeans(n_clusters = n_clusters)
+                m = sklearn.cluster.KMeans(n_clusters=n_clusters)
                 m.fit(half[["E_bf", "E_af"]])
                 half["label"] = m.labels_ + n_clusters * n
 
@@ -3362,9 +3368,7 @@ class TransitionDensityWindow(BaseWindow):
         n_rows = self.ui.nClustersSpinBox.value()
 
         # Outer grid
-        self.gs = matplotlib.gridspec.GridSpec(
-            1, 2, wspace=0.1, hspace=0.1
-        )
+        self.gs = matplotlib.gridspec.GridSpec(1, 2, wspace=0.1, hspace=0.1)
 
         # Left grid (1)
         tdp_subplot = matplotlib.gridspec.GridSpecFromSubplotSpec(
@@ -3375,11 +3379,7 @@ class TransitionDensityWindow(BaseWindow):
         # Right grid (2-column dynamic)
         n_hists = n_rows * 2
         hist_subplots = matplotlib.gridspec.GridSpecFromSubplotSpec(
-            nrows=n_rows,
-            ncols=2,
-            subplot_spec=self.gs[1],
-            wspace=0,
-            hspace=0,
+            nrows=n_rows, ncols=2, subplot_spec=self.gs[1], wspace=0, hspace=0
         )
         self.hist_axes = [
             plt.Subplot(self.canvas.fig, hist_subplots[n])
@@ -3393,24 +3393,25 @@ class TransitionDensityWindow(BaseWindow):
         """
         bandwidth, resolution, n_colors, overlay_pts, pts_alpha = params
 
-        self.tdp_ax.plot([-1, 2], [-1, 2], color = "lightgrey", ls = "--")
+        self.tdp_ax.plot([-1, 2], [-1, 2], color="lightgrey", ls="--")
         if self.fret_before is not None and len(self.fret_before) > 0:
             cont = lib.math.contour_2d(
-                xdata = self.fret_before,
-                ydata = self.fret_after,
-                bandwidth = bandwidth / 200,
-                resolution = resolution,
-                kernel = "linear",
-                n_colors = n_colors,
+                xdata=self.fret_before,
+                ydata=self.fret_after,
+                bandwidth=bandwidth / 200,
+                resolution=resolution,
+                kernel="linear",
+                n_colors=n_colors,
             )
-            self.tdp_ax.contourf(*cont, cmap = "viridis")
+            self.tdp_ax.contourf(*cont, cmap="viridis")
             self.tdp_ax.text(
-                x = 0,
-                y = 0.9,
-                s = "N = {}\n({} transitions)".format(
+                x=0,
+                y=0.9,
+                s="N = {}\n"
+                  "{} transitions\n".format(
                     self.n_samples, len(self.fret_lifetime)
                 ),
-                color = gvars.color_gui_text,
+                color=gvars.color_gui_text,
             )
 
             for i, cluster in self.tdp_df.groupby("label"):
@@ -3418,12 +3419,12 @@ class TransitionDensityWindow(BaseWindow):
                 yi = self.tdp_df["E_af"][self.tdp_df["label"] == i]
 
                 self.tdp_ax.scatter(
-                    x = xi,
-                    y = yi,
-                    s = 20,
-                    color = self.colors[i],
-                    edgecolor = "black",
-                    alpha = pts_alpha / 20 if overlay_pts else 0,
+                    x=xi,
+                    y=yi,
+                    s=20,
+                    color=self.colors[i],
+                    edgecolor="black",
+                    alpha=pts_alpha / 20 if overlay_pts else 0,
                 )
 
             self.canvas.fig.add_subplot(self.tdp_ax)
@@ -3432,19 +3433,66 @@ class TransitionDensityWindow(BaseWindow):
         """
         Plots histogram contents
         """
-        if self.fret_before is not None:
-            bins = np.arange(0, np.max(self.fret_lifetime), 1)
-            xpts = np.linspace(0, np.max(self.fret_lifetime) + 1, 50)
+        np.random.seed(1) # make sure histograms don't change on every re-fit
 
-            for i, cluster in self.tdp_df.groupby("label"):
-                hx, hy, _, norm_c = lib.math.histpoints_w_err(cluster["lifetime"], bins = bins, normalized = False, least_count = 1)
-                popt, pcov = scipy.optimize.curve_fit(lib.math.single_exp_fit, xdata = hx, ydata = hy)
-                self.hist_axes[i].hist(cluster["lifetime"], bins = bins, color = self.colors[i], density = True)
-                self.hist_axes[i].plot(xpts, lib.math.single_exp_fit(xpts, *popt), "-", color = "black")
+        fret_before = self.tdp_df["E_bf"]
+        fret_lifetimes = self.tdp_df["lifetime"]
+
+        def estimate_binwidth(x):
+            """Estimate optimal binwidth by the Freedman-Diaconis rule."""
+            return 2 * scipy.stats.iqr(x) / np.size(x) ** (1 / 3)
+
+        def exp_(x, N, l):
+            e = scipy.special.expit
+            return N * (l * e(-l * x))
+
+        if fret_before is not None:
+            max_lifetime = np.max(fret_lifetimes)
+            bw = estimate_binwidth(fret_lifetimes)
+            bins = np.arange(0, max_lifetime, bw)
+
+            for k, cluster in self.tdp_df.groupby("label"):
+                try:
+                    hx, hy, *_ = lib.math.histpoints_w_err(
+                        data = cluster["lifetime"],
+                        bins=bins,
+                        density=False,
+                        least_count=1,
+                    )
+                    popt, pcov = scipy.optimize.curve_fit(
+                        exp_, xdata=hx, ydata=hy)
+                    perr = np.sqrt(np.diag(pcov))
+
+                    rate = popt[1]
+                    rate_err = perr[1]
+
+                    if rate_err > 3*rate:
+                        rate_err = np.inf
+
+                    self.hist_axes[k].plot(
+                        bins,
+                        exp_(bins, *popt),
+                        "--",
+                        color="black",
+                        label = "label: {}\n"
+                                "$\lambda$:  ${:.2f} \pm {:.2f}$\n"
+                                "lifetime: ${:.2f}$".format(k, rate, rate_err, 1/rate),
+                    )
+                except RuntimeError: # drop fit if it doesn't converge
+                    pass
+
+                histy, *_ = self.hist_axes[k].hist(
+                    cluster["lifetime"],
+                    bins=bins,
+                    color=self.colors[k],
+                    density=False,
+                )
+                self.hist_axes[k].set_xlim(0, max(bins))
+                self.hist_axes[k].set_ylim(0, max(histy) * 1.1)
+                self.hist_axes[k].legend(loc = "upper right")
 
             for ax in self.hist_axes:
                 self.canvas.fig.add_subplot(ax)
-
 
     def refreshPlot(self):
         """
@@ -3691,7 +3739,7 @@ class AppContext(ApplicationContext):
 
     def load_resources(self):
         self.keras_model = keras.models.load_model(
-            self.get_resource("model.h5")
+            self.get_resource("model_15.h5") # published model is v9
         )
         self.config = ConfigObj(self.get_resource("config.ini"))
 

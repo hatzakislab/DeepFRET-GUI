@@ -261,7 +261,6 @@ class Ui_MenuBar(object):
         self.menuWindow.addAction(self.actionTraceWindow)
         self.menuWindow.addAction(self.actionHistogramWindow)
         self.menuWindow.addAction(self.actionTransitionDensityWindow)
-        self.menuWindow.addAction(self.actionLifetimes)
         self.menuHelp.addAction(self.actionGet_Help_Online)
         self.menuHelp.addSeparator()
         self.menuHelp.addAction(self.actionPreferences)

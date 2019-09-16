@@ -20,7 +20,7 @@ class Ui_TransitionDensityWindow(object):
         TransitionDensityWindow.setSizePolicy(sizePolicy)
         TransitionDensityWindow.setMinimumSize(QtCore.QSize(1200, 600))
         TransitionDensityWindow.setMaximumSize(QtCore.QSize(5000, 2000))
-        TransitionDensityWindow.setBaseSize(QtCore.QSize(700, 700))
+        TransitionDensityWindow.setBaseSize(QtCore.QSize(1400, 700))
         TransitionDensityWindow.setWindowOpacity(1.0)
         TransitionDensityWindow.setAutoFillBackground(False)
         TransitionDensityWindow.setDocumentMode(False)

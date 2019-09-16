@@ -112,7 +112,9 @@ class MatplotlibCanvas(FigureCanvas):
         self.gs = GridSpec(1, 1)
         self.fig.add_subplot(self.gs[0])
         self.axes = self.figure.axes
-        self.fig.subplots_adjust(hspace=0, left=0.1, right=0.90, top=0.90, bottom=0.1)
+
+        m = 0.05
+        self.fig.subplots_adjust(hspace=0, left=m, right=1-m, top=1-m, bottom=m)
 
     def setupSinglePlotLayout(self):
         """

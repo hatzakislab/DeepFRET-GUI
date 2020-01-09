@@ -34,7 +34,7 @@ import scipy.optimize
 import scipy.special
 import warnings
 import sklearn.preprocessing
-import keras.models
+import tensorflow.keras.models
 
 from ui._MenuBar import Ui_MenuBar
 from ui._MainWindow import Ui_MainWindow
@@ -3738,8 +3738,8 @@ class AppContext(ApplicationContext):
     """
 
     def load_resources(self):
-        self.keras_model = keras.models.load_model(
-            self.get_resource("model_15.h5") # published model is v9
+        self.keras_model = tensorflow.keras.models.load_model(
+            self.get_resource("model.h5")
         )
         self.config = ConfigObj(self.get_resource("config.ini"))
 

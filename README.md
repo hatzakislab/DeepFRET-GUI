@@ -10,12 +10,6 @@ A fully open-source, all-inclusive software platform for doing total internal re
 - Distribution plotting and fitting
 - Backwards-compatibility with iSMS-exported data
 
-If you used this and liked it, please cite:
-
-```
-Citation coming soon
-```
-
 If you'd like to play around with just the Keras/TensorFlow model, please go to https://github.com/komodovaran/DeepFRET-Model
 
 #### Launching the DeepFRET GUI
@@ -34,7 +28,7 @@ Download a pre-compiled application (currently only available for MacOS)
 2. Open a terminal and navigate to the root of the directory.
 3. Create a venv with `python3 -m venv venv` in the current directory.
 4. Activate environment with `source venv/bin/activate` if on MacOS/Linux or `call venv\scripts\activate.bat` if on Windows.
-5. While still in the environment, install all packages with `pip install requirements.txt -r`
+5. While still in the environment, install all packages with `pip install -r requirements.txt`
 6. Unzip the `hooks.zip` and overwrite the files in `venv/lib/python3.7/site-packages/PyInstaller/hooks/`.
 7. While still in the venv, write `fbs freeze` and wait for the process to finish. If everything went well, there will be a `target/` directory with the DeepFRET application inside.
 

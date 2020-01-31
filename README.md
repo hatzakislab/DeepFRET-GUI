@@ -12,6 +12,9 @@ A fully open-source, all-inclusive software platform for doing total internal re
 
 If you'd like to play around with just the Keras/TensorFlow model, please go to https://github.com/komodovaran/DeepFRET-Model
 
+### How to cite:
+Publication coming soon!
+
 #### Launching the DeepFRET GUI
 See below for information on supported data formats.
 

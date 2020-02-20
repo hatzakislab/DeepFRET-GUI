@@ -2,9 +2,10 @@
 
 # Form implementation generated from reading ui file 'ui/_TransitionDensityWindow.ui'
 #
-# Created by: PyQt5 UI code generator 5.12.2
+# Created by: PyQt5 UI code generator 5.13.1
 #
 # WARNING! All changes made in this file will be lost!
+
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
@@ -41,6 +42,12 @@ class Ui_TransitionDensityWindow(object):
         self.gridLayout.setSpacing(6)
         self.gridLayout.setObjectName("gridLayout")
         self.nClustersSpinBox = QtWidgets.QSpinBox(self.centralWidget)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.nClustersSpinBox.sizePolicy().hasHeightForWidth())
+        self.nClustersSpinBox.setSizePolicy(sizePolicy)
+        self.nClustersSpinBox.setMinimumSize(QtCore.QSize(30, 0))
         self.nClustersSpinBox.setFrame(True)
         self.nClustersSpinBox.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
         self.nClustersSpinBox.setMinimum(1)
@@ -62,8 +69,6 @@ class Ui_TransitionDensityWindow(object):
         _translate = QtCore.QCoreApplication.translate
         TransitionDensityWindow.setWindowTitle(_translate("TransitionDensityWindow", "Transition Density Plot"))
         self.label.setText(_translate("TransitionDensityWindow", "Number of Clusters Per Half"))
-
-
 
 
 if __name__ == "__main__":

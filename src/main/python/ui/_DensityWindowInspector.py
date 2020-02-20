@@ -2,9 +2,10 @@
 
 # Form implementation generated from reading ui file 'ui/_DensityWindowInspector.ui'
 #
-# Created by: PyQt5 UI code generator 5.12.2
+# Created by: PyQt5 UI code generator 5.13.1
 #
 # WARNING! All changes made in this file will be lost!
+
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
@@ -103,8 +104,6 @@ class Ui_DensityWindowInspector(object):
         self.smoothingLabel.setText(_translate("DensityWindowInspector", "Smoothing: "))
         self.resolutionLabel.setText(_translate("DensityWindowInspector", "Resolution: "))
         self.label.setText(_translate("DensityWindowInspector", "Overlay Alpha:"))
-
-
 
 
 if __name__ == "__main__":

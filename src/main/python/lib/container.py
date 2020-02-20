@@ -1,4 +1,5 @@
 import multiprocessing
+
 multiprocessing.freeze_support()
 
 from global_variables import GlobalVariables as gvars
@@ -46,12 +47,7 @@ class ImageContainer:
         self.traces = {}
 
         # To iterate over all channels
-        self.all = (
-            self.grn,
-            self.red,
-            self.coloc_grn_red,
-            self.coloc_all,
-        )
+        self.all = (self.grn, self.red, self.coloc_grn_red, self.coloc_all)
 
 
 class ImageChannel:
@@ -88,6 +84,7 @@ class ImageChannel:
         self.spots = None  # type: Union[None, np.ndarray]
         self.n_spots = 0  # type: int
 
+
 class ColocalizedParticles:
     """
     Class for storing colocalized particle information
@@ -121,6 +118,7 @@ class TraceChannel:
         self.int = None  # type: Union[None, np.ndarray]
         self.bg = None  # type: Union[None, np.ndarray]
         self.bleach = None  # type: Union[None, int]
+
 
 class TraceContainer:
     """
@@ -224,39 +222,35 @@ class MovieData:
         self.currName = name
         self.name = name
         self.movies[name] = ImageContainer()
-        self._data().traces = dict()
+        self._data().traces = {}
         # Populate metadata
         self._data().img = skimage.io.imread(path)
 
-        # Some videos re-arrange the shape for some reason, fix here
-        if setup != "dual":  # dual, as in dual cam
-            if self._data().img.shape[3] > 3:
-                self._data().img = (
-                    self._data().img.swapaxes(3, 1).swapaxes(2, 1)
-                )
+        if setup != "dual" and self._data().img.shape[3] > 3:
+            self._data().img = (
+                self._data().img.swapaxes(3, 1).swapaxes(2, 1)
+            )
 
         self._data().height = self._data().img.shape[1]
         self._data().width = self._data().img.shape[2]
+        # Scaling factor for ROI
         self._data().roi_radius = (
             max(self._data().height, self._data().width) / 80
-        )  # Scaling factor for ROI
+        )
 
         if setup == "dual":
             c1, c2, c3, _ = imgdata.image_channels(4)
 
-            self._data().acc.raw = self._data().img[
-                c1, :, :
-            ]  # Acceptor   (Dexc-Aem)
-            self._data().red.raw = self._data().img[
-                c2, :, :
-            ]  # ALEX  (Aexc-Aem)
-            self._data().grn.raw = self._data().img[
-                c3, :, :
-            ]  # Donor (Dexc-Dem)
+            # Acceptor   (Dexc-Aem)
+            self._data().acc.raw = self._data().img[c1, :, :]
+            # ALEX  (Aexc-Aem)
+            self._data().red.raw = self._data().img[c2, :, :]
+            # Donor (Dexc-Dem)
+            self._data().grn.raw = self._data().img[c3, :, :]
 
             self._data().channels = self._data().grn, self._data().red
 
-        elif setup == "2-color" or setup == "3-color":
+        elif setup in ["2-color", "3-color"]:
             top, btm, lft, rgt = imgdata.image_quadrants(
                 height=self._data().height, width=self._data().width
             )
@@ -319,7 +313,6 @@ class MovieData:
             else:
                 raise ValueError("Format not supported.")
 
-            # If using quad view with bypass (can't have a FRET channel)
         elif setup == "bypass":
             self._data().grn.raw = self._data().img[:, :, :, 0]
             self._data().red.raw = self._data().img[:, :, :, 1]
@@ -340,6 +333,7 @@ class MovieData:
 
         for c in self._data().channels + (self._data().acc,):
             if c.raw is not None:
+                c.raw = np.abs(c.raw)
                 t, h, w = c.raw.shape
 
                 if bg_correction:

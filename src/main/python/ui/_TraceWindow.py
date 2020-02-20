@@ -2,9 +2,10 @@
 
 # Form implementation generated from reading ui file 'ui/_TraceWindow.ui'
 #
-# Created by: PyQt5 UI code generator 5.12.2
+# Created by: PyQt5 UI code generator 5.13.1
 #
 # WARNING! All changes made in this file will be lost!
+
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
@@ -43,8 +44,6 @@ class Ui_TraceWindow(object):
     def retranslateUi(self, TraceWindow):
         _translate = QtCore.QCoreApplication.translate
         TraceWindow.setWindowTitle(_translate("TraceWindow", "Traces"))
-
-
 
 
 if __name__ == "__main__":

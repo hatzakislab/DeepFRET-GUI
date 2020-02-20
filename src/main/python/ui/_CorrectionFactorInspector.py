@@ -2,9 +2,10 @@
 
 # Form implementation generated from reading ui file 'ui/_CorrectionFactorInspector.ui'
 #
-# Created by: PyQt5 UI code generator 5.12.2
+# Created by: PyQt5 UI code generator 5.13.1
 #
 # WARNING! All changes made in this file will be lost!
+
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
@@ -68,8 +69,6 @@ class Ui_CorrectionFactorInspector(object):
         CorrectionFactorInspector.setWindowTitle(_translate("CorrectionFactorInspector", "Dialog"))
         self.label_2.setText(_translate("CorrectionFactorInspector", "global δ-Factor:"))
         self.label.setText(_translate("CorrectionFactorInspector", "global ɑ-Factor:"))
-
-
 
 
 if __name__ == "__main__":

@@ -2,9 +2,10 @@
 
 # Form implementation generated from reading ui file 'ui/_AboutWindow.ui'
 #
-# Created by: PyQt5 UI code generator 5.12.2
+# Created by: PyQt5 UI code generator 5.13.1
 #
 # WARNING! All changes made in this file will be lost!
+
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
@@ -70,8 +71,6 @@ class Ui_About(object):
         self.label_APPVER.setText(_translate("About", "APPVERSION"))
         self.label_AUTHORS.setText(_translate("About", "AUTHORS"))
         self.label_LICENSE.setText(_translate("About", "LICENSE INFO"))
-
-
 
 
 if __name__ == "__main__":

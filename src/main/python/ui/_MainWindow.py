@@ -2,9 +2,10 @@
 
 # Form implementation generated from reading ui file 'ui/_MainWindow.ui'
 #
-# Created by: PyQt5 UI code generator 5.12.2
+# Created by: PyQt5 UI code generator 5.13.1
 #
 # WARNING! All changes made in this file will be lost!
+
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
@@ -252,8 +253,6 @@ class Ui_MainWindow(object):
         self.labelRedVal.setText(_translate("MainWindow", "Red channel"))
         self.labelColocGreenRed.setText(_translate("MainWindow", "Green/Red"))
         self.labelLowerThres.setText(_translate("MainWindow", "Particle Finder"))
-
-
 
 
 if __name__ == "__main__":

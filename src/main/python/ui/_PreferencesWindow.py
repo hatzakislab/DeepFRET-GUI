@@ -2,9 +2,10 @@
 
 # Form implementation generated from reading ui file 'ui/_PreferencesWindow.ui'
 #
-# Created by: PyQt5 UI code generator 5.12.2
+# Created by: PyQt5 UI code generator 5.13.1
 #
 # WARNING! All changes made in this file will be lost!
+
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
@@ -157,8 +158,6 @@ class Ui_Preferences(object):
         self.toleranceComboBox.setItemText(2, _translate("Preferences", "Strict"))
         self.groupBox_2.setTitle(_translate("Preferences", "Default Detection Per Movie"))
         self.label_6.setText(_translate("Preferences", "Pairs"))
-
-
 
 
 if __name__ == "__main__":

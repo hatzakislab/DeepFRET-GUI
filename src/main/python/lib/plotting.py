@@ -70,10 +70,10 @@ def set_axis_exp_ylabel(ax, label, values):
     """
     m = np.max(values)
     e = np.floor(np.log10(np.abs(m)))
-    ax.ticklabel_format(style = 'sci', scilimits = (0,0), axis = 'both')
+    ax.ticklabel_format(style="sci", scilimits=(0, 0), axis="both")
     ax.yaxis.get_offset_text().set_visible(False)
     ax.yaxis.major.formatter._useMathText = True
-    ax.yaxis.set_major_locator(MaxNLocator(nbins = 3, integer = False))
+    ax.yaxis.set_major_locator(MaxNLocator(nbins=3, integer=False))
     ax.set_ylabel("{} ($10^{:.0f}$)".format(label, e))
 
 
@@ -141,11 +141,13 @@ def plot_roi_coloc(
 
 def point_density(xdata, ydata, kernel="gaussian", bandwidth=0.1):
     """
-    This function only evaluates density in the exact points. See contour_2d function for continuous KDE.
+    This function only evaluates density in the exact points. See contour_2d
+    function for continuous KDE.
 
     Example
     -------
-    c = point_density(xdata = xdata, ydata = ydata, kernel = "linear", bandwidth = 0.1)
+    c = point_density(xdata = xdata, ydata = ydata, kernel = "linear",
+    bandwidth = 0.1)
     plt.scatter(xdata, ydata, c = c, cmap = "magma")
     """
 
@@ -159,8 +161,7 @@ def point_density(xdata, ydata, kernel="gaussian", bandwidth=0.1):
     kernel_sk = sklearn.neighbors.KernelDensity(
         kernel=kernel, bandwidth=bandwidth
     ).fit(list(zip(*positions)))
-    z = np.exp(kernel_sk.score_samples(list(zip(*positions))))
-    return z
+    return np.exp(kernel_sk.score_samples(list(zip(*positions))))
 
 
 def plot_shaded_category(y, ax, alpha, colors=None):
@@ -181,11 +182,7 @@ def plot_shaded_category(y, ax, alpha, colors=None):
     if colors is None:
         colors = ("darkgrey", "red", "green", "orange", "royalblue", "purple")
 
-    if len(y.shape) != 1:
-        y_ = y.argmax(axis=1)  # one-hot to single
-    else:
-        y_ = y
-
+    y_ = y.argmax(axis=1) if len(y.shape) != 1 else y
     if len(colors) < len(set(y_)):
         raise ValueError("Must have at least a color for each class")
 

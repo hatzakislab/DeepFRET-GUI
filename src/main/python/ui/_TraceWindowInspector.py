@@ -2,9 +2,10 @@
 
 # Form implementation generated from reading ui file 'ui/_TraceWindowInspector.ui'
 #
-# Created by: PyQt5 UI code generator 5.12.2
+# Created by: PyQt5 UI code generator 5.13.1
 #
 # WARNING! All changes made in this file will be lost!
+
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
@@ -125,8 +126,6 @@ class Ui_TraceWindowInspector(object):
         self.StoiLabel.setText(_translate("TraceWindowInspector", "Stoichiometry Median Range:"))
         self.pushButtonFind.setText(_translate("TraceWindowInspector", "Find"))
         self.FramesLabel_4.setText(_translate("TraceWindowInspector", "Trace Must Bleach:"))
-
-
 
 
 if __name__ == "__main__":

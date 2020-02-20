@@ -1,4 +1,5 @@
 import multiprocessing
+
 multiprocessing.freeze_support()
 
 from global_variables import GlobalVariables as gvars
@@ -18,7 +19,9 @@ def image_quadrants(height, width):
     """
 
     if height != width:
-        raise ValueError("Expected image to be square but got {}x{}".format(height, width))
+        raise ValueError(
+            "Expected image to be square but got {}x{}".format(height, width)
+        )
 
     m_yi = height // 2
     m_xi = width // 2
@@ -45,16 +48,15 @@ def image_channels(cmax):
     c1, c2, c3, c4 = image_channels(cmax = 4)
     """
 
-    channels = []
-    for c in range(cmax):
-        channels.append(slice(c, None, cmax))
-
-    return channels
+    return [slice(c, None, cmax) for c in range(cmax)]
 
 
-def subtract_background(arr, deg=2, s=1e4, by= "row", return_bg_only=False, **filter_kwargs):
+def subtract_background(
+    arr, deg=2, s=1e4, by="row", return_bg_only=False, **filter_kwargs
+):
     """
-    Subtracts background with a row-wise spline fit or filter, to correct for non-uniform illumination profile
+    Subtracts background with a row-wise spline fit or filter, to correct for
+    non-uniform illumination profile
 
     Parameters
     ----------
@@ -65,13 +67,15 @@ def subtract_background(arr, deg=2, s=1e4, by= "row", return_bg_only=False, **fi
     s:
         Spline smoothing factor
     by:
-        Row-wise or column-wise spline fitting. Default is row, because this also eliminates column noise.
+        Row-wise or column-wise spline fitting. Default is row, because this
+        also eliminates column noise.
     return_bg_only:
         Whether to return the fitted background only
 
     Returns
     -------
-    Fitted background of array. Should be subtracted from the image if bg_only is True.
+    Fitted background of array. Should be subtracted from the image if bg_only
+    is True.
     """
 
     if len(arr.shape) == 2:
@@ -84,23 +88,29 @@ def subtract_background(arr, deg=2, s=1e4, by= "row", return_bg_only=False, **fi
     _ = []
     if by == "column":
         # Columnwise spline
-        ix = np.arange(0, rows)  # each column iterated over has the length of the number of rows
-        ls = [UnivariateSpline(ix, arr[:, i], k=deg, s=s)(ix) for i in range(columns)]
+        ix = np.arange(
+            0, rows
+        )  # each column iterated over has the length of the number of rows
+        ls = [
+            UnivariateSpline(ix, arr[:, i], k=deg, s=s)(ix)
+            for i in range(columns)
+        ]
         columnwise = np.column_stack(ls)
         _.append(columnwise)
-
-    if by == "row":
-        # Rowwise spline
-        ix = np.arange(0, columns)  # each row iterated over has the length of the number of columns
-        ls = [UnivariateSpline(ix, arr[i, :], k=deg, s=s)(ix) for i in range(rows)]
-        rowwise = np.row_stack(ls)
-        _.append(rowwise)
-
-    if by == "filter":  # This is faster
+    elif by == "filter":
         ls = skimage.filters.gaussian(arr, **filter_kwargs)
         _.append(ls)
-
-    bg, = _
+    elif by == "row":
+        # Rowwise spline
+        ix = np.arange(
+            0, columns
+        )  # each row iterated over has the length of the number of columns
+        ls = [
+            UnivariateSpline(ix, arr[i, :], k=deg, s=s)(ix) for i in range(rows)
+        ]
+        rowwise = np.row_stack(ls)
+        _.append(rowwise)
+    (bg,) = _
 
     return bg if return_bg_only else arr - bg
 
@@ -118,8 +128,7 @@ def zero_one_scale(arr: np.ndarray):
     -------
     Normalized array
     """
-    normalized = (arr - arr.min()) / (arr.max() - arr.min())
-    return normalized
+    return (arr - arr.min()) / (arr.max() - arr.min())
 
 
 def rescale_intensity(image: np.ndarray, range):
@@ -137,8 +146,7 @@ def rescale_intensity(image: np.ndarray, range):
     -------
     Image with rescaled intensity for imshow
     """
-    image = zero_one_scale(image.clip(*range))
-    return image
+    return zero_one_scale(image.clip(*range))
 
 
 def check_circle_overlap(y1, x1, y2, x2, squared_radius, overlap_factor):
@@ -156,7 +164,8 @@ def check_circle_overlap(y1, x1, y2, x2, squared_radius, overlap_factor):
     radius:
         Radius of circles
     overlap_factor:
-        Kind of arbitrary number between 1 and 100 to decide degree of overlap. Around 20% works fine.
+        Kind of arbitrary number between 1 and 100 to decide degree of overlap.
+        Around 20% works fine.
 
     Returns
     -------
@@ -195,8 +204,7 @@ def light_blend(image1, image2, cmap1, cmap2):
     a = cmap1(image1)
     b = cmap2(image2)
 
-    screen = 1 - (1 - a) * (1 - b)
-    return screen
+    return 1 - (1 - a) * (1 - b)
 
 
 def add_blend(image1, image2, blend_degree):
@@ -216,7 +224,9 @@ def add_blend(image1, image2, blend_degree):
     -------
     Blended image that can be displayed using plt.imshow()
     """
-    return np.sqrt((1 - blend_degree) * image1 ** 2 + blend_degree * image2 ** 2)
+    return np.sqrt(
+        (1 - blend_degree) * image1 ** 2 + blend_degree * image2 ** 2
+    )
 
 
 def overlay_blend(image1, image2):
@@ -234,9 +244,9 @@ def overlay_blend(image1, image2):
     -------
     Blended image that can be displayed using plt.imshow()
     """
-    blend = np.choose(image1 > 0.5, [2 * image1 * image2, 1 - 2 * (1 - image1) * (1 - image2)])  # If False  # If True
-
-    return blend
+    return np.choose(
+        image1 > 0.5, [2 * image1 * image2, 1 - 2 * (1 - image1) * (1 - image2)]
+    )
 
 
 def soft_blend(image1, image2):
@@ -257,7 +267,7 @@ def soft_blend(image1, image2):
     return (1 - 2 * image2) * image1 ** 2 + 2 * image1 * image2
 
 
-def find_spots(image, value, method= "laplacian_of_gaussian") -> np.ndarray:
+def find_spots(image, value, method="laplacian_of_gaussian") -> np.ndarray:
     """
 
     Parameters
@@ -265,7 +275,8 @@ def find_spots(image, value, method= "laplacian_of_gaussian") -> np.ndarray:
     image:
         input image
     value:
-        value obtained from the user interface to be plugged in as either e.g. threshold value or number of peaks,
+        value obtained from the user interface to be plugged in as either e.g.
+        threshold value or number of peaks,
         depending on the specific method used
     method:
         method to detect particles
@@ -282,11 +293,19 @@ def find_spots(image, value, method= "laplacian_of_gaussian") -> np.ndarray:
 
     elif method == "laplacian_of_gaussian":
         spots_found = skimage.feature.blob_log(
-            image, min_sigma=1.5, max_sigma=3, num_sigma=10, overlap=0.5, threshold=value
+            image,
+            min_sigma=1.5,
+            max_sigma=3,
+            num_sigma=10,
+            overlap=0.5,
+            threshold=value,
         )
 
     else:
-        raise ValueError("Invalid method. Must be either 'peak_local_max' or 'laplacian_of_gaussian'.")
+        raise ValueError(
+            "Invalid method. Must be either 'peak_local_max'"
+            " or 'laplacian_of_gaussian'."
+        )
 
     if spots_found.shape[1] == 3:
         spots_found = spots_found[:, range(2)].tolist()
@@ -296,7 +315,9 @@ def find_spots(image, value, method= "laplacian_of_gaussian") -> np.ndarray:
     return spots_found
 
 
-def colocalize_rois(c1, c2, color1, color2, tolerance=1, math_radius=gvars.roi_math_radius) -> pd.DataFrame:
+def colocalize_rois(
+    c1, c2, color1, color2, tolerance=1, math_radius=gvars.roi_math_radius
+) -> pd.DataFrame:
     """
     Checks if circles overlap, given coordinates and radius.
     Coordinates are expected in the same matrix notation as given by skimage
@@ -311,7 +332,8 @@ def colocalize_rois(c1, c2, color1, color2, tolerance=1, math_radius=gvars.roi_m
     tolerance:
         Stringency of overlap.
     color1, color2:
-        Names of the channels being colocalized (important for downstream colocalization of *all* channels)
+        Names of the channels being colocalized (important for downstream
+        colocalization of *all* channels)
 
     Returns
     -------
@@ -342,7 +364,13 @@ def colocalize_rois(c1, c2, color1, color2, tolerance=1, math_radius=gvars.roi_m
 
     df = pd.DataFrame(
         grid,
-        columns=("y_{}".format(color1), "x_{}".format(color1), "y_{}".format(color2), "x_{}".format(color2), "dist"),
+        columns=(
+            "y_{}".format(color1),
+            "x_{}".format(color1),
+            "y_{}".format(color2),
+            "x_{}".format(color2),
+            "dist",
+        ),
     )
 
     df = (
@@ -363,7 +391,8 @@ def colocalize_triple(cpair1, cpair2, common_pair="green") -> pd.DataFrame:
     Parameters
     ----------
     cpair1, cpair2:
-        Pandas dataframes of colocalized channel pairs (e.g. blue/green, green/red)
+        Pandas dataframes of colocalized channel pairs (e.g. blue/green,
+        green/red)
 
     Returns
     -------
@@ -373,15 +402,18 @@ def colocalize_triple(cpair1, cpair2, common_pair="green") -> pd.DataFrame:
     if any(type(o) != pd.DataFrame for o in (cpair1, cpair2)):
         raise ValueError("Both inputs must be of type DataFrame")
 
-    df = pd.merge(cpair1, cpair2, on=["y_{}".format(common_pair), "x_{}".format(common_pair)]).reset_index(drop=True)
-
-    return df
+    return pd.merge(
+        cpair1,
+        cpair2,
+        on=["y_{}".format(common_pair), "x_{}".format(common_pair)],
+    ).reset_index(drop=True)
 
 
 def coloc_fraction(green, red, bluegreen, bluered, greenred, all):
     """
-    Calculates the colocalization fraction of blue (external label) to FRET (green/red)-labelled proteins.
-    This is calculated as fraction of blue that colocalizes with either green or red out of the total number of green/red
+    Calculates the colocalization fraction of blue (external label) to FRET
+    (green/red)-labelled proteins. This is calculated as fraction of blue that
+    colocalizes with either green or red out of the total number of green/red
 
     Example
     -------
@@ -406,7 +438,7 @@ def coloc_fraction(green, red, bluegreen, bluered, greenred, all):
 
 def circle_mask(inner_area, outer_area, gap_space, yx, indices):
     """
-    Calculates a circular pixel mask for extracting get_intensities
+    Calculates a circular pixel mask for extracting intensities
     
     Parameters
     ----------
@@ -434,7 +466,9 @@ def circle_mask(inner_area, outer_area, gap_space, yx, indices):
     center = mask <= inner_area ** 2
     gap = mask <= inner_area ** 2 + gap_space ** 2
     bg_filled = mask <= outer_area ** 2
-    bg_ring = np.logical_xor(bg_filled, gap)  # subtract inner circle_overlap from outer
+    bg_ring = np.logical_xor(
+        bg_filled, gap
+    )  # subtract inner circle_overlap from outer
 
     return center, bg_ring
 
@@ -447,13 +481,14 @@ def tiff_stack_intensity(array, roi_mask, bg_mask, raw=True):
     Parameters
     ----------
     array:
-        Single-channel currentMovie array
+        Single-channel movie array
     roi_mask:
         Numpy mask for center
     bg_mask:
         Numpy mask for background
     raw:
-        Whether to return raw signal/background get_intensities. Otherwise will return signal-background and background as zeroes.
+        Whether to return raw signal/background get_intensities. Otherwise will
+        return signal-background and background as zeroes.
 
     Returns
     -------

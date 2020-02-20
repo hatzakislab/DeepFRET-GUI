@@ -9,7 +9,8 @@ from typing import Union, Tuple
 
 
 def pairwise(array):
-    """Unpacks elements of an array (1,2,3,4...) into pairs, i.e. (1,2), (3,4), ..."""
+    """Unpacks elements of an array (1,2,3,4...) into pairs,
+    i.e. (1,2), (3,4), ..."""
     return zip(array[0::2], array[1::2])
 
 
@@ -30,6 +31,7 @@ def min_none(ls) -> Union[float, None]:
 def all_nonetype(ls):
     """Returns True if all values in iterable are None"""
     return all(v is None for v in ls)
+
 
 def merge_tuples(*t):
     """
@@ -81,7 +83,8 @@ def m_append(objects: tuple, to: tuple, method="append"):
 def seek_line(
     line_starts: Union[str, Tuple[str, str]], path: str, timeout: int = 10
 ):
-    """Seeks the file until specified line start is encountered in the start of the line."""
+    """Seeks the file until specified line start is encountered in the start of
+     the line."""
     with open(path, encoding="utf-8") as f:
         n = 0
         if isinstance(line_starts, str):
@@ -97,7 +100,8 @@ def seek_line(
 
 
 def csv_skip_to(path, line, timeout=10, **kwargs):
-    """Seeks the file until specified header is encountered in the start of the line."""
+    """Seeks the file until specified header is encountered in the start of
+    the line."""
     if os.stat(path).st_size == 0:
         raise ValueError("File is empty")
     with open(path, encoding="utf-8") as f:
@@ -112,3 +116,22 @@ def csv_skip_to(path, line, timeout=10, **kwargs):
                 return None
         f.seek(pos)
         return pd.read_csv(f, **kwargs)
+
+
+def generate_unique_name(full_filename, array):
+    """
+    Checks for a name in a given array. If name already exists,
+    append _n numbering to make unique, and return the unique name.
+    """
+    name = os.path.basename(full_filename)
+    # Test if name has already been loaded
+    if name in array:
+        n = 1
+        # Create a new unique name
+        unique_name = name + "_" + str(n)
+        while unique_name in array:
+            n += 1
+        else:
+            return unique_name
+    else:
+        return name

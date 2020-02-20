@@ -2,9 +2,10 @@
 
 # Form implementation generated from reading ui file 'ui/_MenuBar.ui'
 #
-# Created by: PyQt5 UI code generator 5.12.2
+# Created by: PyQt5 UI code generator 5.13.1
 #
 # WARNING! All changes made in this file will be lost!
+
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
@@ -381,8 +382,6 @@ class Ui_MenuBar(object):
         self.actionPredict_All_traces.setShortcut(_translate("MenuBar", "Ctrl+Alt+P"))
         self.actionClear_All_Predictions.setText(_translate("MenuBar", "Clear All Predictions"))
         self.actionClear_All_Predictions.setShortcut(_translate("MenuBar", "Meta+Ctrl+P"))
-
-
 
 
 if __name__ == "__main__":

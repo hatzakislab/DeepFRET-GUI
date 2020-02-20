@@ -2,9 +2,10 @@
 
 # Form implementation generated from reading ui file 'ui/_HistogramWindow.ui'
 #
-# Created by: PyQt5 UI code generator 5.12.2
+# Created by: PyQt5 UI code generator 5.13.1
 #
 # WARNING! All changes made in this file will be lost!
+
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
@@ -88,8 +89,6 @@ class Ui_HistogramWindow(object):
         self.gaussianAutoButton.setText(_translate("HistogramWindow", "Auto"))
         self.applyCorrectionsCheckBox.setText(_translate("HistogramWindow", "Apply β / ɣ Corrections"))
         self.label_2.setText(_translate("HistogramWindow", "Max number of frames:"))
-
-
 
 
 if __name__ == "__main__":

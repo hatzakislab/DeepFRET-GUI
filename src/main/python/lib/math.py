@@ -1,5 +1,7 @@
 import multiprocessing
 
+import numpy
+
 multiprocessing.freeze_support()
 
 import matplotlib
@@ -21,11 +23,13 @@ import hmmlearn.hmm
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
+
 def single_exp_fit(x, scale):
     """
     Single exponential fit.
     """
-    return scipy.stats.expon.pdf(x, loc = 0, scale = scale)
+    return scipy.stats.expon.pdf(x, loc=0, scale=scale)
+
 
 def leastsq_line(x: np.ndarray, y: np.ndarray) -> Tuple[float, float]:
     """
@@ -52,8 +56,9 @@ def correct_DA(intensities, alpha=0, delta=0):
 
 def calc_E(intensities, alpha=0, delta=0, clip_range=(-0.3, 1.3)):
     """
-    Calculates raw FRET efficiency from donor (Dexc-Dem) and acceptor (Dexc-Aem).
-    Note that iSMS has the option of subtracting background or not, and calculate E (apparent E) from that.
+    Calculates raw FRET efficiency from donor (Dexc-Dem) and acceptor
+    (Dexc-Aem). Note that iSMS has the option of subtracting background or not,
+    and calculate E (apparent E) from that.
     """
 
     cmin, cmax = clip_range
@@ -71,8 +76,9 @@ def calc_S(
     intensities, alpha=0, delta=0, beta=1, gamma=1, clip_range=(-0.3, 1.3)
 ):
     """
-    Calculates raw calc_S from donor (Dexc-Dem), acceptor (Dexc-Aem) and direct emission of acceptor ("ALEX", Aexc-Aem)
-    Note that iSMS has the option of subtracting background or not, and calculate S (apparent S) from that.
+    Calculates raw calc_S from donor (Dexc-Dem), acceptor (Dexc-Aem) and direct
+    emission of acceptor ("ALEX", Aexc-Aem) Note that iSMS has the option of
+    subtracting background or not, and calculate S (apparent S) from that.
     """
     cmin, cmax = clip_range
 
@@ -91,8 +97,9 @@ def corrected_ES(
     intensities, alpha, delta, beta, gamma, clip_range=(-0.3, 1.3)
 ):
     """
-    Calculates the fully corrected FRET and stoichiometry, given all the correction factors.
-    This is only used for the combined 2D histogram, not for single traces.
+    Calculates the fully corrected FRET and stoichiometry, given all the
+    correction factors. This is only used for the combined 2D histogram,
+    not for single traces.
     """
     cmin, cmax = clip_range
 
@@ -135,8 +142,7 @@ def alpha_factor(DD, DA):
     Use the donor and acceptor get_intensities minus background.
     """
     E_app = DA / (DD + DA)
-    alpha = np.median(E_app / (1 - E_app))
-    return alpha
+    return np.median(E_app / (1 - E_app))
 
 
 def delta_factor(DD, DA, AA):
@@ -145,13 +151,13 @@ def delta_factor(DD, DA, AA):
     Use the donor and acceptor get_intensities minus background.
     """
     S_app = (DD + DA) / (DD + DA + AA)
-    delta = np.median(S_app / (1 - S_app))
-    return delta
+    return np.median(S_app / (1 - S_app))
 
 
 def beta_gamma_factor(E_app, S_app):
     """
-    Calculates global beta and gamma factors from apparent E and S (alpha and delta already applied).
+    Calculates global beta and gamma factors from apparent E and S (alpha and
+    delta already applied).
     """
     # Sanitize inputs to avoid values tending towards infinity
     cond = (S_app > 0.3) & (S_app < 0.7)
@@ -188,7 +194,8 @@ def fit_hmm(X, y, n_components_max=3, bic_tol=20):
     y:
         Observed y, e.g. FRET
     bic_tol:
-        Heuristic tolerance value for BIC to prevent overfitting. Increase to punish overfitting more.
+        Heuristic tolerance value for BIC to prevent overfitting. Increase to
+        punish overfitting more.
 
     Returns
     -------
@@ -204,7 +211,8 @@ def fit_hmm(X, y, n_components_max=3, bic_tol=20):
 
     def _heuristic_bic(s, tol):
         """
-        Heuristic for determining the lowest reasonable BIC by setting a tolerance for the difference in BIC
+        Heuristic for determining the lowest reasonable BIC by setting a
+        tolerance for the difference in BIC
         """
         s = np.array(s)
         best_idx, sec_best_idx = np.argpartition(s, 2)[:2]
@@ -251,7 +259,8 @@ def fit_hmm(X, y, n_components_max=3, bic_tol=20):
     # # Find y_after from y_before
     lf["y_after"] = np.roll(lf["y_fit"], -1)
 
-    # Find out when there's a change in state, depending on the minimum transition size set
+    # Find out when there's a change in state, depending on the minimum
+    # transition size set
     lf["state_jump"] = lf["y_fit"].transform(
         lambda group: (abs(group.diff()) > 0).cumsum()
     )
@@ -286,8 +295,9 @@ def fit_gaussian_mixture(arr, k_states):
 
     Returns
     -------
-    Parameters zipped as (means, sigmas, weights), BICs and best k if found by BIC method
-    Returned as a dictionary to avoid unpacking the wrong things when having few parameters
+    Parameters zipped as (means, sigmas, weights), BICs and best k if found by
+    BIC method, returned as a dictionary to avoid unpacking the wrong things
+    when having few parameters
 
     Examples
     --------
@@ -338,7 +348,8 @@ def fit_gaussian_mixture(arr, k_states):
 def sample_max_normalize_3d(X):
     """
     Sample-wise max-value normalization of 3D array (tensor).
-    This is not feature-wise normalization, to keep the ratios between features intact!
+    This is not feature-wise normalization, to keep the ratios between features
+    intact!
     """
     if len(X.shape) == 2:
         X = X[np.newaxis, :, :]
@@ -350,8 +361,9 @@ def sample_max_normalize_3d(X):
 
 def seq_probabilities(yi, skip_threshold=0.5, skip_column=0):
     """
-    Calculates class-wise probabilities over the entire trace for a one-hot encoded
-    sequence prediction. Skips values where the first value is above threshold (bleaching)
+    Calculates class-wise probabilities over the entire trace for a one-hot
+    encoded sequence prediction. Skips values where the first value is above
+    threshold (bleaching).
     """
     assert len(yi.shape) == 2
 
@@ -394,8 +406,7 @@ def predict_single(xi, model):
     np.newaxis adds an empty dimension to create a single-sample tensor, and
     np.squeeze removes the empty dimension after prediction
     """
-    yi = np.squeeze(model.predict(xi[np.newaxis, :, :]))
-    return yi
+    return np.squeeze(model.predict(xi[np.newaxis, :, :]))
 
 
 def predict_batch(X, model, batch_size=256, progressbar: ProgressBar = None):
@@ -431,7 +442,8 @@ def count_adjacent_values(arr):
     for ax in axes:
         for starts, ln in zip(adjs, lns):
             alpha = (1 - np.mean(score[starts:starts + ln])) * 0.15
-            ax.axvspan(xmin = t[starts], xmax = t[starts] + (ln - 1), alpha = alpha, color = "red", zorder = -1)
+            ax.axvspan(xmin = t[starts], xmax = t[starts] + (ln - 1),
+            alpha = alpha, color = "red", zorder = -1)
     """
     arr = arr.ravel()
 
@@ -467,8 +479,7 @@ def min_real(ls) -> Union[Union[int, float], None]:
     """
     ls = np.array(ls)
     ls = ls[ls != None]
-    val = None if len(ls) == 0 else min(ls)
-    return val
+    return None if len(ls) == 0 else min(ls)
 
 
 def contour_2d(
@@ -486,7 +497,7 @@ def contour_2d(
     Calculates the 2D kernel density estimate for a dataset.
 
     Valid kernels for sklearn are
-    ['gaussian' | 'tophat' | 'epanechnikov' | 'exponential' | 'linear' | 'cosine']
+    'gaussian', 'tophat', 'epanechnikov', 'exponential', 'linear', 'cosine'
 
     Example
     -------
@@ -509,7 +520,8 @@ def contour_2d(
     if bandwidth == "auto":
         bandwidth = (len(xdata) * 4 / 4.0) ** (-1.0 / 6)
 
-    # Stretch the min/max values to make sure that the KDE goes beyond the outermost points
+    # Stretch the min/max values to make sure that the KDE goes beyond the
+    # outermost points
     meanx = np.mean(xdata) * extend_grid
     meany = np.mean(ydata) * extend_grid
 
@@ -550,7 +562,8 @@ def contour_2d(
 
 def estimate_bw(n, d, factor):
     """
-    Estimate optimal bandwidth parameter, based on Silverman's rule (see SciPy docs)
+    Estimate optimal bandwidth parameter, based on Silverman's rule
+    (see SciPy docs)
 
     Parameters
     ----------
@@ -568,7 +581,9 @@ def estimate_bw(n, d, factor):
     return ((n * (d + 2) / 4.0) ** (-1.0 / (d + 4))) * factor ** 2
 
 
-def histpoints_w_err(data, bins, density, remove_empty_bins = False, least_count = 5):
+def histpoints_w_err(
+    data, bins, density, remove_empty_bins=False, least_count=5
+):
     """
     Converts unbinned data to x,y-curvefitable points with Poisson errors.
 
@@ -591,19 +606,20 @@ def histpoints_w_err(data, bins, density, remove_empty_bins = False, least_count
     x, y, y-error points and normalization constant
 
     """
-    counts, bin_edges = np.histogram(data, bins = bins, density = density)
+    counts, bin_edges = np.histogram(data, bins=bins, density=density)
     bin_centers = (bin_edges[1:] + bin_edges[:-1]) / 2
     bin_err = np.sqrt(counts)
 
     # Get the normalization constant
-    unnorm_counts, bin_edges = np.histogram(data, bins = bins, density = False)
+    unnorm_counts, bin_edges = np.histogram(data, bins=bins, density=False)
 
     # Generate fitting points
     if remove_empty_bins:
-        true_counts, _ = np.histogram(data, bins,
-                                      density = False)  # regardless of normalization, get actual counts per bin
-        x = bin_centers[true_counts >= int(
-            least_count)]  # filter along counts, to remove any value in the same position as an empty bin
+        # regardless of normalization, get actual counts per bin
+        true_counts, _ = np.histogram(data, bins, density=False)
+        # filter along counts, to remove any value in the same position as
+        # an empty bin
+        x = bin_centers[true_counts >= int(least_count)]
         y = counts[true_counts >= int(least_count)]
         sy = bin_err[true_counts >= int(least_count)]
     else:
@@ -612,3 +628,13 @@ def histpoints_w_err(data, bins, density, remove_empty_bins = False, least_count
     norm_const = np.sum(unnorm_counts * (bin_edges[1] - bin_edges[0]))
 
     return x, y, sy, norm_const
+
+
+def estimate_binwidth(scipy, x):
+    """Estimate optimal binwidth by the Freedman-Diaconis rule."""
+    return 2 * scipy.stats.iqr(x) / np.size(x) ** (1 / 3)
+
+
+def exp_fit(scipy, x, N, l):
+    e = scipy.special.expit
+    return N * (l * e(-l * x))

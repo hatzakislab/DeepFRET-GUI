@@ -1,9 +1,12 @@
 import multiprocessing
+
 multiprocessing.freeze_support()
 
 from global_variables import GlobalVariables as gvars
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.backends.backend_qt5agg import (
+    NavigationToolbar2QT as NavigationToolbar,
+)
 from matplotlib.widgets import PolygonSelector
 from matplotlib.path import Path
 from matplotlib.figure import Figure
@@ -21,7 +24,15 @@ class MatplotlibCanvas(FigureCanvas):
     e.g. (131) means 1 row, 3 columns, position 1 (going from top left).
     """
 
-    def __init__(self, parent=None, ax_setup=None, ax_window=None, width=6, height=2, dpi=100):
+    def __init__(
+        self,
+        parent=None,
+        ax_setup=None,
+        ax_window=None,
+        width=6,
+        height=2,
+        dpi=100,
+    ):
         self.fig = Figure(figsize=(width, height), dpi=dpi, tight_layout=False)
         super(MatplotlibCanvas, self).__init__(self.fig)
         # FigureCanvas.__init__(self, self.fig)
@@ -81,29 +92,43 @@ class MatplotlibCanvas(FigureCanvas):
         self.axes_blend = (self.ax_grn_red,)
         self.axes_all = self.ax_grn, self.ax_red, self.ax_grn_red
 
-        self.fig.subplots_adjust(left=0.05, right=0.95, hspace = 0, wspace = 0.04)  # Increase to add space between plot and GUI
+        self.fig.subplots_adjust(
+            left=0.05, right=0.95, hspace=0, wspace=0.04
+        )  # Increase to add space between plot and GUI
 
     def setupTwoColorTraceLayout(self):
         """
         Setup for viewing traces with 2 colors.
         """
         gs = self.fig.add_gridspec(
-            nrows = 5, ncols = 1, height_ratios = [2, 2, 2, 2, 1]
+            nrows=5, ncols=1, height_ratios=[2, 2, 2, 2, 1]
         )
 
         self.ax_grn = self.fig.add_subplot(gs[0])  # Green
         self.ax_red = self.ax_grn.twinx()  # Red
         self.ax_alx = self.fig.add_subplot(gs[1])  # ALEX
         self.ax_fret = self.fig.add_subplot(gs[2])  # FRET
-        self.ax_stoi = self.fig.add_subplot(gs[3])  # Stoichiometry (should be the bottom-most)
+        self.ax_stoi = self.fig.add_subplot(
+            gs[3]
+        )  # Stoichiometry (should be the bottom-most)
         self.ax_ml = self.fig.add_subplot(gs[4])  # ML predictions
 
-        self.axes = self.ax_grn, self.ax_red, self.ax_alx, self.ax_fret, self.ax_stoi, self.ax_ml
-        self.axes_c = list(zip((self.ax_grn, self.ax_red, self.ax_alx), ("D", "A", "A-direct")))
+        self.axes = (
+            self.ax_grn,
+            self.ax_red,
+            self.ax_alx,
+            self.ax_fret,
+            self.ax_stoi,
+            self.ax_ml,
+        )
+        self.axes_c = list(
+            zip((self.ax_grn, self.ax_red, self.ax_alx), ("D", "A", "A-direct"))
+        )
 
-        self.fig.subplots_adjust(hspace=0, left=0.06, right=0.94, top=0.96, bottom=0.04)
+        self.fig.subplots_adjust(
+            hspace=0, left=0.06, right=0.94, top=0.96, bottom=0.04
+        )
         self.traceOutlineColor()
-
 
     def setupDynamicGridLayout(self):
         """
@@ -113,8 +138,10 @@ class MatplotlibCanvas(FigureCanvas):
         self.fig.add_subplot(self.gs[0])
         self.axes = self.figure.axes
 
-        m = 0.05
-        self.fig.subplots_adjust(hspace=0, left=m, right=1-m, top=1-m, bottom=m)
+        m = 0.08
+        self.fig.subplots_adjust(
+            hspace=0, left=m, right=1 - m, top=1 - m, bottom=m
+        )
 
     def setupSinglePlotLayout(self):
         """
@@ -134,7 +161,9 @@ class MatplotlibCanvas(FigureCanvas):
 
         self.axes = self.ax_top, self.ax_btm
 
-        self.fig.subplots_adjust(hspace=0.30, wspace=0, left=0.02, right=0.98, bottom=0.09, top=0.98)
+        self.fig.subplots_adjust(
+            hspace=0.30, wspace=0, left=0.02, right=0.98, bottom=0.09, top=0.98
+        )
 
     def setupTripleAxesPlotLayout(self):
         """
@@ -144,11 +173,14 @@ class MatplotlibCanvas(FigureCanvas):
         self.ax_ctr = self.fig.add_subplot(132)
         self.ax_rgt = self.fig.add_subplot(133)
 
-        self.fig.subplots_adjust(hspace=0.30, wspace=0, left=0.02, right=0.98, bottom=0.09, top=0.98)
+        self.fig.subplots_adjust(
+            hspace=0.30, wspace=0, left=0.02, right=0.98, bottom=0.09, top=0.98
+        )
 
     def setupJointGridLayout(self):
         """
-        Sets up a 2D-histogram layout similar to a seaborn JointGrid, but manually through matplotlib for compatibility reasons.
+        Sets up a 2D-histogram layout similar to a seaborn JointGrid,
+        but manually through matplotlib for compatibility reasons.
         """
         space_between = 0  # 0.01
         left, right = 0.08, 0.7
@@ -171,16 +203,24 @@ class MatplotlibCanvas(FigureCanvas):
         Updates the box outline and ticks for the traces displayer.
         """
         for ax in self.axes:
-            ax.tick_params(axis="x", which="both", bottom=False, labelbottom=False)
+            ax.tick_params(
+                axis="x", which="both", bottom=False, labelbottom=False
+            )
             ax.yaxis.label.set_color(gvars.color_gui_text)
 
         if hasattr(self, "ax_ml"):
-            self.ax_ml.tick_params(axis = "x", which = "both", bottom = True, labelbottom = True)
+            self.ax_ml.tick_params(
+                axis="x", which="both", bottom=True, labelbottom=True
+            )
             self.ax_ml.set_xlabel("Frames")  # Assuming this is the bottom trace
         else:
             if self.ax_setup != "bypass":
-                self.ax_stoi.tick_params(axis="x", which="both", bottom=True, labelbottom=True)
-                self.ax_stoi.set_xlabel("Frames")  # Assuming this is the bottom trace
+                self.ax_stoi.tick_params(
+                    axis="x", which="both", bottom=True, labelbottom=True
+                )
+                self.ax_stoi.set_xlabel(
+                    "Frames"
+                )  # Assuming this is the bottom trace
 
     def get_window_title(self):  # overwrite class method for default image name
         return self.defaultImageName
@@ -197,7 +237,8 @@ class PlotWidget(QWidget):
         self.setLayout(QVBoxLayout())
         self.canvas = MatplotlibCanvas(parent=self, **kwargs)
 
-        # Visible set to False. Only using this to use the save file dialog from MPL
+        # Visible set to False. Only using this to use the save file dialog
+        # from MPL
         self.toolbar = NavigationToolbar(self.canvas, self, coordinates=True)
         self.toolbar.setVisible(False)
 

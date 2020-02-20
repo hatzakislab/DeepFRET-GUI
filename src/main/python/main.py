@@ -36,7 +36,7 @@ import scipy.optimize
 import scipy.special
 import warnings
 import sklearn.preprocessing
-import tensorflow.keras.models
+from tensorflow_core.python.keras.models import load_model
 
 from ui._MenuBar import Ui_MenuBar
 from ui._MainWindow import Ui_MainWindow
@@ -64,7 +64,9 @@ from lib.container import (
 )
 from mpl_layout import PlotWidget
 
-from fbs_runtime.application_context import ApplicationContext
+from fbs_runtime.application_context.PyQt5 import ApplicationContext
+
+
 
 class PreferencesWindow(QDialog):
     """
@@ -3664,7 +3666,7 @@ class AppContext(ApplicationContext):
         Loads initial resources from disk to application
         """
         # model_experimental is better but undocumented
-        self.keras_model = tensorflow.keras.models.load_model(
+        self.keras_model = load_model(
             self.get_resource("model_published.h5")
         )
         self.config = ConfigObj(self.get_resource("config.ini"))

@@ -8,8 +8,7 @@ import numpy as np
 import pandas as pd
 import skimage.io
 from lib import imgdata
-from typing import Union
-from typing import Tuple as T
+from typing import Union, Tuple
 
 
 class ImageContainer:
@@ -24,7 +23,7 @@ class ImageContainer:
         self.width = None  # type: Union[None, int]
         self.height = None  # type: Union[None, int]
         self.roi_radius = None  # type: Union[None, int]
-        self.channels = None  # type: Union[None, T[ImageChannel]]
+        self.channels = None  # type: Union[None, Tuple[ImageChannel]]
         self.coloc_frac = None  # type: Union[None, float]
 
         # Image color channels

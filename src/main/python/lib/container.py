@@ -1,4 +1,5 @@
 import multiprocessing
+import time
 
 multiprocessing.freeze_support()
 
@@ -128,6 +129,8 @@ class TraceContainer:
         self.name = name  # type: str
         self.movie = movie  # type: str
         self.n = n  # type: str
+        self.tracename = None  # type: Union[None, str]
+
 
         self.is_checked = False  # type: bool
         self.xdata = []  # type: [int, int]
@@ -156,6 +159,7 @@ class TraceContainer:
 
         self.channels = self.grn, self.red, self.acc
 
+
     def get_intensities(self):
         """
         Convenience function to return trace get_intensities
@@ -178,6 +182,92 @@ class TraceContainer:
         red_bleach = self.red.bleach  # type: Union[None, int]
         return grn_bleach, acc_bleach, red_bleach
 
+    def get_export_df(self):
+        """
+        Returns the DataFrame to use for export
+        """
+        if self.y_pred is None:
+            df = pd.DataFrame(
+                {
+                    "D-Dexc-bg": self.grn.bg,
+                    "A-Dexc-bg": self.acc.bg,
+                    "A-Aexc-bg": self.red.bg,
+                    "D-Dexc-rw": self.grn.int,
+                    "A-Dexc-rw": self.acc.int,
+                    "A-Aexc-rw": self.red.int,
+                    "S": self.stoi,
+                    "E": self.fret,
+                }
+            ).round(4)
+        else:
+            df = pd.DataFrame(
+                {
+                    "D-Dexc-bg": self.grn.bg,
+                    "A-Dexc-bg": self.acc.bg,
+                    "A-Aexc-bg": self.red.bg,
+                    "D-Dexc-rw": self.grn.int,
+                    "A-Dexc-rw": self.acc.int,
+                    "A-Aexc-rw": self.red.int,
+                    "S": self.stoi,
+                    "E": self.fret,
+                    "p_blch": self.y_pred[:, 0],
+                    "p_aggr": self.y_pred[:, 1],
+                    "p_stat": self.y_pred[:, 2],
+                    "p_dyna": self.y_pred[:, 3],
+                    "p_nois": self.y_pred[:, 4],
+                    "p_scrm": self.y_pred[:, 5],
+                }
+            ).round(4)
+        return df
+
+    def get_export_txt(self, df: Union[None, pd.DataFrame] = None, exp_txt: Union[None, str] = None,
+                       date_txt: Union[None, str] = None):
+        """
+        Returns the string to use for saving the trace as a txt
+        """
+        if df is None:
+            df = self.get_export_df()
+        if (exp_txt is None) or (date_txt is None):
+            exp_txt = "Exported by DeepFRET"
+            date_txt = "Date: {}".format(time.strftime("%Y-%m-%d, %H:%M"))
+
+        mov_txt = "Movie filename: {}".format(self.movie)
+        id_txt = "FRET pair #{}".format(self.n)
+        bl_txt = (
+            "Donor bleaches at: {} - "
+            "Acceptor bleaches at: {}".format(
+                self.grn.bleach, self.red.bleach
+            )
+        )
+        out_txt = "{0}\n" \
+                  "{1}\n" \
+                  "{2}\n" \
+                  "{3}\n" \
+                  "{4}\n\n" \
+                  "{5}".format(
+            exp_txt,
+            date_txt,
+            mov_txt,
+            id_txt,
+            bl_txt,
+            df.to_csv(index=False, sep="\t"))
+
+        return out_txt
+
+    def get_tracename(self) -> str:
+        if self.tracename is None:
+            if self.movie is None:
+                name = "Trace_pair{}.txt".format(self.n)
+            else:
+                name = "Trace_{}_pair{}.txt".format(
+                    self.movie.replace(".", "_"), self.n
+                )
+
+            # Scrub mysterious \n if they appear due to filenames
+            name = "".join(name.splitlines(keepends=False))
+            self.tracename = name
+
+        return self.tracename
 
 class MovieData:
     """
@@ -234,7 +324,7 @@ class MovieData:
         self._data().width = self._data().img.shape[2]
         # Scaling factor for ROI
         self._data().roi_radius = (
-            max(self._data().height, self._data().width) / 80
+                max(self._data().height, self._data().width) / 80
         )
 
         if setup == "dual":
@@ -255,8 +345,8 @@ class MovieData:
             )
 
             if (
-                self._data().img.shape[3] == 3
-                and self._data().img.shape[0] < 99
+                    self._data().img.shape[3] == 3
+                    and self._data().img.shape[0] < 99
             ):
                 # self._data().blu.raw = self._data().img[:, btm, lft, 0]
                 self._data().grn.raw = self._data().img[:, top, lft, 1]
@@ -271,8 +361,8 @@ class MovieData:
 
             # for FRET movies, channels ordered (green, red, blue)
             elif (
-                self._data().img.shape[3] == 3
-                and self._data().img.shape[0] > 99
+                    self._data().img.shape[3] == 3
+                    and self._data().img.shape[0] > 99
             ):
                 # self._data().blu.raw = self._data().img[:, btm, lft, 2]
                 self._data().grn.raw = self._data().img[:, top, lft, 0]
@@ -340,8 +430,8 @@ class MovieData:
                     crop_h = int(h // 50)
                     crop_w = int(w // 50)
 
-                    c.raw = c.raw[:, crop_h : h - crop_h, crop_w : w - crop_w]
-                    c.mean = c.raw[0 : t // 20, :, :].mean(axis=0)
+                    c.raw = c.raw[:, crop_h: h - crop_h, crop_w: w - crop_w]
+                    c.mean = c.raw[0: t // 20, :, :].mean(axis=0)
                     c.mean = imgdata.zero_one_scale(c.mean)
                     c.mean_nobg = imgdata.subtract_background(
                         c.mean, by="row", return_bg_only=False

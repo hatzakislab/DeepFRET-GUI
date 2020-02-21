@@ -1,7 +1,5 @@
 import multiprocessing
 
-from about_window import AboutWindow
-
 multiprocessing.freeze_support()
 
 import os
@@ -15,6 +13,7 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from configobj import ConfigObj
 
+from about_window import AboutWindow
 import lib.imgdata
 import lib.math
 import lib.misc
@@ -65,7 +64,6 @@ from lib.container import (
 from mpl_layout import PlotWidget
 
 from fbs_runtime.application_context.PyQt5 import ApplicationContext
-
 
 
 class PreferencesWindow(QDialog):
@@ -155,12 +153,12 @@ class PreferencesWindow(QDialog):
         self.readConfigFromFile()
 
         for configKey, checkBox in zip(
-            gvars.keys_globalCheckBoxes, self.globalCheckBoxes
+                gvars.keys_globalCheckBoxes, self.globalCheckBoxes
         ):
             checkBox.setChecked(bool(self.getConfig(configKey)))
 
         for radioButton, imgMode in zip(
-            self.imgModeRadioButtons, self.imgModes
+                self.imgModeRadioButtons, self.imgModes
         ):
             if self.getConfig(gvars.key_imgMode) == imgMode:
                 radioButton.setChecked(True)
@@ -178,14 +176,14 @@ class PreferencesWindow(QDialog):
         Write getConfig from the GUI when the preference window is closed.
         """
         for configKey, checkBox in zip(
-            gvars.keys_globalCheckBoxes, self.globalCheckBoxes
+                gvars.keys_globalCheckBoxes, self.globalCheckBoxes
         ):
             self.setConfig(configKey, checkBox.isChecked())
 
         # Imaging Modes
         newImgMode = None
         for radioButton, imgMode in zip(
-            self.imgModeRadioButtons, self.imgModes
+                self.imgModeRadioButtons, self.imgModes
         ):
             if radioButton.isChecked():
                 newImgMode = imgMode
@@ -745,7 +743,7 @@ class BaseWindow(QMainWindow):
             TransitionDensityWindow_.refreshPlot()
 
     def setupFigureCanvas(
-        self, ax_setup, ax_window, use_layoutbox=True, **kwargs
+            self, ax_setup, ax_window, use_layoutbox=True, **kwargs
     ):
         """
         Creates a canvas with a given ax layout.
@@ -866,7 +864,7 @@ class BaseWindow(QMainWindow):
         exp_txt, date_txt = self.returnInfoHeader()
 
         directory = (
-            self.getConfig(gvars.key_lastOpenedDir) + "/Colocalization.txt"
+                self.getConfig(gvars.key_lastOpenedDir) + "/Colocalization.txt"
         )
         path, _ = QFileDialog.getSaveFileName(
             self, directory=directory
@@ -928,68 +926,12 @@ class BaseWindow(QMainWindow):
             ctxt.app.processEvents()
 
             for trace in traces:
-                if trace.y_pred is None:
-                    df = pd.DataFrame(
-                        {
-                            "D-Dexc-bg": trace.grn.bg,
-                            "A-Dexc-bg": trace.acc.bg,
-                            "A-Aexc-bg": trace.red.bg,
-                            "D-Dexc-rw": trace.grn.int,
-                            "A-Dexc-rw": trace.acc.int,
-                            "A-Aexc-rw": trace.red.int,
-                            "S": trace.stoi,
-                            "E": trace.fret,
-                        }
-                    ).round(4)
-                else:
-                    df = pd.DataFrame(
-                        {
-                            "D-Dexc-bg": trace.grn.bg,
-                            "A-Dexc-bg": trace.acc.bg,
-                            "A-Aexc-bg": trace.red.bg,
-                            "D-Dexc-rw": trace.grn.int,
-                            "A-Dexc-rw": trace.acc.int,
-                            "A-Aexc-rw": trace.red.int,
-                            "S": trace.stoi,
-                            "E": trace.fret,
-                            "p_blch": trace.y_pred[:, 0],
-                            "p_aggr": trace.y_pred[:, 1],
-                            "p_stat": trace.y_pred[:, 2],
-                            "p_dyna": trace.y_pred[:, 3],
-                            "p_nois": trace.y_pred[:, 4],
-                            "p_scrm": trace.y_pred[:, 5],
-                        }
-                    ).round(4)
+                out_txt = trace.get_export_txt(exp_txt=exp_txt, date_txt=date_txt)
 
-                mov_txt = "Movie filename: {}".format(trace.movie)
-                id_txt = "FRET pair #{}".format(trace.n)
-                bl_txt = (
-                    "Donor bleaches at: {} - "
-                    "Acceptor bleaches at: {}".format(
-                        trace.grn.bleach, trace.red.bleach
-                    )
-                )
-
-                savename = os.path.join(
-                    path, TraceWindow_.generatePrettyTracename(trace)
-                )
+                savename = os.path.join(path, trace.get_tracename())
 
                 with open(savename, "w") as f:
-                    f.write(
-                        "{0}\n"
-                        "{1}\n"
-                        "{2}\n"
-                        "{3}\n"
-                        "{4}\n\n"
-                        "{5}".format(
-                            exp_txt,
-                            date_txt,
-                            mov_txt,
-                            id_txt,
-                            bl_txt,
-                            df.to_csv(index=False, sep="\t"),
-                        )
-                    )
+                    f.write(out_txt)
 
     def exportCorrectionFactors(self):
         """
@@ -999,7 +941,7 @@ class BaseWindow(QMainWindow):
         exp_txt, date_txt = self.returnInfoHeader()
 
         directory = (
-            self.getConfig(gvars.key_lastOpenedDir) + "/CorrectionFactors.txt"
+                self.getConfig(gvars.key_lastOpenedDir) + "/CorrectionFactors.txt"
         )
         path, _ = QFileDialog.getSaveFileName(
             self, directory=directory
@@ -1027,7 +969,7 @@ class BaseWindow(QMainWindow):
         exp_txt, date_txt = self.returnInfoHeader()
 
         directory = (
-            self.getConfig(gvars.key_lastOpenedDir) + "/E_S_Histogram.txt"
+                self.getConfig(gvars.key_lastOpenedDir) + "/E_S_Histogram.txt"
         )
         path, _ = QFileDialog.getSaveFileName(
             self, directory=directory
@@ -1066,8 +1008,8 @@ class BaseWindow(QMainWindow):
         exp_txt, date_txt = self.returnInfoHeader()
 
         directory = (
-            self.getConfig(gvars.key_lastOpenedDir)
-            + "/Transition_Densities.txt"
+                self.getConfig(gvars.key_lastOpenedDir)
+                + "/Transition_Densities.txt"
         )
         path, _ = QFileDialog.getSaveFileName(
             self, directory=directory
@@ -1412,7 +1354,7 @@ class MainWindow(BaseWindow):
                 self.getTracesSingleMovie()
                 self.currentMovie().img = None
                 for c in self.currentMovie().channels + (
-                    self.currentMovie().acc,
+                        self.currentMovie().acc,
                 ):
                     c.raw = None
 
@@ -1564,8 +1506,8 @@ class MainWindow(BaseWindow):
         mov.traces = {}
 
         if (
-            mov.coloc_blu_grn.spots is not None
-            and mov.coloc_grn_red.spots is not None
+                mov.coloc_blu_grn.spots is not None
+                and mov.coloc_grn_red.spots is not None
         ):
             mov.coloc_all.spots = lib.imgdata.colocalize_triple(
                 mov.coloc_blu_grn.spots, mov.coloc_grn_red.spots
@@ -1705,7 +1647,7 @@ class MainWindow(BaseWindow):
             sensitivity = 100 if self.imgMode == "bypass" else 250
 
             for c, lo, hi in zip(
-                mov.channels, contrast_lo, contrast_hi
+                    mov.channels, contrast_lo, contrast_hi
             ):  # type: ImageChannel, QDoubleSpinBox, QDoubleSpinBox
                 clip_lo = float(lo.value() / sensitivity)
                 clip_hi = float(hi.value() / sensitivity)
@@ -1782,9 +1724,9 @@ class MainWindow(BaseWindow):
                 )
 
             if (
-                self.imgMode == "3-color"
-                and mov.blu.exists
-                or self.imgMode == "bypass"
+                    self.imgMode == "3-color"
+                    and mov.blu.exists
+                    or self.imgMode == "bypass"
             ):
                 if mov.coloc_blu_grn.spots is not None:
                     lib.plotting.plot_roi_coloc(
@@ -2039,7 +1981,8 @@ class TraceWindow(BaseWindow):
             self.getCurrentListObject()
             self.setConfig(gvars.key_lastOpenedDir, self.currDir)
 
-    def loadTraceFromAscii(self, full_filename) -> [TraceContainer, None]:
+    @staticmethod
+    def loadTraceFromAscii(full_filename) -> [TraceContainer, None]:
         """
         Reads a trace from an ASCII text file. Several checks are included to
         include flexible compatibility with different versions of trace exports.
@@ -2521,9 +2464,8 @@ class TraceWindow(BaseWindow):
 
         # Change colors of output to look better for export
         if self.currName is not None:
-            self.canvas.defaultImageName = self.generatePrettyTracename(
-                self.currentTrace()
-            )
+            self.canvas.defaultImageName = self.currentTrace().get_tracename()
+
         else:
             self.canvas.defaultImageName = "Blank"
 
@@ -2645,10 +2587,10 @@ class TraceWindow(BaseWindow):
 
             # Canvas setup
             if self.canvas.ax_setup in (
-                "dual",
-                "2-color",
-                "2-color-inv",
-                "3-color",
+                    "dual",
+                    "2-color",
+                    "2-color-inv",
+                    "3-color",
             ):
                 channels = [trace.grn, trace.acc, trace.red]
                 colors = [gvars.color_green, gvars.color_red, gvars.color_red]
@@ -2660,7 +2602,7 @@ class TraceWindow(BaseWindow):
                 raise ValueError("Setup is not valid. Corrupted config.ini?")
 
             for (ax, label), channel, color in zip(
-                self.canvas.axes_c, channels, colors
+                    self.canvas.axes_c, channels, colors
             ):
                 if label == "A":
                     int_ = F_DA
@@ -2721,10 +2663,10 @@ class TraceWindow(BaseWindow):
                 ax_S = self.canvas.ax_stoi
 
                 for signal, ax, color, label in zip(
-                    (fret, stoi),
-                    (ax_E, ax_S),
-                    (gvars.color_orange, gvars.color_purple),
-                    ("E", "S"),
+                        (fret, stoi),
+                        (ax_E, ax_S),
+                        (gvars.color_orange, gvars.color_purple),
+                        ("E", "S"),
                 ):
                     ax.plot(trace.frames, signal, color=color)
                     ax.axvspan(
@@ -2812,9 +2754,9 @@ class HistogramWindow(BaseWindow):
         [
             self.ui.gaussianAutoButton.clicked.connect(x)
             for x in (
-                partial(self.fitGaussians, "auto"),
-                partial(self.refreshPlot, True),
-            )
+            partial(self.fitGaussians, "auto"),
+            partial(self.refreshPlot, True),
+        )
         ]
         [
             self.ui.gaussianSpinBox.valueChanged.connect(x)
@@ -3076,10 +3018,10 @@ class HistogramWindow(BaseWindow):
                 )
 
         for n, (factor, name) in enumerate(
-            zip(
-                (self.alpha, self.delta, self.beta, self.gamma),
-                ("alpha", "delta", "beta", "gamma"),
-            )
+                zip(
+                    (self.alpha, self.delta, self.beta, self.gamma),
+                    ("alpha", "delta", "beta", "gamma"),
+                )
         ):
             self.canvas.ax_ctr.text(
                 x=0.0,
@@ -3317,7 +3259,7 @@ class TransitionDensityWindow(BaseWindow):
                 x=0,
                 y=0.9,
                 s="N = {}\n"
-                "{} transitions\n".format(
+                  "{} transitions\n".format(
                     self.n_samples, len(self.fret_lifetime)
                 ),
                 color=gvars.color_gui_text,
@@ -3387,8 +3329,8 @@ class TransitionDensityWindow(BaseWindow):
                         "--",
                         color="black",
                         label="label: {}\n"
-                        "$\lambda$:  ${:.2f} \pm {:.2f}$\n"
-                        "lifetime: ${:.2f}$".format(
+                              "$\lambda$:  ${:.2f} \pm {:.2f}$\n"
+                              "lifetime: ${:.2f}$".format(
                             k, rate, rate_err, 1 / rate
                         ),
                     )
@@ -3470,7 +3412,7 @@ class DensityWindowInspector(SheetInspector):
         self.ui.setupUi(self)
 
         if isinstance(
-            parent, HistogramWindow
+                parent, HistogramWindow
         ):  # Avoids an explicit reference in parent class, for easier copy-paste
             self.keys = gvars.keys_hist
             HistogramWindow_.inspector = self
@@ -3486,13 +3428,13 @@ class DensityWindowInspector(SheetInspector):
     def connectUi(self, parent):
         """Connect Ui to parent functions"""
         if hasattr(
-            parent, "canvas"
+                parent, "canvas"
         ):  # Avoid refreshing canvas before it's even instantiated on the parent
             for slider in (
-                self.ui.smoothingSlider,
-                self.ui.resolutionSlider,
-                self.ui.colorSlider,
-                self.ui.pointAlphaSlider,
+                    self.ui.smoothingSlider,
+                    self.ui.resolutionSlider,
+                    self.ui.colorSlider,
+                    self.ui.pointAlphaSlider,
             ):
 
                 # Avoids an explicit reference in parent class,
@@ -3657,6 +3599,7 @@ class AppContext(ApplicationContext):
     Entry point for running the application. Only loads resources and holds
     the event loop.
     """
+
     def __init__(self):
         super().__init__()
         self.keras_model = None

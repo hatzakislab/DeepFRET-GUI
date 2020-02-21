@@ -89,6 +89,7 @@ class PreferencesWindow(QDialog):
             self.ui.checkBox_unColocRed,
             self.ui.checkBox_illuCorrect,
             self.ui.checkBox_fitSpots,
+            self.ui.checkBox_twoChannelsNoALEX,
         )
 
         self.imgModeRadioButtons = (

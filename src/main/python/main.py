@@ -926,12 +926,7 @@ class BaseWindow(QMainWindow):
             ctxt.app.processEvents()
 
             for trace in traces:
-                out_txt = trace.get_export_txt(exp_txt=exp_txt, date_txt=date_txt)
-
-                savename = os.path.join(path, trace.get_tracename())
-
-                with open(savename, "w") as f:
-                    f.write(out_txt)
+                trace.export_trace_to_txt(dir_to_join=path)
 
     def exportCorrectionFactors(self):
         """

@@ -1,4 +1,5 @@
 import multiprocessing
+import os.path
 import time
 
 multiprocessing.freeze_support()
@@ -130,7 +131,7 @@ class TraceContainer:
         self.movie = movie  # type: str
         self.n = n  # type: str
         self.tracename = None  # type: Union[None, str]
-
+        self.savename = None  # type: Union[None, str]
 
         self.is_checked = False  # type: bool
         self.xdata = []  # type: [int, int]
@@ -268,6 +269,13 @@ class TraceContainer:
             self.tracename = name
 
         return self.tracename
+
+
+    def export_trace_to_txt(self, dir_to_join:Union[None, str]=None):
+        savename = os.path.join(dir_to_join, self.get_tracename())
+        with open(savename, "w") as f:
+            f.write(self.get_export_txt())
+
 
 class MovieData:
     """

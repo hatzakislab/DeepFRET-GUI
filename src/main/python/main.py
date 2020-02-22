@@ -898,7 +898,7 @@ class BaseWindow(QMainWindow):
                     "{0}\n"
                     "{1}\n\n"
                     "{2}".format(
-                        exp_txt, date_txt, df.to_csv(index=False, sep="\t",na_rep='NaN')
+                        exp_txt, date_txt, df.to_csv(index=False, sep="\t", na_rep='NaN')
                     )
                 )
 
@@ -953,7 +953,7 @@ class BaseWindow(QMainWindow):
                     "{0}\n"
                     "{1}\n\n"
                     "{2}".format(
-                        exp_txt, date_txt, df.to_csv(index=False, sep="\t",na_rep='NaN')
+                        exp_txt, date_txt, df.to_csv(index=False, sep="\t", na_rep='NaN')
                     )
                 )
 
@@ -992,7 +992,7 @@ class BaseWindow(QMainWindow):
                     "{0}\n"
                     "{1}\n\n"
                     "{2}".format(
-                        exp_txt, date_txt, df.to_csv(index=False, sep="\t",na_rep='NaN')
+                        exp_txt, date_txt, df.to_csv(index=False, sep="\t", na_rep='NaN')
                     )
                 )
 
@@ -1023,7 +1023,7 @@ class BaseWindow(QMainWindow):
                     "{0}\n"
                     "{1}\n\n"
                     "{2}".format(
-                        exp_txt, date_txt, df.to_csv(index=False, sep="\t",na_rep='NaN')
+                        exp_txt, date_txt, df.to_csv(index=False, sep="\t", na_rep='NaN')
                     )
                 )
 
@@ -2032,6 +2032,12 @@ class TraceWindow(BaseWindow):
         except AttributeError:
             return None
 
+        # Add flag to see if incomplete trace
+        if not any(s.startswith('A-A') for s in df.columns):
+            df["A-Aexc-rw"] = np.nan
+            df["A-Aexc-bg"] = np.nan
+            df["A-Aexc-I"] = np.nan
+
         trace = TraceContainer(
             movie=movie, n=pair_n, name=os.path.basename(full_filename)
         )
@@ -2067,7 +2073,7 @@ class TraceWindow(BaseWindow):
                 )
 
             # This strips periods if present
-            df.columns = [c.strip(".") for c in colnames]
+            df.columns = [c.strip(".") for c in df.columns]
 
             trace.grn.int = df["D-Dexc-rw"].values
             trace.acc.int = df["A-Dexc-rw"].values
@@ -2083,8 +2089,20 @@ class TraceWindow(BaseWindow):
                 trace.acc.bg = zeros
                 trace.red.bg = zeros
 
-        trace.fret = lib.math.calc_E(trace.get_intensities())
-        trace.stoi = lib.math.calc_S(trace.get_intensities())
+
+        # trace.fret = lib.math.calc_E(trace.get_intensities())
+        #
+        #
+        # trace.stoi = lib.math.calc_S(trace.get_intensities())
+        if "E" in df.columns:
+            trace.fret = df["E"].values
+        else:
+            trace.calculate_fret()
+
+        if "S" in df.columns:
+            trace.stoi = df["S"].values
+        else:
+            trace.calculate_stoi()
 
         trace.frames = np.arange(1, len(trace.grn.int) + 1, 1)
         trace.frames_max = trace.frames.max()

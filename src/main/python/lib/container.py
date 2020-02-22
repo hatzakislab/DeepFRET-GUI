@@ -2,6 +2,7 @@ import multiprocessing
 import os.path
 import time
 
+
 multiprocessing.freeze_support()
 
 from global_variables import GlobalVariables as gvars
@@ -10,6 +11,7 @@ import numpy as np
 import pandas as pd
 import skimage.io
 from lib import imgdata
+import lib.math
 from typing import Union, Tuple
 
 
@@ -182,34 +184,26 @@ class TraceContainer:
         red_bleach = self.red.bleach  # type: Union[None, int]
         return grn_bleach, acc_bleach, red_bleach
 
-    def get_export_df(self):
+    def get_export_df(self, keep_nan_columns: Union[bool, None] = None):
         """
         Returns the DataFrame to use for export
         """
-        if self.y_pred is None:
-            df = pd.DataFrame(
+        if keep_nan_columns is None:
+            keep_nan_columns = True
+        dfdict = {
+            "D-Dexc-bg": self.grn.bg,
+            "A-Dexc-bg": self.acc.bg,
+            "A-Aexc-bg": self.red.bg,
+            "D-Dexc-rw": self.grn.int,
+            "A-Dexc-rw": self.acc.int,
+            "A-Aexc-rw": self.red.int,
+            "S": self.stoi,
+            "E": self.fret,
+        }
+
+        if self.y_pred is not None:
+            dfdict.update(
                 {
-                    "D-Dexc-bg": self.grn.bg,
-                    "A-Dexc-bg": self.acc.bg,
-                    "A-Aexc-bg": self.red.bg,
-                    "D-Dexc-rw": self.grn.int,
-                    "A-Dexc-rw": self.acc.int,
-                    "A-Aexc-rw": self.red.int,
-                    "S": self.stoi,
-                    "E": self.fret,
-                }
-            ).round(4)
-        else:
-            df = pd.DataFrame(
-                {
-                    "D-Dexc-bg": self.grn.bg,
-                    "A-Dexc-bg": self.acc.bg,
-                    "A-Aexc-bg": self.red.bg,
-                    "D-Dexc-rw": self.grn.int,
-                    "A-Dexc-rw": self.acc.int,
-                    "A-Aexc-rw": self.red.int,
-                    "S": self.stoi,
-                    "E": self.fret,
                     "p_blch": self.y_pred[:, 0],
                     "p_aggr": self.y_pred[:, 1],
                     "p_stat": self.y_pred[:, 2],
@@ -217,16 +211,22 @@ class TraceContainer:
                     "p_nois": self.y_pred[:, 4],
                     "p_scrm": self.y_pred[:, 5],
                 }
-            ).round(4)
+            )
+
+        df = pd.DataFrame(dfdict).round(4)
+
+        if keep_nan_columns is False:
+            df.dropna(axis=1, how='all', inplace=True)
+
         return df
 
     def get_export_txt(self, df: Union[None, pd.DataFrame] = None, exp_txt: Union[None, str] = None,
-                       date_txt: Union[None, str] = None):
+                       date_txt: Union[None, str] = None, keep_nan_columns: Union[bool, None] = None):
         """
         Returns the string to use for saving the trace as a txt
         """
         if df is None:
-            df = self.get_export_df()
+            df = self.get_export_df(keep_nan_columns=keep_nan_columns)
         if (exp_txt is None) or (date_txt is None):
             exp_txt = "Exported by DeepFRET"
             date_txt = "Date: {}".format(time.strftime("%Y-%m-%d, %H:%M"))
@@ -250,7 +250,7 @@ class TraceContainer:
             mov_txt,
             id_txt,
             bl_txt,
-            df.to_csv(index=False, sep="\t",na_rep='NaN')
+            df.to_csv(index=False, sep="\t", na_rep='NaN')
         )
 
         return out_txt
@@ -278,11 +278,17 @@ class TraceContainer:
                 self.savename = self.get_tracename()
         return self.savename
 
-    def export_trace_to_txt(self, dir_to_join: Union[None, str] = None):
+    def export_trace_to_txt(self, dir_to_join: Union[None, str] = None, keep_nan_columns: Union[bool, None] = None):
         savename = self.get_savename(dir_to_join=dir_to_join)
         # print(self)
         with open(savename, "w") as f:
-            f.write(self.get_export_txt())
+            f.write(self.get_export_txt(keep_nan_columns=keep_nan_columns))
+
+    def calculate_fret(self):
+        self.fret = lib.math.calc_E(self.get_intensities())
+
+    def calculate_stoi(self):
+        self.stoi = lib.math.calc_S(self.get_intensities())
 
 
 class MovieData:

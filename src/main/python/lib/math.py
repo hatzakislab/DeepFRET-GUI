@@ -49,7 +49,12 @@ def correct_DA(intensities, alpha=0, delta=0):
     I_DD = grn_int - grn_bg
     I_DA = acc_int - acc_bg
     I_AA = red_int - red_bg
-    F_DA = I_DA - (alpha * I_DD) - (delta * I_AA)
+
+    if np.isnan(np.sum(I_AA)):
+        F_DA = I_DA - (alpha * I_DD)
+        print('not using delta factor!')
+    else:
+        F_DA = I_DA - (alpha * I_DD) - (delta * I_AA)
 
     return F_DA, I_DD, I_DA, I_AA
 
@@ -64,6 +69,12 @@ def calc_E(intensities, alpha=0, delta=0, clip_range=(-0.3, 1.3)):
     cmin, cmax = clip_range
 
     F_DA, I_DD, I_DA, I_AA = correct_DA(intensities, alpha, delta)
+
+    # if np.isnan(np.sum(F_DA)):
+    #     E = I_DA / (I_DD + I_DA)
+    #     print('using uncorrected FRET')
+    # else:
+    #     E = F_DA / (I_DD + F_DA)
 
     E = F_DA / (I_DD + F_DA)
     E = np.clip(E, cmin, cmax, out=E)

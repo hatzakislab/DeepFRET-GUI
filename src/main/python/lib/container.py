@@ -1,7 +1,8 @@
 import multiprocessing
 import os.path
+import re
 import time
-
+import warnings
 
 multiprocessing.freeze_support()
 
@@ -128,12 +129,15 @@ class TraceContainer:
     Class for storing individual newTrace information.
     """
 
-    def __init__(self, name, movie, n):
-        self.name = name  # type: str
-        self.movie = movie  # type: str
-        self.n = n  # type: str
+    def __init__(self, filename, name=None):
+        self.filename = filename# type: str
+        self.name = name if name is not None else os.path.basename(filename)  # type: str
+        self.movie  = None # type: str
+        self.n = None # type: str
         self.tracename = None  # type: Union[None, str]
         self.savename = None  # type: Union[None, str]
+
+        self.load_successful = False
 
         self.is_checked = False  # type: bool
         self.xdata = []  # type: [int, int]
@@ -161,6 +165,139 @@ class TraceContainer:
         self.frames_max = None  # type: Union[None, int]
 
         self.channels = self.grn, self.red, self.acc
+
+        self.load_from_ascii()
+
+    def load_from_ascii(self):
+        """
+                Reads a trace from an ASCII text file. Several checks are included to
+                include flexible compatibility with different versions of trace exports.
+                Also includes support for all iSMS traces.
+                """
+        colnames = [
+            "D-Dexc-bg.",
+            "A-Dexc-bg.",
+            "A-Aexc-bg.",
+            "D-Dexc-rw.",
+            "A-Dexc-rw.",
+            "A-Aexc-rw.",
+            "S",
+            "E",
+        ]
+
+        with open(self.filename) as f:
+            txt_header = [next(f) for _ in range(5)]
+
+        # This is for iSMS compatibility
+        if txt_header[0].split("\n")[0] == "Exported by iSMS":
+            df = pd.read_csv(self.filename, skiprows=5, sep="\t", header=None)
+            if len(df.columns) == colnames:
+                df.columns = colnames
+            else:
+                try:
+                    df.columns = colnames
+                except ValueError:
+                    colnames = colnames[3:]
+                    df.columns = colnames
+        # Else DeepFRET trace compatibility
+        else:
+            df = lib.misc.csv_skip_to(
+                path=self.filename, line="D-Dexc", sep="\s+"
+            )
+        try:
+            pair_n = lib.misc.seek_line(
+                path=self.filename, line_starts="FRET pair"
+            )
+            self.n = int(pair_n.split("#")[-1])
+
+            movie = lib.misc.seek_line(
+                path=self.filename, line_starts="Movie filename"
+            )
+            self.movie = movie.split(": ")[-1]
+
+            bleaching = lib.misc.seek_line(
+                path=self.filename,
+                line_starts=("Donor bleaches at", "Bleaches at"),
+            )
+
+        except AttributeError:
+            return None
+        self.load_successful = True
+
+        # Add flag to see if incomplete trace
+        if not any(s.startswith('A-A') for s in df.columns):
+            df["A-Aexc-rw"] = np.nan
+            df["A-Aexc-bg"] = np.nan
+            df["A-Aexc-I"] = np.nan
+
+
+        if "D-Dexc_F" in df.columns:
+            warnings.warn(
+                "This trace is created with an older format.",
+                DeprecationWarning,
+            )
+            self.grn.int = df["D-Dexc_F"].values
+            self.acc.int = df["A-Dexc_I"].values
+            self.red.int = df["A-Aexc_I"].values
+
+            zeros = np.zeros(len(self.grn.int))
+            self.grn.bg = zeros
+            self.acc.bg = zeros
+            self.red.bg = zeros
+
+        else:
+            if "p_blch" in df.columns:
+                ml_cols = [
+                    "p_blch",
+                    "p_aggr",
+                    "p_stat",
+                    "p_dyna",
+                    "p_nois",
+                    "p_scrm",
+                ]
+                colnames += ml_cols
+                self.y_pred = df[ml_cols].values
+                self.y_class, self.confidence = lib.math.seq_probabilities(
+                    self.y_pred
+                )
+
+            # This strips periods if present
+            df.columns = [c.strip(".") for c in df.columns]
+
+            self.grn.int = df["D-Dexc-rw"].values
+            self.acc.int = df["A-Dexc-rw"].values
+            self.red.int = df["A-Aexc-rw"].values
+
+            try:
+                self.grn.bg = df["D-Dexc-bg"].values
+                self.acc.bg = df["A-Dexc-bg"].values
+                self.red.bg = df["A-Aexc-bg"].values
+            except KeyError:
+                zeros = np.zeros(len(self.grn.int))
+                self.grn.bg = zeros
+                self.acc.bg = zeros
+                self.red.bg = zeros
+
+        self.calculate_fret()
+        self.calculate_stoi()
+
+        self.frames = np.arange(1, len(self.grn.int) + 1, 1)
+        self.frames_max = self.frames.max()
+
+        # TODO: revert mechanism to first bleaching or separate D/A bleaching
+        #  for consistency throughout code (and speedups)
+        try:
+            bleaching = re.findall(r"\d+", str(bleaching))
+            if any(bleaching):  # check if list is not empty
+                self.grn.bleach, self.red.bleach = (
+                    int(bleaching[0]),
+                    int(bleaching[-1]),
+                )  # works for both 1 or 2 values by indexing both ways
+                self.first_bleach = lib.misc.min_none(
+                    (self.grn.bleach, self.red.bleach)
+                )
+        except (ValueError, AttributeError):
+            pass
 
     def get_intensities(self):
         """

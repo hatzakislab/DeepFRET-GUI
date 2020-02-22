@@ -8,7 +8,7 @@ from io import StringIO
 
 def load_and_reduce_trace(filename: str) -> TraceContainer:
     # _TW = TraceWindow()
-    trace = TraceWindow.loadTraceFromAscii(filename)
+    trace = TraceContainer(filename)
     trace.red.int[:] = None
     trace.red.bg[:] = None
     trace.stoi[:] = None
@@ -26,7 +26,7 @@ if __name__ == '__main__':
 
     _trace.export_trace_to_txt(keep_nan_columns=False)
 
-    _trace2 = TraceWindow.loadTraceFromAscii(file_path)
+    _trace2 = TraceContainer(file_path)
     s2 = _trace2.get_export_txt()
     print(_trace.get_export_df().head())
     print(_trace2.get_export_df().head())

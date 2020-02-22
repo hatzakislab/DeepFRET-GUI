@@ -1946,13 +1946,13 @@ class TraceWindow(BaseWindow):
                     break
 
                 self.currDir = os.path.dirname(full_filename)
-                newTrace = self.loadTraceFromAscii(full_filename)
+                newTrace = TraceContainer(filename=full_filename)
 
                 if (n % update_every_n) == 0:
                     progressbar.increment()
 
                 # If file wasn't loaded properly, skip
-                if newTrace is None:
+                if newTrace.load_successful is False:
                     continue
                 # Don't load duplicates
                 if newTrace.name in self.data.traces.keys():
@@ -1975,154 +1975,6 @@ class TraceWindow(BaseWindow):
                 self.selectListViewTopRow()
             self.getCurrentListObject()
             self.setConfig(gvars.key_lastOpenedDir, self.currDir)
-
-    @staticmethod
-    def loadTraceFromAscii(full_filename) -> [TraceContainer, None]:
-        """
-        Reads a trace from an ASCII text file. Several checks are included to
-        include flexible compatibility with different versions of trace exports.
-        Also includes support for all iSMS traces.
-        """
-        colnames = [
-            "D-Dexc-bg.",
-            "A-Dexc-bg.",
-            "A-Aexc-bg.",
-            "D-Dexc-rw.",
-            "A-Dexc-rw.",
-            "A-Aexc-rw.",
-            "S",
-            "E",
-        ]
-
-        with open(full_filename) as f:
-            txt_header = [next(f) for _ in range(5)]
-
-        # This is for iSMS compatibility
-        if txt_header[0].split("\n")[0] == "Exported by iSMS":
-            df = pd.read_csv(full_filename, skiprows=5, sep="\t", header=None)
-            if len(df.columns) == colnames:
-                df.columns = colnames
-            else:
-                try:
-                    df.columns = colnames
-                except ValueError:
-                    colnames = colnames[3:]
-                    df.columns = colnames
-        # Else DeepFRET trace compatibility
-        else:
-            df = lib.misc.csv_skip_to(
-                path=full_filename, line="D-Dexc", sep="\s+"
-            )
-        try:
-            pair_n = lib.misc.seek_line(
-                path=full_filename, line_starts="FRET pair"
-            )
-            pair_n = int(pair_n.split("#")[-1])
-
-            movie = lib.misc.seek_line(
-                path=full_filename, line_starts="Movie filename"
-            )
-            movie = movie.split(": ")[-1]
-
-            bleaching = lib.misc.seek_line(
-                path=full_filename,
-                line_starts=("Donor bleaches at", "Bleaches at"),
-            )
-
-        except AttributeError:
-            return None
-
-        # Add flag to see if incomplete trace
-        if not any(s.startswith('A-A') for s in df.columns):
-            df["A-Aexc-rw"] = np.nan
-            df["A-Aexc-bg"] = np.nan
-            df["A-Aexc-I"] = np.nan
-
-        trace = TraceContainer(
-            movie=movie, n=pair_n, name=os.path.basename(full_filename)
-        )
-
-        if "D-Dexc_F" in df.columns:
-            warnings.warn(
-                "This trace is created with an older format.",
-                DeprecationWarning,
-            )
-            trace.grn.int = df["D-Dexc_F"].values
-            trace.acc.int = df["A-Dexc_I"].values
-            trace.red.int = df["A-Aexc_I"].values
-
-            zeros = np.zeros(len(trace.grn.int))
-            trace.grn.bg = zeros
-            trace.acc.bg = zeros
-            trace.red.bg = zeros
-
-        else:
-            if "p_blch" in df.columns:
-                ml_cols = [
-                    "p_blch",
-                    "p_aggr",
-                    "p_stat",
-                    "p_dyna",
-                    "p_nois",
-                    "p_scrm",
-                ]
-                colnames += ml_cols
-                trace.y_pred = df[ml_cols].values
-                trace.y_class, trace.confidence = lib.math.seq_probabilities(
-                    trace.y_pred
-                )
-
-            # This strips periods if present
-            df.columns = [c.strip(".") for c in df.columns]
-
-            trace.grn.int = df["D-Dexc-rw"].values
-            trace.acc.int = df["A-Dexc-rw"].values
-            trace.red.int = df["A-Aexc-rw"].values
-
-            try:
-                trace.grn.bg = df["D-Dexc-bg"].values
-                trace.acc.bg = df["A-Dexc-bg"].values
-                trace.red.bg = df["A-Aexc-bg"].values
-            except KeyError:
-                zeros = np.zeros(len(trace.grn.int))
-                trace.grn.bg = zeros
-                trace.acc.bg = zeros
-                trace.red.bg = zeros
-
-
-        # trace.fret = lib.math.calc_E(trace.get_intensities())
-        #
-        #
-        # trace.stoi = lib.math.calc_S(trace.get_intensities())
-        if "E" in df.columns:
-            trace.fret = df["E"].values
-        else:
-            trace.calculate_fret()
-
-        if "S" in df.columns:
-            trace.stoi = df["S"].values
-        else:
-            trace.calculate_stoi()
-
-        trace.frames = np.arange(1, len(trace.grn.int) + 1, 1)
-        trace.frames_max = trace.frames.max()
-
-        # TODO: revert mechanism to first bleaching or separate D/A bleaching
-        #  for consistency throughout code (and speedups)
-        try:
-            bleaching = re.findall(r"\d+", str(bleaching))
-            if any(bleaching):  # check if list is not empty
-                trace.grn.bleach, trace.red.bleach = (
-                    int(bleaching[0]),
-                    int(bleaching[-1]),
-                )  # works for both 1 or 2 values by indexing both ways
-                trace.first_bleach = lib.misc.min_none(
-                    (trace.grn.bleach, trace.red.bleach)
-                )
-        except (ValueError, AttributeError):
-            pass
-
-        return trace
 
     def selectCorrectionFactorRange(self, event):
         """

@@ -52,7 +52,6 @@ def correct_DA(intensities, alpha=0, delta=0):
 
     if np.isnan(np.sum(I_AA)):
         F_DA = I_DA - (alpha * I_DD)
-        print('not using delta factor!')
     else:
         F_DA = I_DA - (alpha * I_DD) - (delta * I_AA)
 

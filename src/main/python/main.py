@@ -898,7 +898,7 @@ class BaseWindow(QMainWindow):
                     "{0}\n"
                     "{1}\n\n"
                     "{2}".format(
-                        exp_txt, date_txt, df.to_csv(index=False, sep="\t")
+                        exp_txt, date_txt, df.to_csv(index=False, sep="\t",na_rep='NaN')
                     )
                 )
 
@@ -953,7 +953,7 @@ class BaseWindow(QMainWindow):
                     "{0}\n"
                     "{1}\n\n"
                     "{2}".format(
-                        exp_txt, date_txt, df.to_csv(index=False, sep="\t")
+                        exp_txt, date_txt, df.to_csv(index=False, sep="\t",na_rep='NaN')
                     )
                 )
 
@@ -992,7 +992,7 @@ class BaseWindow(QMainWindow):
                     "{0}\n"
                     "{1}\n\n"
                     "{2}".format(
-                        exp_txt, date_txt, df.to_csv(index=False, sep="\t")
+                        exp_txt, date_txt, df.to_csv(index=False, sep="\t",na_rep='NaN')
                     )
                 )
 
@@ -1023,7 +1023,7 @@ class BaseWindow(QMainWindow):
                     "{0}\n"
                     "{1}\n\n"
                     "{2}".format(
-                        exp_txt, date_txt, df.to_csv(index=False, sep="\t")
+                        exp_txt, date_txt, df.to_csv(index=False, sep="\t",na_rep='NaN')
                     )
                 )
 

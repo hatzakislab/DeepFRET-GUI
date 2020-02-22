@@ -160,7 +160,6 @@ class TraceContainer:
 
         self.channels = self.grn, self.red, self.acc
 
-
     def get_intensities(self):
         """
         Convenience function to return trace get_intensities
@@ -251,7 +250,8 @@ class TraceContainer:
             mov_txt,
             id_txt,
             bl_txt,
-            df.to_csv(index=False, sep="\t"))
+            df.to_csv(index=False, sep="\t",na_rep='NaN')
+        )
 
         return out_txt
 
@@ -270,9 +270,17 @@ class TraceContainer:
 
         return self.tracename
 
+    def get_savename(self, dir_to_join: Union[None, str] = None):
+        if self.savename is None:
+            if dir_to_join is not None:
+                self.savename = os.path.join(dir_to_join, self.get_tracename())
+            else:
+                self.savename = self.get_tracename()
+        return self.savename
 
-    def export_trace_to_txt(self, dir_to_join:Union[None, str]=None):
-        savename = os.path.join(dir_to_join, self.get_tracename())
+    def export_trace_to_txt(self, dir_to_join: Union[None, str] = None):
+        savename = self.get_savename(dir_to_join=dir_to_join)
+        # print(self)
         with open(savename, "w") as f:
             f.write(self.get_export_txt())
 

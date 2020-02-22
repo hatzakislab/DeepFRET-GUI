@@ -3,13 +3,11 @@ from unittest import TestCase
 import numpy as np
 
 from lib.container import TraceContainer
-# from src.main.python.main import TraceWindow
 
 class TestTraceContainer(TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.file_path = 'temp.txt'
-
 
     def test_load_trace_from_ascii(self):
         filename = '../resources/traces/fiddler_3dim_0.txt'
@@ -26,9 +24,8 @@ class TestTraceContainer(TestCase):
         _trace.tracename = self.file_path
         _trace.export_trace_to_txt()
         _trace2 = TraceContainer(self.file_path)
-
-        self.assertTrue(np.allclose(_trace.grn.int, _trace2.grn.int))
-        self.assertTrue(np.allclose(_trace.first_bleach, _trace2.first_bleach))
+        np.testing.assert_array_almost_equal(_trace.grn.int, _trace2.grn.int)
+        self.assertEqual(_trace.first_bleach, _trace2.first_bleach)
 
     def test_reducing_trace_save_and_load(self):
         self.addCleanup(os.remove, self.file_path)
@@ -59,8 +56,8 @@ class TestTraceContainer(TestCase):
         _trace.stoi[:] = None
         _df = _trace.get_export_df()
         _trace.fret[:] = None
-        _trace.tracename = self.file_path
-        _trace.export_trace_to_txt()
+        _trace.savename = self.file_path
+        _trace.export_trace_to_txt(keep_nan_columns=False)
         _trace2 = TraceContainer(self.file_path)
         _df2 = _trace2.get_export_df()
 

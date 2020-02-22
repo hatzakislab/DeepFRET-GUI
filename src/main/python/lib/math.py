@@ -69,12 +69,6 @@ def calc_E(intensities, alpha=0, delta=0, clip_range=(-0.3, 1.3)):
 
     F_DA, I_DD, I_DA, I_AA = correct_DA(intensities, alpha, delta)
 
-    # if np.isnan(np.sum(F_DA)):
-    #     E = I_DA / (I_DD + I_DA)
-    #     print('using uncorrected FRET')
-    # else:
-    #     E = F_DA / (I_DD + F_DA)
-
     E = F_DA / (I_DD + F_DA)
     E = np.clip(E, cmin, cmax, out=E)
     E = np.reshape(E, -1)

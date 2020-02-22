@@ -1,1 +1,5 @@
-/venv/
+/.idea
+/venv
+/target
+/test
+.gitignore

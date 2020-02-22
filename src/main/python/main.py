@@ -2513,7 +2513,10 @@ class TraceWindow(BaseWindow):
                     )
 
                 ax.plot(trace.frames, int_, color=color)
-                ax.set_ylim(0 - int_.max() * 0.1, int_.max() * 1.1)
+                try:
+                    ax.set_ylim(0 - int_.max() * 0.1, int_.max() * 1.1)
+                except ValueError:
+                    ax.set_ylim(0, 1.1)
                 ax.yaxis.label.set_color(gvars.color_gui_text)
                 lib.plotting.set_axis_exp_ylabel(
                     ax=ax, label=label, values=int_

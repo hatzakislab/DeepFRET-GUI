@@ -387,7 +387,7 @@ def seq_probabilities(yi, skip_threshold=0.5, skip_column=0):
         p = np.zeros(yi.shape[1])
 
     # sum static and dynamic smFRET scores (they shouldn't compete)
-    confidence = p[[2, 3]].sum()
+    confidence = p[[4, 5, 6, 7, 8]].sum()
     return p, confidence
 
 
@@ -418,20 +418,19 @@ def predict_batch(X, model, batch_size=256, progressbar: ProgressBar = None):
     Predicts on batches in a loop
     """
     batches = (X.shape[0] // batch_size) + 1
-    y_pred = np.zeros(shape=(X.shape[0], X.shape[1], 6))
+    y_pred = []
 
     for i in range(batches):
         i1 = i * batch_size
         i2 = i1 + batch_size
-        y_pred[i1:i2, :, :] = model.predict_on_batch(X[i1:i2])
+        y_pred.append(model.predict_on_batch(X[i1:i2]))
 
         if progressbar is not None:
             progressbar.increment()
-
             if progressbar.wasCanceled():
                 break
 
-    return y_pred
+    return np.row_stack(y_pred)
 
 
 def count_adjacent_values(arr):

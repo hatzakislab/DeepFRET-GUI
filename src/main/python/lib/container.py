@@ -8,12 +8,13 @@ multiprocessing.freeze_support()
 
 from global_variables import GlobalVariables as gvars
 from matplotlib.colors import LinearSegmentedColormap
+from typing import Union, Tuple
 import numpy as np
 import pandas as pd
 import skimage.io
-from lib import imgdata
+import lib.imgdata
 import lib.math
-from typing import Union, Tuple
+import lib.misc
 
 
 class ImageContainer:
@@ -47,7 +48,8 @@ class ImageContainer:
         # Blended channels
         self.grn_red_blend = None  # type: Union[None, np.ndarray]
 
-        # Create a class to store traces and associated information for every image name
+        # Create a class to store traces and associated information for every
+        # image name
         self.traces = {}
 
         # To iterate over all channels
@@ -75,7 +77,8 @@ class ImageChannel:
             )
         else:
             raise ValueError(
-                "Invalid color. Available options are 'green' or 'red' (or 'blue' for compatibility reasons)."
+                "Invalid color. Available options are 'green' or 'red' (or "
+                "'blue' for compatibility reasons)."
             )
 
         self.exists = True  # type: bool
@@ -129,11 +132,25 @@ class TraceContainer:
     Class for storing individual newTrace information.
     """
 
+    ml_column_names = [
+        "p_bleached",
+        "p_aggegate",
+        "p_noisy",
+        "p_scramble",
+        "p_1-state",
+        "p_2-state",
+        "p_3-state",
+        "p_4-state",
+        "p_5-state",
+    ]
+
     def __init__(self, filename, name=None):
-        self.filename = filename# type: str
-        self.name = name if name is not None else os.path.basename(filename)  # type: str
-        self.movie  = None # type: str
-        self.n = None # type: str
+        self.filename = filename  # type: str
+        self.name = (
+            name if name is not None else os.path.basename(filename)
+        )  # type: str
+        self.movie = None  # type: Union[None, str]
+        self.n = None  # type: Union[None, str]
         self.tracename = None  # type: Union[None, str]
         self.savename = None  # type: Union[None, str]
 
@@ -170,8 +187,10 @@ class TraceContainer:
 
     def load_from_ascii(self):
         """
-                Reads a trace from an ASCII text file. Several checks are included to
-                include flexible compatibility with different versions of trace exports.
+                Reads a trace from an ASCII text file. Several checks are
+                included to
+                include flexible compatibility with different versions of
+                trace exports.
                 Also includes support for all iSMS traces.
                 """
         colnames = [
@@ -225,11 +244,10 @@ class TraceContainer:
         self.load_successful = True
 
         # Add flag to see if incomplete trace
-        if not any(s.startswith('A-A') for s in df.columns):
+        if not any(s.startswith("A-A") for s in df.columns):
             df["A-Aexc-rw"] = np.nan
             df["A-Aexc-bg"] = np.nan
             df["A-Aexc-I"] = np.nan
-
 
         if "D-Dexc_F" in df.columns:
             warnings.warn(
@@ -246,17 +264,9 @@ class TraceContainer:
             self.red.bg = zeros
 
         else:
-            if "p_blch" in df.columns:
-                ml_cols = [
-                    "p_blch",
-                    "p_aggr",
-                    "p_stat",
-                    "p_dyna",
-                    "p_nois",
-                    "p_scrm",
-                ]
-                colnames += ml_cols
-                self.y_pred = df[ml_cols].values
+            if "p_bleached" in df.columns:
+                colnames += self.ml_column_names
+                self.y_pred = df[self.ml_column_names].values
                 self.y_class, self.confidence = lib.math.seq_probabilities(
                     self.y_pred
                 )
@@ -339,26 +349,23 @@ class TraceContainer:
         }
 
         if self.y_pred is not None:
-            dfdict.update(
-                {
-                    "p_blch": self.y_pred[:, 0],
-                    "p_aggr": self.y_pred[:, 1],
-                    "p_stat": self.y_pred[:, 2],
-                    "p_dyna": self.y_pred[:, 3],
-                    "p_nois": self.y_pred[:, 4],
-                    "p_scrm": self.y_pred[:, 5],
-                }
-            )
+            # Add predictions column names and values
+            dfdict.update(dict(zip(self.ml_column_names, self.y_pred.T)))
 
         df = pd.DataFrame(dfdict).round(4)
 
         if keep_nan_columns is False:
-            df.dropna(axis=1, how='all', inplace=True)
+            df.dropna(axis=1, how="all", inplace=True)
 
         return df
 
-    def get_export_txt(self, df: Union[None, pd.DataFrame] = None, exp_txt: Union[None, str] = None,
-                       date_txt: Union[None, str] = None, keep_nan_columns: Union[bool, None] = None):
+    def get_export_txt(
+        self,
+        df: Union[None, pd.DataFrame] = None,
+        exp_txt: Union[None, str] = None,
+        date_txt: Union[None, str] = None,
+        keep_nan_columns: Union[bool, None] = None,
+    ):
         """
         Returns the string to use for saving the trace as a txt
         """
@@ -370,27 +377,24 @@ class TraceContainer:
 
         mov_txt = "Movie filename: {}".format(self.movie)
         id_txt = "FRET pair #{}".format(self.n)
-        bl_txt = (
-            "Donor bleaches at: {} - "
-            "Acceptor bleaches at: {}".format(
-                self.grn.bleach, self.red.bleach
+        bl_txt = "Donor bleaches at: {} - " "Acceptor bleaches at: {}".format(
+            self.grn.bleach, self.red.bleach
+        )
+        return (
+            "{0}\n"
+            "{1}\n"
+            "{2}\n"
+            "{3}\n"
+            "{4}\n\n"
+            "{5}".format(
+                exp_txt,
+                date_txt,
+                mov_txt,
+                id_txt,
+                bl_txt,
+                df.to_csv(index=False, sep="\t", na_rep="NaN"),
             )
         )
-        out_txt = "{0}\n" \
-                  "{1}\n" \
-                  "{2}\n" \
-                  "{3}\n" \
-                  "{4}\n\n" \
-                  "{5}".format(
-            exp_txt,
-            date_txt,
-            mov_txt,
-            id_txt,
-            bl_txt,
-            df.to_csv(index=False, sep="\t", na_rep='NaN')
-        )
-
-        return out_txt
 
     def get_tracename(self) -> str:
         if self.tracename is None:
@@ -415,7 +419,11 @@ class TraceContainer:
                 self.savename = self.get_tracename()
         return self.savename
 
-    def export_trace_to_txt(self, dir_to_join: Union[None, str] = None, keep_nan_columns: Union[bool, None] = None):
+    def export_trace_to_txt(
+        self,
+        dir_to_join: Union[None, str] = None,
+        keep_nan_columns: Union[bool, None] = None,
+    ):
         savename = self.get_savename(dir_to_join=dir_to_join)
         # print(self)
         with open(savename, "w") as f:
@@ -445,7 +453,8 @@ class MovieData:
 
     def _data(self) -> ImageContainer:
         """
-        Shortcut for returning the metadata of movie currently being loaded, for internal use.
+        Shortcut for returning the metadata of movie currently being loaded,
+        for internal use.
         Frontend should use get() instead
         """
         if self.currName is not None:
@@ -453,7 +462,8 @@ class MovieData:
 
     def load_img(self, path, name, setup, bg_correction):
         """
-        Loads movie and extracts all parameters depending on the number of channels
+        Loads movie and extracts all parameters depending on the number of
+        channels
 
         Parameters
         ----------
@@ -464,7 +474,8 @@ class MovieData:
         setup:
             Imaging setup from config
         bg_correction:
-            Corrects for illumination profile and crops misaligned edges slightly
+            Corrects for illumination profile and crops misaligned edges
+            slightly
         """
         # Instantiate container
         self.currName = name
@@ -475,19 +486,17 @@ class MovieData:
         self._data().img = skimage.io.imread(path)
 
         if setup != "dual" and self._data().img.shape[3] > 3:
-            self._data().img = (
-                self._data().img.swapaxes(3, 1).swapaxes(2, 1)
-            )
+            self._data().img = self._data().img.swapaxes(3, 1).swapaxes(2, 1)
 
         self._data().height = self._data().img.shape[1]
         self._data().width = self._data().img.shape[2]
         # Scaling factor for ROI
         self._data().roi_radius = (
-                max(self._data().height, self._data().width) / 80
+            max(self._data().height, self._data().width) / 80
         )
 
         if setup == "dual":
-            c1, c2, c3, _ = imgdata.image_channels(4)
+            c1, c2, c3, _ = lib.imgdata.image_channels(4)
 
             # Acceptor   (Dexc-Aem)
             self._data().acc.raw = self._data().img[c1, :, :]
@@ -499,13 +508,13 @@ class MovieData:
             self._data().channels = self._data().grn, self._data().red
 
         elif setup in ["2-color", "3-color"]:
-            top, btm, lft, rgt = imgdata.image_quadrants(
+            top, btm, lft, rgt = lib.imgdata.image_quadrants(
                 height=self._data().height, width=self._data().width
             )
 
             if (
-                    self._data().img.shape[3] == 3
-                    and self._data().img.shape[0] < 99
+                self._data().img.shape[3] == 3
+                and self._data().img.shape[0] < 99
             ):
                 # self._data().blu.raw = self._data().img[:, btm, lft, 0]
                 self._data().grn.raw = self._data().img[:, top, lft, 1]
@@ -520,8 +529,8 @@ class MovieData:
 
             # for FRET movies, channels ordered (green, red, blue)
             elif (
-                    self._data().img.shape[3] == 3
-                    and self._data().img.shape[0] > 99
+                self._data().img.shape[3] == 3
+                and self._data().img.shape[0] > 99
             ):
                 # self._data().blu.raw = self._data().img[:, btm, lft, 2]
                 self._data().grn.raw = self._data().img[:, top, lft, 0]
@@ -545,7 +554,7 @@ class MovieData:
                 # self._data().blu.exists = False
 
         elif setup == "2-color-inv":
-            top, btm, lft, rgt = imgdata.image_quadrants(
+            top, btm, lft, rgt = lib.imgdata.image_quadrants(
                 height=self._data().height, width=self._data().width
             )
 
@@ -589,14 +598,14 @@ class MovieData:
                     crop_h = int(h // 50)
                     crop_w = int(w // 50)
 
-                    c.raw = c.raw[:, crop_h: h - crop_h, crop_w: w - crop_w]
-                    c.mean = c.raw[0: t // 20, :, :].mean(axis=0)
-                    c.mean = imgdata.zero_one_scale(c.mean)
-                    c.mean_nobg = imgdata.subtract_background(
+                    c.raw = c.raw[:, crop_h : h - crop_h, crop_w : w - crop_w]
+                    c.mean = c.raw[0 : t // 20, :, :].mean(axis=0)
+                    c.mean = lib.imgdata.zero_one_scale(c.mean)
+                    c.mean_nobg = lib.imgdata.subtract_background(
                         c.mean, by="row", return_bg_only=False
                     )
                 else:
-                    c.mean = imgdata.zero_one_scale(c.mean)
+                    c.mean = lib.imgdata.zero_one_scale(c.mean)
                     c.mean_nobg = c.mean
 
         if self._data().red.exists:

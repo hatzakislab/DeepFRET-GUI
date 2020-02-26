@@ -205,10 +205,13 @@ def plot_predictions(yi_pred, ax):
     clrs = (
         "darkgrey",
         "red",
-        "green",
-        "orange",
         "royalblue",
         "mediumvioletred",
+        "orange",
+        "green",
+        "green",
+        "green",
+        "green"
     )
     p, confidence = lib.math.seq_probabilities(yi_pred, skip_threshold=0.5)
     plot_shaded_category(y=yi_pred, ax=ax, colors=clrs, alpha=0.3)

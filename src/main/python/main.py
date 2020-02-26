@@ -15,6 +15,7 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from configobj import ConfigObj
 
+
 import lib.imgdata
 import lib.math
 import lib.misc

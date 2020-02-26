@@ -198,47 +198,67 @@ def plot_shaded_category(y, ax, alpha, colors=None):
         )
 
 
-def plot_predictions(yi_pred, ax):
+def plot_predictions(yi_pred, fig, ax):
     """
     Plots Keras predictions as probabilities with shaded argmax overlays
     """
+    names = ("bleached",
+            "aggregated",
+             "noisy",
+             "scrambled",
+             "1-state",
+             "2-state",
+             "3-state",
+             "4-state",
+             "5-state",)
+
     clrs = (
         "darkgrey",
         "red",
         "royalblue",
         "mediumvioletred",
         "orange",
+        "lightgreen",
+        "springgreen",
+        "limegreen",
         "green",
-        "green",
-        "green",
-        "green"
     )
-    p, confidence = lib.math.seq_probabilities(yi_pred, skip_threshold=0.5)
-    plot_shaded_category(y=yi_pred, ax=ax, colors=clrs, alpha=0.3)
+    probability, confidence = lib.math.seq_probabilities(
+        yi_pred, skip_threshold=0.5
+    )
+    plot_shaded_category(y=yi_pred, ax=ax, colors=clrs, alpha=0.1)
 
+    # Upper right individual %
     patches = []
     for i in range(yi_pred.shape[-1]):
+        p = probability[i] * 100
+        label = "{:.0f}% {}".format(p, names[i])
+        # Align with monospace if single digit prob
+        if p < 10:
+            label = " " + label
+        ax.plot(yi_pred[:, i], color=clrs[i])
         patch = Patch(
             color=clrs[i],
-            label="{:.0f} %".format(p[i] * 100) if p[i] != 0 else None,
+            label=label
         )
         patches.append(patch)
 
-        # plot_trace_and_preds predicted probabilities
-        ax.plot(yi_pred[:, i], color=clrs[i])
-        ax.annotate(
-            s="confidence: {:.1f} %".format(p[[2, 3]].sum() * 100),
-            xy=(0, 1),
-            xytext=(8, -8),
-            va="top",
-            xycoords="axes fraction",
-            textcoords="offset points",
-            bbox=dict(
-                boxstyle="round",
-                alpha=0.25,
-                facecolor="white",
-                edgecolor="lightgrey",
-            ),
-        )
-    ax.legend(handles=patches, loc="upper right", ncol=3)
+    fig.legend(handles=patches, loc='center right', prop = {
+        "family":"monospace"})
+
+    # Upper left confidence %
+    ax.annotate(
+        s="confidence: {:.1f} %".format(confidence * 100),
+        xy=(0, 1),
+        xytext=(8, -8),
+        va="top",
+        xycoords="axes fraction",
+        textcoords="offset points",
+        bbox=dict(
+            boxstyle="round",
+            alpha=0.25,
+            facecolor="white",
+            edgecolor="lightgrey",
+        ),
+    )
     ax.set_ylabel("$p_i$")

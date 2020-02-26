@@ -358,13 +358,13 @@ class BaseWindow(QMainWindow):
             self.fitCheckedTracesHiddenMarkovModel
         )
         self.ui.actionPredict_Selected_Traces.triggered.connect(
-            partial(self.predictTraces, True)
+            partial(self.classifyTraces, True)
         )
         self.ui.actionPredict_All_traces.triggered.connect(
-            partial(self.predictTraces, False)
+            partial(self.classifyTraces, False)
         )
         self.ui.actionClear_All_Predictions.triggered.connect(
-            self.clearAllPredictions
+            self.clearAllClassifications
         )
 
         # Window
@@ -1064,7 +1064,7 @@ class BaseWindow(QMainWindow):
         if TraceWindow_.isVisible():
             CorrectionFactorInspector_.show()
 
-    def clearAllPredictions(self):
+    def clearAllClassifications(self):
         """Override in subclass."""
         pass
 
@@ -1115,7 +1115,7 @@ class BaseWindow(QMainWindow):
         """Override in subclass."""
         pass
 
-    def predictTraces(self, selected):
+    def classifyTraces(self, selected):
         """Override in subclass."""
         pass
 
@@ -2012,23 +2012,30 @@ class TraceWindow(BaseWindow):
         delta = self.getConfig(gvars.key_deltaFactor)
 
         if self.currName is not None and len(self.data.traces) > 0:
+            # Predict number of states using deep learning first
             trace = self.currentTrace()
+
+            if trace.y_class is None:
+                self.classifyTraces(single=refresh)
+
             F_DA, I_DD, I_DA, I_AA = lib.math.correct_DA(
                 trace.get_intensities(), alpha=alpha, delta=delta
             )
             fret = lib.math.calc_E(trace.get_intensities(), alpha, delta)
             X = np.column_stack((I_DD, F_DA))
-            X = sklearn.preprocessing.robust_scale(X)
+            X /= X.max()
 
-            try:
-                idealized, time, transitions = lib.math.fit_hmm(
-                    X=X[: trace.first_bleach], y=fret[: trace.first_bleach]
+            # Count states, if any
+            n_states = lib.math.count_n_states(trace.y_class)
+            if n_states is not None:
+                idealized, time, transitions = lib.math.fit_dl_hmm(
+                    X=X[: trace.first_bleach],
+                    y=fret[: trace.first_bleach],
+                    n_components=n_states,
                 )
                 trace.hmm = idealized
                 trace.hmm_idx = time
                 trace.transitions = transitions
-            except ValueError:
-                warnings.warn("Error in HMM. Trace skipped.", RuntimeWarning)
 
         # Only refresh immediately for single fits
         if refresh:
@@ -2044,22 +2051,25 @@ class TraceWindow(BaseWindow):
         traces = [
             trace for trace in self.data.traces.values() if trace.is_checked
         ]
+        self.classifyTraces(single=False, checked_only=True)
 
-        progressbar = ProgressBar(loop_len=len(traces), parent=TraceWindow_)
-        for trace in traces:  # type: TraceContainer
-            if progressbar.wasCanceled():
-                break
-            self.currName = trace.name
-            self.fitSingleTraceHiddenMarkovModel(refresh=False)
-            progressbar.increment()
+        if traces:
+            progressbar = ProgressBar(loop_len=len(traces), parent=TraceWindow_)
+            for trace in traces:  # type: TraceContainer
+                if progressbar.wasCanceled():
+                    break
+                self.currName = trace.name
+                self.fitSingleTraceHiddenMarkovModel(refresh=False)
+                progressbar.increment()
         self.resetCurrentName()
         self.refreshPlot()
 
         if TransitionDensityWindow_.isVisible():
             TransitionDensityWindow_.refreshPlot()
 
-    def setPredictions(self, trace, yi_pred):
-        """Assign trace predictions to correspondign trace"""
+    @staticmethod
+    def setClassifications(trace, yi_pred):
+        """Assign predicted trace classifications to trace"""
         trace.y_pred = yi_pred
         trace.y_class, trace.confidence = lib.math.seq_probabilities(
             trace.y_pred
@@ -2070,7 +2080,7 @@ class TraceWindow(BaseWindow):
         for c in trace.channels:
             c.bleach = trace.first_bleach
 
-    def predictTraces(self, single=False, checked_only=False):
+    def classifyTraces(self, single=False, checked_only=False):
         """
         Classifies checked traces with deep learning model.
         """
@@ -2140,12 +2150,12 @@ class TraceWindow(BaseWindow):
                         progressbar.increment()
 
             for n, trace in enumerate(traces):
-                self.setPredictions(trace=trace, yi_pred=Y[n])
+                self.setClassifications(trace=trace, yi_pred=Y[n])
 
             self.resetCurrentName()
             self.refreshPlot()
 
-    def clearAllPredictions(self):
+    def clearAllClassifications(self):
         """
         Clears all classifications for a trace. This will also clear
         predicted bleaching.
@@ -2440,6 +2450,8 @@ class TraceWindow(BaseWindow):
         """
         Refreshes plot for TraceWindow.
         """
+        self.canvas.fig.legends = []
+
         if self.currName is not None and len(self.data.traces) > 0:
             trace = self.currentTrace()
             alpha = self.getConfig(gvars.key_alphaFactor)
@@ -2583,7 +2595,9 @@ class TraceWindow(BaseWindow):
 
             if hasattr(self.canvas, "ax_ml") and trace.y_pred is not None:
                 lib.plotting.plot_predictions(
-                    trace.y_pred, ax=self.canvas.ax_ml
+                    yi_pred=trace.y_pred,
+                    fig=self.canvas.fig,
+                    ax=self.canvas.ax_ml,
                 )
 
         else:
@@ -3486,7 +3500,7 @@ class AppContext(ApplicationContext):
         """
         # model_experimental is better but undocumented
         self.keras_model = load_model(
-            self.get_resource("model_published_5_class.h5")
+            self.get_resource("model_experimental_9_class.h5")
         )
         self.config = ConfigObj(self.get_resource("config.ini"))
 

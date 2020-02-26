@@ -1,7 +1,5 @@
 import multiprocessing
 
-import numpy
-
 multiprocessing.freeze_support()
 
 import matplotlib
@@ -21,7 +19,24 @@ import sklearn.cluster
 import sklearn.mixture
 import hmmlearn.hmm
 
-pd.options.mode.chained_assignment = None  # default='warn'
+pd.options.mode.chained_assignment = None
+
+
+def count_n_states(class_probs):
+    """
+    Count number of states in trace, given propabilities
+
+    Assumes the mapping
+    class 4 -> 1 state
+    class 5 -> 2 states
+    etc...
+    """
+    adjust = 3
+    n_states = np.argmax(class_probs) - adjust
+    if n_states < 1:
+        n_states = None
+    return n_states
+
 
 
 def single_exp_fit(x, scale):
@@ -286,6 +301,66 @@ def fit_hmm(X, y, n_components_max=3, bic_tol=20):
     return idealized, idealized_idx, lifetimes
 
 
+def fit_dl_hmm(X, y, n_components=3):
+    """
+    Parameters
+    ----------
+    X:
+        Timeseries of shape (-1, n_features), e.g. DD/DA
+    y:
+        Observed y, e.g. FRET
+    n_components:
+        Number of components to predict
+
+    Returns
+    -------
+    Hidden y
+    """
+    model = hmmlearn.hmm.GaussianHMM(
+        n_components=n_components,
+        covariance_type="tied",
+        n_iter=1000,
+        algorithm="viterbi",
+    )
+    model.fit(X)
+
+    hf = pd.DataFrame()
+    hf["state"] = model.predict(X)
+    hf["y_obs"] = y
+    hf["y_fit"] = hf.groupby(["state"], as_index=False)["y_obs"].transform(
+        "median"
+    )
+    hf["time"] = hf["y_fit"].index + 1
+
+    # Calculate lifetimes now, by making a copy to work on
+    lf = hf.copy()
+
+    # # Find y_after from y_before
+    lf["y_after"] = np.roll(lf["y_fit"], -1)
+
+    # Find out when there's a change in state, depending on the minimum
+    # transition size set
+    lf["state_jump"] = lf["y_fit"].transform(
+        lambda group: (abs(group.diff()) > 0).cumsum()
+    )
+
+    # Drop duplicates
+    lf.drop_duplicates(subset="state_jump", keep="last", inplace=True)
+
+    # Find the difference for every time
+    lf["lifetime"] = np.append(np.nan, np.diff(lf["time"]))
+
+    lf.rename(columns={"y_fit": "y_before"}, inplace=True)
+    lf = lf[["y_before", "y_after", "lifetime"]]
+    lf = lf[:-1]
+
+    idealized = hf["y_fit"].values
+    idealized_idx = hf["time"].values
+    lifetimes = lf
+
+    return idealized, idealized_idx, lifetimes
+
+
 def fit_gaussian_mixture(arr, k_states):
     """
     Fits k gaussians to a set of data.
@@ -387,7 +462,7 @@ def seq_probabilities(yi, skip_threshold=0.5, skip_column=0):
         p = np.zeros(yi.shape[1])
 
     # sum static and dynamic smFRET scores (they shouldn't compete)
-    confidence = p[[4, 5, 6, 7, 8]].sum()
+    confidence = p[4:].sum()
     return p, confidence
 
 

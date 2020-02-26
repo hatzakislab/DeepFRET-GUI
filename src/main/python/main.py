@@ -14,6 +14,7 @@ from PyQt5.QtWidgets import *
 from configobj import ConfigObj
 
 from about_window import AboutWindow
+
 import lib.imgdata
 import lib.math
 import lib.misc

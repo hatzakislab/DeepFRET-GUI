@@ -10,7 +10,7 @@ configobj==5.0.6
 cycler==0.10.0
 decorator==4.4.0
 docutils==0.14
-fbs==0.8.4
+fbs==0.8.6
 future==0.17.1
 gast==0.2.2
 google-auth==1.11.0

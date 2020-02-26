@@ -1,7 +1,5 @@
 import multiprocessing
 
-from about_window import AboutWindow
-
 multiprocessing.freeze_support()
 
 import os
@@ -15,6 +13,7 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from configobj import ConfigObj
 
+from about_window import AboutWindow
 
 import lib.imgdata
 import lib.math
@@ -68,7 +67,6 @@ from mpl_layout import PlotWidget
 from fbs_runtime.application_context.PyQt5 import ApplicationContext
 
 
-
 class PreferencesWindow(QDialog):
     """
     Editable preferences. If preferences shouldn't be editable (e.g. global
@@ -90,6 +88,7 @@ class PreferencesWindow(QDialog):
             self.ui.checkBox_unColocRed,
             self.ui.checkBox_illuCorrect,
             self.ui.checkBox_fitSpots,
+            self.ui.checkBox_twoChannelsNoALEX,
         )
 
         self.imgModeRadioButtons = (
@@ -155,12 +154,12 @@ class PreferencesWindow(QDialog):
         self.readConfigFromFile()
 
         for configKey, checkBox in zip(
-            gvars.keys_globalCheckBoxes, self.globalCheckBoxes
+                gvars.keys_globalCheckBoxes, self.globalCheckBoxes
         ):
             checkBox.setChecked(bool(self.getConfig(configKey)))
 
         for radioButton, imgMode in zip(
-            self.imgModeRadioButtons, self.imgModes
+                self.imgModeRadioButtons, self.imgModes
         ):
             if self.getConfig(gvars.key_imgMode) == imgMode:
                 radioButton.setChecked(True)
@@ -178,14 +177,14 @@ class PreferencesWindow(QDialog):
         Write getConfig from the GUI when the preference window is closed.
         """
         for configKey, checkBox in zip(
-            gvars.keys_globalCheckBoxes, self.globalCheckBoxes
+                gvars.keys_globalCheckBoxes, self.globalCheckBoxes
         ):
             self.setConfig(configKey, checkBox.isChecked())
 
         # Imaging Modes
         newImgMode = None
         for radioButton, imgMode in zip(
-            self.imgModeRadioButtons, self.imgModes
+                self.imgModeRadioButtons, self.imgModes
         ):
             if radioButton.isChecked():
                 newImgMode = imgMode
@@ -745,7 +744,7 @@ class BaseWindow(QMainWindow):
             TransitionDensityWindow_.refreshPlot()
 
     def setupFigureCanvas(
-        self, ax_setup, ax_window, use_layoutbox=True, **kwargs
+            self, ax_setup, ax_window, use_layoutbox=True, **kwargs
     ):
         """
         Creates a canvas with a given ax layout.
@@ -866,7 +865,7 @@ class BaseWindow(QMainWindow):
         exp_txt, date_txt = self.returnInfoHeader()
 
         directory = (
-            self.getConfig(gvars.key_lastOpenedDir) + "/Colocalization.txt"
+                self.getConfig(gvars.key_lastOpenedDir) + "/Colocalization.txt"
         )
         path, _ = QFileDialog.getSaveFileName(
             self, directory=directory
@@ -900,7 +899,7 @@ class BaseWindow(QMainWindow):
                     "{0}\n"
                     "{1}\n\n"
                     "{2}".format(
-                        exp_txt, date_txt, df.to_csv(index=False, sep="\t")
+                        exp_txt, date_txt, df.to_csv(index=False, sep="\t", na_rep='NaN')
                     )
                 )
 
@@ -928,68 +927,7 @@ class BaseWindow(QMainWindow):
             ctxt.app.processEvents()
 
             for trace in traces:
-                if trace.y_pred is None:
-                    df = pd.DataFrame(
-                        {
-                            "D-Dexc-bg": trace.grn.bg,
-                            "A-Dexc-bg": trace.acc.bg,
-                            "A-Aexc-bg": trace.red.bg,
-                            "D-Dexc-rw": trace.grn.int,
-                            "A-Dexc-rw": trace.acc.int,
-                            "A-Aexc-rw": trace.red.int,
-                            "S": trace.stoi,
-                            "E": trace.fret,
-                        }
-                    ).round(4)
-                else:
-                    df = pd.DataFrame(
-                        {
-                            "D-Dexc-bg": trace.grn.bg,
-                            "A-Dexc-bg": trace.acc.bg,
-                            "A-Aexc-bg": trace.red.bg,
-                            "D-Dexc-rw": trace.grn.int,
-                            "A-Dexc-rw": trace.acc.int,
-                            "A-Aexc-rw": trace.red.int,
-                            "S": trace.stoi,
-                            "E": trace.fret,
-                            "p_blch": trace.y_pred[:, 0],
-                            "p_aggr": trace.y_pred[:, 1],
-                            "p_stat": trace.y_pred[:, 2],
-                            "p_dyna": trace.y_pred[:, 3],
-                            "p_nois": trace.y_pred[:, 4],
-                            "p_scrm": trace.y_pred[:, 5],
-                        }
-                    ).round(4)
-
-                mov_txt = "Movie filename: {}".format(trace.movie)
-                id_txt = "FRET pair #{}".format(trace.n)
-                bl_txt = (
-                    "Donor bleaches at: {} - "
-                    "Acceptor bleaches at: {}".format(
-                        trace.grn.bleach, trace.red.bleach
-                    )
-                )
-
-                savename = os.path.join(
-                    path, TraceWindow_.generatePrettyTracename(trace)
-                )
-
-                with open(savename, "w") as f:
-                    f.write(
-                        "{0}\n"
-                        "{1}\n"
-                        "{2}\n"
-                        "{3}\n"
-                        "{4}\n\n"
-                        "{5}".format(
-                            exp_txt,
-                            date_txt,
-                            mov_txt,
-                            id_txt,
-                            bl_txt,
-                            df.to_csv(index=False, sep="\t"),
-                        )
-                    )
+                trace.export_trace_to_txt(dir_to_join=path)
 
     def exportCorrectionFactors(self):
         """
@@ -999,7 +937,7 @@ class BaseWindow(QMainWindow):
         exp_txt, date_txt = self.returnInfoHeader()
 
         directory = (
-            self.getConfig(gvars.key_lastOpenedDir) + "/CorrectionFactors.txt"
+                self.getConfig(gvars.key_lastOpenedDir) + "/CorrectionFactors.txt"
         )
         path, _ = QFileDialog.getSaveFileName(
             self, directory=directory
@@ -1016,7 +954,7 @@ class BaseWindow(QMainWindow):
                     "{0}\n"
                     "{1}\n\n"
                     "{2}".format(
-                        exp_txt, date_txt, df.to_csv(index=False, sep="\t")
+                        exp_txt, date_txt, df.to_csv(index=False, sep="\t", na_rep='NaN')
                     )
                 )
 
@@ -1027,7 +965,7 @@ class BaseWindow(QMainWindow):
         exp_txt, date_txt = self.returnInfoHeader()
 
         directory = (
-            self.getConfig(gvars.key_lastOpenedDir) + "/E_S_Histogram.txt"
+                self.getConfig(gvars.key_lastOpenedDir) + "/E_S_Histogram.txt"
         )
         path, _ = QFileDialog.getSaveFileName(
             self, directory=directory
@@ -1055,7 +993,7 @@ class BaseWindow(QMainWindow):
                     "{0}\n"
                     "{1}\n\n"
                     "{2}".format(
-                        exp_txt, date_txt, df.to_csv(index=False, sep="\t")
+                        exp_txt, date_txt, df.to_csv(index=False, sep="\t", na_rep='NaN')
                     )
                 )
 
@@ -1066,8 +1004,8 @@ class BaseWindow(QMainWindow):
         exp_txt, date_txt = self.returnInfoHeader()
 
         directory = (
-            self.getConfig(gvars.key_lastOpenedDir)
-            + "/Transition_Densities.txt"
+                self.getConfig(gvars.key_lastOpenedDir)
+                + "/Transition_Densities.txt"
         )
         path, _ = QFileDialog.getSaveFileName(
             self, directory=directory
@@ -1086,7 +1024,7 @@ class BaseWindow(QMainWindow):
                     "{0}\n"
                     "{1}\n\n"
                     "{2}".format(
-                        exp_txt, date_txt, df.to_csv(index=False, sep="\t")
+                        exp_txt, date_txt, df.to_csv(index=False, sep="\t", na_rep='NaN')
                     )
                 )
 
@@ -1412,7 +1350,7 @@ class MainWindow(BaseWindow):
                 self.getTracesSingleMovie()
                 self.currentMovie().img = None
                 for c in self.currentMovie().channels + (
-                    self.currentMovie().acc,
+                        self.currentMovie().acc,
                 ):
                     c.raw = None
 
@@ -1564,8 +1502,8 @@ class MainWindow(BaseWindow):
         mov.traces = {}
 
         if (
-            mov.coloc_blu_grn.spots is not None
-            and mov.coloc_grn_red.spots is not None
+                mov.coloc_blu_grn.spots is not None
+                and mov.coloc_grn_red.spots is not None
         ):
             mov.coloc_all.spots = lib.imgdata.colocalize_triple(
                 mov.coloc_blu_grn.spots, mov.coloc_grn_red.spots
@@ -1705,7 +1643,7 @@ class MainWindow(BaseWindow):
             sensitivity = 100 if self.imgMode == "bypass" else 250
 
             for c, lo, hi in zip(
-                mov.channels, contrast_lo, contrast_hi
+                    mov.channels, contrast_lo, contrast_hi
             ):  # type: ImageChannel, QDoubleSpinBox, QDoubleSpinBox
                 clip_lo = float(lo.value() / sensitivity)
                 clip_hi = float(hi.value() / sensitivity)
@@ -1782,9 +1720,9 @@ class MainWindow(BaseWindow):
                 )
 
             if (
-                self.imgMode == "3-color"
-                and mov.blu.exists
-                or self.imgMode == "bypass"
+                    self.imgMode == "3-color"
+                    and mov.blu.exists
+                    or self.imgMode == "bypass"
             ):
                 if mov.coloc_blu_grn.spots is not None:
                     lib.plotting.plot_roi_coloc(
@@ -2009,13 +1947,13 @@ class TraceWindow(BaseWindow):
                     break
 
                 self.currDir = os.path.dirname(full_filename)
-                newTrace = self.loadTraceFromAscii(full_filename)
+                newTrace = TraceContainer(filename=full_filename)
 
                 if (n % update_every_n) == 0:
                     progressbar.increment()
 
                 # If file wasn't loaded properly, skip
-                if newTrace is None:
+                if newTrace.load_successful is False:
                     continue
                 # Don't load duplicates
                 if newTrace.name in self.data.traces.keys():
@@ -2038,135 +1976,6 @@ class TraceWindow(BaseWindow):
                 self.selectListViewTopRow()
             self.getCurrentListObject()
             self.setConfig(gvars.key_lastOpenedDir, self.currDir)
-
-    def loadTraceFromAscii(self, full_filename) -> [TraceContainer, None]:
-        """
-        Reads a trace from an ASCII text file. Several checks are included to
-        include flexible compatibility with different versions of trace exports.
-        Also includes support for all iSMS traces.
-        """
-        colnames = [
-            "D-Dexc-bg.",
-            "A-Dexc-bg.",
-            "A-Aexc-bg.",
-            "D-Dexc-rw.",
-            "A-Dexc-rw.",
-            "A-Aexc-rw.",
-            "S",
-            "E",
-        ]
-
-        with open(full_filename) as f:
-            txt_header = [next(f) for _ in range(5)]
-
-        # This is for iSMS compatibility
-        if txt_header[0].split("\n")[0] == "Exported by iSMS":
-            df = pd.read_csv(full_filename, skiprows=5, sep="\t", header=None)
-            if len(df.columns) == colnames:
-                df.columns = colnames
-            else:
-                try:
-                    df.columns = colnames
-                except ValueError:
-                    colnames = colnames[3:]
-                    df.columns = colnames
-        # Else DeepFRET trace compatibility
-        else:
-            df = lib.misc.csv_skip_to(
-                path=full_filename, line="D-Dexc", sep="\s+"
-            )
-        try:
-            pair_n = lib.misc.seek_line(
-                path=full_filename, line_starts="FRET pair"
-            )
-            pair_n = int(pair_n.split("#")[-1])
-
-            movie = lib.misc.seek_line(
-                path=full_filename, line_starts="Movie filename"
-            )
-            movie = movie.split(": ")[-1]
-
-            bleaching = lib.misc.seek_line(
-                path=full_filename,
-                line_starts=("Donor bleaches at", "Bleaches at"),
-            )
-
-        except AttributeError:
-            return None
-
-        trace = TraceContainer(
-            movie=movie, n=pair_n, name=os.path.basename(full_filename)
-        )
-
-        if "D-Dexc_F" in df.columns:
-            warnings.warn(
-                "This trace is created with an older format.",
-                DeprecationWarning,
-            )
-            trace.grn.int = df["D-Dexc_F"].values
-            trace.acc.int = df["A-Dexc_I"].values
-            trace.red.int = df["A-Aexc_I"].values
-
-            zeros = np.zeros(len(trace.grn.int))
-            trace.grn.bg = zeros
-            trace.acc.bg = zeros
-            trace.red.bg = zeros
-
-        else:
-            if "p_blch" in df.columns:
-                ml_cols = [
-                    "p_blch",
-                    "p_aggr",
-                    "p_stat",
-                    "p_dyna",
-                    "p_nois",
-                    "p_scrm",
-                ]
-                colnames += ml_cols
-                trace.y_pred = df[ml_cols].values
-                trace.y_class, trace.confidence = lib.math.seq_probabilities(
-                    trace.y_pred
-                )
-
-            # This strips periods if present
-            df.columns = [c.strip(".") for c in colnames]
-
-            trace.grn.int = df["D-Dexc-rw"].values
-            trace.acc.int = df["A-Dexc-rw"].values
-            trace.red.int = df["A-Aexc-rw"].values
-
-            try:
-                trace.grn.bg = df["D-Dexc-bg"].values
-                trace.acc.bg = df["A-Dexc-bg"].values
-                trace.red.bg = df["A-Aexc-bg"].values
-            except KeyError:
-                zeros = np.zeros(len(trace.grn.int))
-                trace.grn.bg = zeros
-                trace.acc.bg = zeros
-                trace.red.bg = zeros
-
-        trace.fret = lib.math.calc_E(trace.get_intensities())
-        trace.stoi = lib.math.calc_S(trace.get_intensities())
-
-        trace.frames = np.arange(1, len(trace.grn.int) + 1, 1)
-        trace.frames_max = trace.frames.max()
-
-        # TODO: revert mechanism to first bleaching or separate D/A bleaching
-        #  for consistency throughout code (and speedups)
-        try:
-            bleaching = re.findall(r"\d+", str(bleaching))
-            if any(bleaching):  # check if list is not empty
-                trace.grn.bleach, trace.red.bleach = (
-                    int(bleaching[0]),
-                    int(bleaching[-1]),
-                )  # works for both 1 or 2 values by indexing both ways
-                trace.first_bleach = lib.misc.min_none(
-                    (trace.grn.bleach, trace.red.bleach)
-                )
-        except (ValueError, AttributeError):
-            pass
-
-        return trace
 
     def selectCorrectionFactorRange(self, event):
         """
@@ -2521,9 +2330,8 @@ class TraceWindow(BaseWindow):
 
         # Change colors of output to look better for export
         if self.currName is not None:
-            self.canvas.defaultImageName = self.generatePrettyTracename(
-                self.currentTrace()
-            )
+            self.canvas.defaultImageName = self.currentTrace().get_tracename()
+
         else:
             self.canvas.defaultImageName = "Blank"
 
@@ -2645,10 +2453,10 @@ class TraceWindow(BaseWindow):
 
             # Canvas setup
             if self.canvas.ax_setup in (
-                "dual",
-                "2-color",
-                "2-color-inv",
-                "3-color",
+                    "dual",
+                    "2-color",
+                    "2-color-inv",
+                    "3-color",
             ):
                 channels = [trace.grn, trace.acc, trace.red]
                 colors = [gvars.color_green, gvars.color_red, gvars.color_red]
@@ -2660,7 +2468,7 @@ class TraceWindow(BaseWindow):
                 raise ValueError("Setup is not valid. Corrupted config.ini?")
 
             for (ax, label), channel, color in zip(
-                self.canvas.axes_c, channels, colors
+                    self.canvas.axes_c, channels, colors
             ):
                 if label == "A":
                     int_ = F_DA
@@ -2706,7 +2514,10 @@ class TraceWindow(BaseWindow):
                     )
 
                 ax.plot(trace.frames, int_, color=color)
-                ax.set_ylim(0 - int_.max() * 0.1, int_.max() * 1.1)
+                try:
+                    ax.set_ylim(0 - int_.max() * 0.1, int_.max() * 1.1)
+                except ValueError:
+                    ax.set_ylim(0, 1.1)
                 ax.yaxis.label.set_color(gvars.color_gui_text)
                 lib.plotting.set_axis_exp_ylabel(
                     ax=ax, label=label, values=int_
@@ -2721,10 +2532,10 @@ class TraceWindow(BaseWindow):
                 ax_S = self.canvas.ax_stoi
 
                 for signal, ax, color, label in zip(
-                    (fret, stoi),
-                    (ax_E, ax_S),
-                    (gvars.color_orange, gvars.color_purple),
-                    ("E", "S"),
+                        (fret, stoi),
+                        (ax_E, ax_S),
+                        (gvars.color_orange, gvars.color_purple),
+                        ("E", "S"),
                 ):
                     ax.plot(trace.frames, signal, color=color)
                     ax.axvspan(
@@ -2812,9 +2623,9 @@ class HistogramWindow(BaseWindow):
         [
             self.ui.gaussianAutoButton.clicked.connect(x)
             for x in (
-                partial(self.fitGaussians, "auto"),
-                partial(self.refreshPlot, True),
-            )
+            partial(self.fitGaussians, "auto"),
+            partial(self.refreshPlot, True),
+        )
         ]
         [
             self.ui.gaussianSpinBox.valueChanged.connect(x)
@@ -3076,10 +2887,10 @@ class HistogramWindow(BaseWindow):
                 )
 
         for n, (factor, name) in enumerate(
-            zip(
-                (self.alpha, self.delta, self.beta, self.gamma),
-                ("alpha", "delta", "beta", "gamma"),
-            )
+                zip(
+                    (self.alpha, self.delta, self.beta, self.gamma),
+                    ("alpha", "delta", "beta", "gamma"),
+                )
         ):
             self.canvas.ax_ctr.text(
                 x=0.0,
@@ -3317,7 +3128,7 @@ class TransitionDensityWindow(BaseWindow):
                 x=0,
                 y=0.9,
                 s="N = {}\n"
-                "{} transitions\n".format(
+                  "{} transitions\n".format(
                     self.n_samples, len(self.fret_lifetime)
                 ),
                 color=gvars.color_gui_text,
@@ -3387,8 +3198,8 @@ class TransitionDensityWindow(BaseWindow):
                         "--",
                         color="black",
                         label="label: {}\n"
-                        "$\lambda$:  ${:.2f} \pm {:.2f}$\n"
-                        "lifetime: ${:.2f}$".format(
+                              "$\lambda$:  ${:.2f} \pm {:.2f}$\n"
+                              "lifetime: ${:.2f}$".format(
                             k, rate, rate_err, 1 / rate
                         ),
                     )
@@ -3470,7 +3281,7 @@ class DensityWindowInspector(SheetInspector):
         self.ui.setupUi(self)
 
         if isinstance(
-            parent, HistogramWindow
+                parent, HistogramWindow
         ):  # Avoids an explicit reference in parent class, for easier copy-paste
             self.keys = gvars.keys_hist
             HistogramWindow_.inspector = self
@@ -3486,13 +3297,13 @@ class DensityWindowInspector(SheetInspector):
     def connectUi(self, parent):
         """Connect Ui to parent functions"""
         if hasattr(
-            parent, "canvas"
+                parent, "canvas"
         ):  # Avoid refreshing canvas before it's even instantiated on the parent
             for slider in (
-                self.ui.smoothingSlider,
-                self.ui.resolutionSlider,
-                self.ui.colorSlider,
-                self.ui.pointAlphaSlider,
+                    self.ui.smoothingSlider,
+                    self.ui.resolutionSlider,
+                    self.ui.colorSlider,
+                    self.ui.pointAlphaSlider,
             ):
 
                 # Avoids an explicit reference in parent class,
@@ -3657,6 +3468,7 @@ class AppContext(ApplicationContext):
     Entry point for running the application. Only loads resources and holds
     the event loop.
     """
+
     def __init__(self):
         super().__init__()
         self.keras_model = None

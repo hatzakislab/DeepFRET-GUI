@@ -49,7 +49,11 @@ def correct_DA(intensities, alpha=0, delta=0):
     I_DD = grn_int - grn_bg
     I_DA = acc_int - acc_bg
     I_AA = red_int - red_bg
-    F_DA = I_DA - (alpha * I_DD) - (delta * I_AA)
+
+    if np.isnan(np.sum(I_AA)):
+        F_DA = I_DA - (alpha * I_DD)
+    else:
+        F_DA = I_DA - (alpha * I_DD) - (delta * I_AA)
 
     return F_DA, I_DD, I_DA, I_AA
 

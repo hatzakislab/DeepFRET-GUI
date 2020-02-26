@@ -1,5 +1,4 @@
 from PyQt5.QtWidgets import QDialog
-
 from global_variables import GlobalVariables as gvars
 from ui._AboutWindow import Ui_About
 

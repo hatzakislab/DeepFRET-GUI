@@ -146,9 +146,7 @@ class TraceContainer:
 
     def __init__(self, filename, name=None):
         self.filename = filename  # type: str
-        self.name = (
-            name if name is not None else os.path.basename(filename)
-        )  # type: str
+        self.name = name if name is not None else os.path.basename(filename)  # type: str
         self.movie = None  # type: Union[None, str]
         self.n = None  # type: Union[None, str]
         self.tracename = None  # type: Union[None, str]
@@ -180,19 +178,20 @@ class TraceContainer:
         self.d_factor = np.nan  # type: float
         self.frames = None  # type: Union[None, int]
         self.frames_max = None  # type: Union[None, int]
+        self.framerate = None  # type: Union[None, float]
 
         self.channels = self.grn, self.red, self.acc
-
-        self.load_from_ascii()
+        try:
+            self.load_from_ascii()
+        except TypeError as e:
+            self.load_from_dat()
 
     def load_from_ascii(self):
         """
-                Reads a trace from an ASCII text file. Several checks are
-                included to
-                include flexible compatibility with different versions of
-                trace exports.
-                Also includes support for all iSMS traces.
-                """
+        Reads a trace from an ASCII text file. Several checks are included to
+        include flexible compatibility with different versions of trace exports.
+        Also includes support for all iSMS traces.
+        """
         colnames = [
             "D-Dexc-bg.",
             "A-Dexc-bg.",
@@ -203,6 +202,8 @@ class TraceContainer:
             "S",
             "E",
         ]
+        if self.filename.endswith('.dat'):
+            raise TypeError("Datafile is not the right type for this function!")
 
         with open(self.filename) as f:
             txt_header = [next(f) for _ in range(5)]
@@ -308,6 +309,33 @@ class TraceContainer:
                 )
         except (ValueError, AttributeError):
             pass
+
+    def load_from_dat(self):
+        """
+        Loading from .dat files, as supplied in the kinSoft challenge
+        """
+        with open(self.filename) as f:
+            _arr = np.loadtxt(f)
+
+        zeros = np.zeros(len(_arr))
+
+        self.grn.int = _arr[:, 1]
+        self.acc.int = _arr[:, 2]
+        self.red.int = zeros * np.nan
+
+        self.grn.bg = zeros
+        self.acc.bg = zeros
+        self.red.bg = zeros * np.nan
+
+        self.framerate = int(1 / (_arr[0, 1] - _arr[0, 0]))
+
+        self.calculate_fret()
+        self.calculate_stoi()
+
+        self.frames = np.arange(1, len(_arr) + 1, 1)
+        self.frames_max = self.frames.max()
+
+        self.load_successful = True
 
     def get_intensities(self):
         """

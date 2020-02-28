@@ -2085,8 +2085,6 @@ class TraceWindow(BaseWindow):
         Classifies checked traces with deep learning model.
         """
         ctxt.app.processEvents()
-        alpha = self.getConfig(gvars.key_alphaFactor)
-        delta = self.getConfig(gvars.key_deltaFactor)
 
         if single:
             traces = [self.currentTrace()]
@@ -2105,29 +2103,48 @@ class TraceWindow(BaseWindow):
             batch_size = 256
             batches = (len(traces) // batch_size) + 1
             progressbar = ProgressBar(loop_len=batches, parent=TraceWindow_)
-            all_eq = (
-                False
-                if single
-                else lib.math.all_equal([trace.frames_max for trace in traces])
-            )
 
-            model = ctxt.keras_model
-            if all_eq:
+            if not single:
+                all_lengths_eq = lib.math.all_equal(
+                    [trace.frames_max for trace in traces]
+                )
+                all_features_eq = lib.math.all_equal(
+                    [np.isnan(np.sum(trace.red.int)) for trace in traces]
+                )
+            else:
+                all_lengths_eq = False
+                all_features_eq = None
+
+            if all((all_lengths_eq, all_features_eq)):
                 # shape is (n_traces) if traces have uneven length
                 X = np.array(
                     [
-                        lib.math.correct_DA(
-                            trace.get_intensities(), alpha=alpha, delta=delta
-                        )
+                        lib.math.correct_DA(trace.get_intensities())
                         for trace in traces
                     ]
                 )
+
+                # Swap from (samples, features, time) to
+                # (samples, time, features)
                 X = np.swapaxes(X, 1, 2)
-                X = lib.math.sample_max_normalize_3d(X[:, :, 1:])
+
+                X = (
+                    X[..., [1, 2]]
+                    if np.isnan(np.sum(X[..., -1]))
+                    else X[..., [1, 2, 3]]
+                )
+                # Normalize tensor
+                X = lib.math.sample_max_normalize_3d(X)
 
                 # Fix single sample dimension
                 if len(X.shape) == 2:
                     X = X[np.newaxis, :, :]
+
+                model = (
+                    ctxt.keras_2c_model
+                    if X.shape[-1] == 2
+                    else ctxt.keras_3c_model
+                )
 
                 Y = lib.math.predict_batch(
                     X=X,
@@ -2139,11 +2156,15 @@ class TraceWindow(BaseWindow):
                 Y = []
                 for n, trace in enumerate(traces):
                     xi = np.column_stack(
-                        lib.math.correct_DA(
-                            trace.get_intensities(), alpha=alpha, delta=delta
-                        )
+                        lib.math.correct_DA(trace.get_intensities())
                     )
-                    xi = lib.math.sample_max_normalize_3d(X=xi[:, 1:])
+
+                    if np.isnan(np.sum(xi[..., -1])):
+                        model = ctxt.keras_2c_model
+                    else:
+                        model = ctxt.keras_3c_model
+
+                    xi = lib.math.sample_max_normalize_3d(X=xi)
                     yi = lib.math.predict_single(xi=xi, model=model)
                     Y.append(yi)
                     if n % batch_size == 0:
@@ -3491,7 +3512,8 @@ class AppContext(ApplicationContext):
 
     def __init__(self):
         super().__init__()
-        self.keras_model = None
+        self.keras_2c_model = None
+        self.keras_3c_model = None
         self.config = None
 
     def load_resources(self):
@@ -3499,8 +3521,11 @@ class AppContext(ApplicationContext):
         Loads initial resources from disk to application
         """
         # model_experimental is better but undocumented
-        self.keras_model = load_model(
-            self.get_resource("model_experimental_9_class.h5")
+        self.keras_2c_model = load_model(
+            self.get_resource("FRET_2C_experimental.h5")
+        )
+        self.keras_3c_model = load_model(
+            self.get_resource("FRET_3C_experimental.h5")
         )
         self.config = ConfigObj(self.get_resource("config.ini"))
 

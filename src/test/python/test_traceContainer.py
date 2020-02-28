@@ -4,6 +4,7 @@ import numpy as np
 
 from lib.container import TraceContainer
 
+
 class TestTraceContainer(TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -63,3 +64,10 @@ class TestTraceContainer(TestCase):
 
         np.testing.assert_array_almost_equal(_df['E'], _df2['E'])
 
+    def test_dat_files_load(self):
+        filename = '../resources/traces/kinsoftSampleTrace.dat'
+        _trace = TraceContainer(filename)
+        self.assertIsInstance(_trace.acc.int, np.ndarray)
+        self.assertIsInstance(_trace.grn.int, np.ndarray)
+        self.assertIsInstance(_trace.red.int, np.ndarray)
+        self.assertTrue(np.isnan(_trace.red.int[0]))

@@ -29,7 +29,6 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import time
-import re
 import scipy.stats
 import scipy.signal
 import scipy.optimize
@@ -154,12 +153,12 @@ class PreferencesWindow(QDialog):
         self.readConfigFromFile()
 
         for configKey, checkBox in zip(
-                gvars.keys_globalCheckBoxes, self.globalCheckBoxes
+            gvars.keys_globalCheckBoxes, self.globalCheckBoxes
         ):
             checkBox.setChecked(bool(self.getConfig(configKey)))
 
         for radioButton, imgMode in zip(
-                self.imgModeRadioButtons, self.imgModes
+            self.imgModeRadioButtons, self.imgModes
         ):
             if self.getConfig(gvars.key_imgMode) == imgMode:
                 radioButton.setChecked(True)
@@ -177,14 +176,14 @@ class PreferencesWindow(QDialog):
         Write getConfig from the GUI when the preference window is closed.
         """
         for configKey, checkBox in zip(
-                gvars.keys_globalCheckBoxes, self.globalCheckBoxes
+            gvars.keys_globalCheckBoxes, self.globalCheckBoxes
         ):
             self.setConfig(configKey, checkBox.isChecked())
 
         # Imaging Modes
         newImgMode = None
         for radioButton, imgMode in zip(
-                self.imgModeRadioButtons, self.imgModes
+            self.imgModeRadioButtons, self.imgModes
         ):
             if radioButton.isChecked():
                 newImgMode = imgMode
@@ -359,13 +358,13 @@ class BaseWindow(QMainWindow):
             self.fitCheckedTracesHiddenMarkovModel
         )
         self.ui.actionPredict_Selected_Traces.triggered.connect(
-            partial(self.predictTraces, True)
+            partial(self.classifyTraces, True)
         )
         self.ui.actionPredict_All_traces.triggered.connect(
-            partial(self.predictTraces, False)
+            partial(self.classifyTraces, False)
         )
         self.ui.actionClear_All_Predictions.triggered.connect(
-            self.clearAllPredictions
+            self.clearAllClassifications
         )
 
         # Window
@@ -744,7 +743,7 @@ class BaseWindow(QMainWindow):
             TransitionDensityWindow_.refreshPlot()
 
     def setupFigureCanvas(
-            self, ax_setup, ax_window, use_layoutbox=True, **kwargs
+        self, ax_setup, ax_window, use_layoutbox=True, **kwargs
     ):
         """
         Creates a canvas with a given ax layout.
@@ -865,7 +864,7 @@ class BaseWindow(QMainWindow):
         exp_txt, date_txt = self.returnInfoHeader()
 
         directory = (
-                self.getConfig(gvars.key_lastOpenedDir) + "/Colocalization.txt"
+            self.getConfig(gvars.key_lastOpenedDir) + "/Colocalization.txt"
         )
         path, _ = QFileDialog.getSaveFileName(
             self, directory=directory
@@ -899,7 +898,9 @@ class BaseWindow(QMainWindow):
                     "{0}\n"
                     "{1}\n\n"
                     "{2}".format(
-                        exp_txt, date_txt, df.to_csv(index=False, sep="\t", na_rep='NaN')
+                        exp_txt,
+                        date_txt,
+                        df.to_csv(index=False, sep="\t", na_rep="NaN"),
                     )
                 )
 
@@ -917,7 +918,6 @@ class BaseWindow(QMainWindow):
         else:
             traces = [trace for trace in MainWindow_.data.traces.values()]
 
-        exp_txt, date_txt = self.returnInfoHeader()
         diag = ExportDialog(
             init_dir=gvars.key_lastOpenedDir, accept_label="Export"
         )
@@ -937,7 +937,7 @@ class BaseWindow(QMainWindow):
         exp_txt, date_txt = self.returnInfoHeader()
 
         directory = (
-                self.getConfig(gvars.key_lastOpenedDir) + "/CorrectionFactors.txt"
+            self.getConfig(gvars.key_lastOpenedDir) + "/CorrectionFactors.txt"
         )
         path, _ = QFileDialog.getSaveFileName(
             self, directory=directory
@@ -954,7 +954,9 @@ class BaseWindow(QMainWindow):
                     "{0}\n"
                     "{1}\n\n"
                     "{2}".format(
-                        exp_txt, date_txt, df.to_csv(index=False, sep="\t", na_rep='NaN')
+                        exp_txt,
+                        date_txt,
+                        df.to_csv(index=False, sep="\t", na_rep="NaN"),
                     )
                 )
 
@@ -965,7 +967,7 @@ class BaseWindow(QMainWindow):
         exp_txt, date_txt = self.returnInfoHeader()
 
         directory = (
-                self.getConfig(gvars.key_lastOpenedDir) + "/E_S_Histogram.txt"
+            self.getConfig(gvars.key_lastOpenedDir) + "/E_S_Histogram.txt"
         )
         path, _ = QFileDialog.getSaveFileName(
             self, directory=directory
@@ -993,7 +995,9 @@ class BaseWindow(QMainWindow):
                     "{0}\n"
                     "{1}\n\n"
                     "{2}".format(
-                        exp_txt, date_txt, df.to_csv(index=False, sep="\t", na_rep='NaN')
+                        exp_txt,
+                        date_txt,
+                        df.to_csv(index=False, sep="\t", na_rep="NaN"),
                     )
                 )
 
@@ -1004,8 +1008,8 @@ class BaseWindow(QMainWindow):
         exp_txt, date_txt = self.returnInfoHeader()
 
         directory = (
-                self.getConfig(gvars.key_lastOpenedDir)
-                + "/Transition_Densities.txt"
+            self.getConfig(gvars.key_lastOpenedDir)
+            + "/Transition_Densities.txt"
         )
         path, _ = QFileDialog.getSaveFileName(
             self, directory=directory
@@ -1024,7 +1028,9 @@ class BaseWindow(QMainWindow):
                     "{0}\n"
                     "{1}\n\n"
                     "{2}".format(
-                        exp_txt, date_txt, df.to_csv(index=False, sep="\t", na_rep='NaN')
+                        exp_txt,
+                        date_txt,
+                        df.to_csv(index=False, sep="\t", na_rep="NaN"),
                     )
                 )
 
@@ -1058,7 +1064,7 @@ class BaseWindow(QMainWindow):
         if TraceWindow_.isVisible():
             CorrectionFactorInspector_.show()
 
-    def clearAllPredictions(self):
+    def clearAllClassifications(self):
         """Override in subclass."""
         pass
 
@@ -1109,7 +1115,7 @@ class BaseWindow(QMainWindow):
         """Override in subclass."""
         pass
 
-    def predictTraces(self, selected):
+    def classifyTraces(self, selected):
         """Override in subclass."""
         pass
 
@@ -1350,7 +1356,7 @@ class MainWindow(BaseWindow):
                 self.getTracesSingleMovie()
                 self.currentMovie().img = None
                 for c in self.currentMovie().channels + (
-                        self.currentMovie().acc,
+                    self.currentMovie().acc,
                 ):
                     c.raw = None
 
@@ -1502,8 +1508,8 @@ class MainWindow(BaseWindow):
         mov.traces = {}
 
         if (
-                mov.coloc_blu_grn.spots is not None
-                and mov.coloc_grn_red.spots is not None
+            mov.coloc_blu_grn.spots is not None
+            and mov.coloc_grn_red.spots is not None
         ):
             mov.coloc_all.spots = lib.imgdata.colocalize_triple(
                 mov.coloc_blu_grn.spots, mov.coloc_grn_red.spots
@@ -1643,7 +1649,7 @@ class MainWindow(BaseWindow):
             sensitivity = 100 if self.imgMode == "bypass" else 250
 
             for c, lo, hi in zip(
-                    mov.channels, contrast_lo, contrast_hi
+                mov.channels, contrast_lo, contrast_hi
             ):  # type: ImageChannel, QDoubleSpinBox, QDoubleSpinBox
                 clip_lo = float(lo.value() / sensitivity)
                 clip_hi = float(hi.value() / sensitivity)
@@ -1720,9 +1726,9 @@ class MainWindow(BaseWindow):
                 )
 
             if (
-                    self.imgMode == "3-color"
-                    and mov.blu.exists
-                    or self.imgMode == "bypass"
+                self.imgMode == "3-color"
+                and mov.blu.exists
+                or self.imgMode == "bypass"
             ):
                 if mov.coloc_blu_grn.spots is not None:
                     lib.plotting.plot_roi_coloc(
@@ -2007,23 +2013,30 @@ class TraceWindow(BaseWindow):
         delta = self.getConfig(gvars.key_deltaFactor)
 
         if self.currName is not None and len(self.data.traces) > 0:
+            # Predict number of states using deep learning first
             trace = self.currentTrace()
+
+            if trace.y_class is None:
+                self.classifyTraces(single=refresh)
+
             F_DA, I_DD, I_DA, I_AA = lib.math.correct_DA(
                 trace.get_intensities(), alpha=alpha, delta=delta
             )
             fret = lib.math.calc_E(trace.get_intensities(), alpha, delta)
             X = np.column_stack((I_DD, F_DA))
-            X = sklearn.preprocessing.robust_scale(X)
+            X /= X.max()
 
-            try:
-                idealized, time, transitions = lib.math.fit_hmm(
-                    X=X[: trace.first_bleach], y=fret[: trace.first_bleach]
+            # Count states, if any
+            n_states = lib.math.count_n_states(trace.y_class)
+            if n_states is not None:
+                idealized, time, transitions = lib.math.fit_dl_hmm(
+                    X=X[: trace.first_bleach],
+                    y=fret[: trace.first_bleach],
+                    n_components=n_states,
                 )
                 trace.hmm = idealized
                 trace.hmm_idx = time
                 trace.transitions = transitions
-            except ValueError:
-                warnings.warn("Error in HMM. Trace skipped.", RuntimeWarning)
 
         # Only refresh immediately for single fits
         if refresh:
@@ -2039,22 +2052,25 @@ class TraceWindow(BaseWindow):
         traces = [
             trace for trace in self.data.traces.values() if trace.is_checked
         ]
+        self.classifyTraces(single=False, checked_only=True)
 
-        progressbar = ProgressBar(loop_len=len(traces), parent=TraceWindow_)
-        for trace in traces:  # type: TraceContainer
-            if progressbar.wasCanceled():
-                break
-            self.currName = trace.name
-            self.fitSingleTraceHiddenMarkovModel(refresh=False)
-            progressbar.increment()
+        if traces:
+            progressbar = ProgressBar(loop_len=len(traces), parent=TraceWindow_)
+            for trace in traces:  # type: TraceContainer
+                if progressbar.wasCanceled():
+                    break
+                self.currName = trace.name
+                self.fitSingleTraceHiddenMarkovModel(refresh=False)
+                progressbar.increment()
         self.resetCurrentName()
         self.refreshPlot()
 
         if TransitionDensityWindow_.isVisible():
             TransitionDensityWindow_.refreshPlot()
 
-    def setPredictions(self, trace, yi_pred):
-        """Assign trace predictions to correspondign trace"""
+    @staticmethod
+    def setClassifications(trace, yi_pred):
+        """Assign predicted trace classifications to trace"""
         trace.y_pred = yi_pred
         trace.y_class, trace.confidence = lib.math.seq_probabilities(
             trace.y_pred
@@ -2065,13 +2081,11 @@ class TraceWindow(BaseWindow):
         for c in trace.channels:
             c.bleach = trace.first_bleach
 
-    def predictTraces(self, single=False, checked_only=False):
+    def classifyTraces(self, single=False, checked_only=False):
         """
         Classifies checked traces with deep learning model.
         """
         ctxt.app.processEvents()
-        alpha = self.getConfig(gvars.key_alphaFactor)
-        delta = self.getConfig(gvars.key_deltaFactor)
 
         if single:
             traces = [self.currentTrace()]
@@ -2090,29 +2104,48 @@ class TraceWindow(BaseWindow):
             batch_size = 256
             batches = (len(traces) // batch_size) + 1
             progressbar = ProgressBar(loop_len=batches, parent=TraceWindow_)
-            all_eq = (
-                False
-                if single
-                else lib.math.all_equal([trace.frames_max for trace in traces])
-            )
 
-            model = ctxt.keras_model
-            if all_eq:
+            if not single:
+                all_lengths_eq = lib.math.all_equal(
+                    [trace.frames_max for trace in traces]
+                )
+                all_features_eq = lib.math.all_equal(
+                    [np.isnan(np.sum(trace.red.int)) for trace in traces]
+                )
+            else:
+                all_lengths_eq = False
+                all_features_eq = None
+
+            if all((all_lengths_eq, all_features_eq)):
                 # shape is (n_traces) if traces have uneven length
                 X = np.array(
                     [
-                        lib.math.correct_DA(
-                            trace.get_intensities(), alpha=alpha, delta=delta
-                        )
+                        lib.math.correct_DA(trace.get_intensities())
                         for trace in traces
                     ]
                 )
+
+                # Swap from (samples, features, time) to
+                # (samples, time, features)
                 X = np.swapaxes(X, 1, 2)
-                X = lib.math.sample_max_normalize_3d(X[:, :, 1:])
+
+                X = (
+                    X[..., [1, 2]]
+                    if np.isnan(np.sum(X[..., -1]))
+                    else X[..., [1, 2, 3]]
+                )
+                # Normalize tensor
+                X = lib.math.sample_max_normalize_3d(X)
 
                 # Fix single sample dimension
                 if len(X.shape) == 2:
                     X = X[np.newaxis, :, :]
+
+                model = (
+                    ctxt.keras_2c_model
+                    if X.shape[-1] == 2
+                    else ctxt.keras_3c_model
+                )
 
                 Y = lib.math.predict_batch(
                     X=X,
@@ -2124,23 +2157,27 @@ class TraceWindow(BaseWindow):
                 Y = []
                 for n, trace in enumerate(traces):
                     xi = np.column_stack(
-                        lib.math.correct_DA(
-                            trace.get_intensities(), alpha=alpha, delta=delta
-                        )
+                        lib.math.correct_DA(trace.get_intensities())
                     )
-                    xi = lib.math.sample_max_normalize_3d(X=xi[:, 1:])
+
+                    if np.isnan(np.sum(xi[..., -1])):
+                        model = ctxt.keras_2c_model
+                    else:
+                        model = ctxt.keras_3c_model
+
+                    xi = lib.math.sample_max_normalize_3d(X=xi)
                     yi = lib.math.predict_single(xi=xi, model=model)
                     Y.append(yi)
                     if n % batch_size == 0:
                         progressbar.increment()
 
             for n, trace in enumerate(traces):
-                self.setPredictions(trace=trace, yi_pred=Y[n])
+                self.setClassifications(trace=trace, yi_pred=Y[n])
 
             self.resetCurrentName()
             self.refreshPlot()
 
-    def clearAllPredictions(self):
+    def clearAllClassifications(self):
         """
         Clears all classifications for a trace. This will also clear
         predicted bleaching.
@@ -2435,6 +2472,8 @@ class TraceWindow(BaseWindow):
         """
         Refreshes plot for TraceWindow.
         """
+        self.canvas.fig.legends = []
+
         if self.currName is not None and len(self.data.traces) > 0:
             trace = self.currentTrace()
             alpha = self.getConfig(gvars.key_alphaFactor)
@@ -2454,10 +2493,10 @@ class TraceWindow(BaseWindow):
 
             # Canvas setup
             if self.canvas.ax_setup in (
-                    "dual",
-                    "2-color",
-                    "2-color-inv",
-                    "3-color",
+                "dual",
+                "2-color",
+                "2-color-inv",
+                "3-color",
             ):
                 channels = [trace.grn, trace.acc, trace.red]
                 colors = [gvars.color_green, gvars.color_red, gvars.color_red]
@@ -2469,7 +2508,7 @@ class TraceWindow(BaseWindow):
                 raise ValueError("Setup is not valid. Corrupted config.ini?")
 
             for (ax, label), channel, color in zip(
-                    self.canvas.axes_c, channels, colors
+                self.canvas.axes_c, channels, colors
             ):
                 if label == "A":
                     int_ = F_DA
@@ -2533,10 +2572,10 @@ class TraceWindow(BaseWindow):
                 ax_S = self.canvas.ax_stoi
 
                 for signal, ax, color, label in zip(
-                        (fret, stoi),
-                        (ax_E, ax_S),
-                        (gvars.color_orange, gvars.color_purple),
-                        ("E", "S"),
+                    (fret, stoi),
+                    (ax_E, ax_S),
+                    (gvars.color_orange, gvars.color_purple),
+                    ("E", "S"),
                 ):
                     ax.plot(trace.frames, signal, color=color)
                     ax.axvspan(
@@ -2578,7 +2617,9 @@ class TraceWindow(BaseWindow):
 
             if hasattr(self.canvas, "ax_ml") and trace.y_pred is not None:
                 lib.plotting.plot_predictions(
-                    trace.y_pred, ax=self.canvas.ax_ml
+                    yi_pred=trace.y_pred,
+                    fig=self.canvas.fig,
+                    ax=self.canvas.ax_ml,
                 )
 
         else:
@@ -2624,9 +2665,9 @@ class HistogramWindow(BaseWindow):
         [
             self.ui.gaussianAutoButton.clicked.connect(x)
             for x in (
-            partial(self.fitGaussians, "auto"),
-            partial(self.refreshPlot, True),
-        )
+                partial(self.fitGaussians, "auto"),
+                partial(self.refreshPlot, True),
+            )
         ]
         [
             self.ui.gaussianSpinBox.valueChanged.connect(x)
@@ -2888,10 +2929,10 @@ class HistogramWindow(BaseWindow):
                 )
 
         for n, (factor, name) in enumerate(
-                zip(
-                    (self.alpha, self.delta, self.beta, self.gamma),
-                    ("alpha", "delta", "beta", "gamma"),
-                )
+            zip(
+                (self.alpha, self.delta, self.beta, self.gamma),
+                ("alpha", "delta", "beta", "gamma"),
+            )
         ):
             self.canvas.ax_ctr.text(
                 x=0.0,
@@ -3129,7 +3170,7 @@ class TransitionDensityWindow(BaseWindow):
                 x=0,
                 y=0.9,
                 s="N = {}\n"
-                  "{} transitions\n".format(
+                "{} transitions\n".format(
                     self.n_samples, len(self.fret_lifetime)
                 ),
                 color=gvars.color_gui_text,
@@ -3199,8 +3240,8 @@ class TransitionDensityWindow(BaseWindow):
                         "--",
                         color="black",
                         label="label: {}\n"
-                              "$\lambda$:  ${:.2f} \pm {:.2f}$\n"
-                              "lifetime: ${:.2f}$".format(
+                        "$\lambda$:  ${:.2f} \pm {:.2f}$\n"
+                        "lifetime: ${:.2f}$".format(
                             k, rate, rate_err, 1 / rate
                         ),
                     )
@@ -3282,7 +3323,7 @@ class DensityWindowInspector(SheetInspector):
         self.ui.setupUi(self)
 
         if isinstance(
-                parent, HistogramWindow
+            parent, HistogramWindow
         ):  # Avoids an explicit reference in parent class, for easier copy-paste
             self.keys = gvars.keys_hist
             HistogramWindow_.inspector = self
@@ -3298,13 +3339,13 @@ class DensityWindowInspector(SheetInspector):
     def connectUi(self, parent):
         """Connect Ui to parent functions"""
         if hasattr(
-                parent, "canvas"
+            parent, "canvas"
         ):  # Avoid refreshing canvas before it's even instantiated on the parent
             for slider in (
-                    self.ui.smoothingSlider,
-                    self.ui.resolutionSlider,
-                    self.ui.colorSlider,
-                    self.ui.pointAlphaSlider,
+                self.ui.smoothingSlider,
+                self.ui.resolutionSlider,
+                self.ui.colorSlider,
+                self.ui.pointAlphaSlider,
             ):
 
                 # Avoids an explicit reference in parent class,
@@ -3472,7 +3513,8 @@ class AppContext(ApplicationContext):
 
     def __init__(self):
         super().__init__()
-        self.keras_model = None
+        self.keras_2c_model = None
+        self.keras_3c_model = None
         self.config = None
 
     def load_resources(self):
@@ -3480,8 +3522,11 @@ class AppContext(ApplicationContext):
         Loads initial resources from disk to application
         """
         # model_experimental is better but undocumented
-        self.keras_model = load_model(
-            self.get_resource("model_published.h5")
+        self.keras_2c_model = load_model(
+            self.get_resource("FRET_2C_experimental.h5")
+        )
+        self.keras_3c_model = load_model(
+            self.get_resource("FRET_3C_experimental.h5")
         )
         self.config = ConfigObj(self.get_resource("config.ini"))
 

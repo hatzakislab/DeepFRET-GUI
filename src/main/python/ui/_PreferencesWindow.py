@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ui/_PreferencesWindow.ui'
 #
-# Created by: PyQt5 UI code generator 5.13.1
+# Created by: PyQt5 UI code generator 5.14.1
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -71,9 +71,6 @@ class Ui_Preferences(object):
         self.checkBox_fitSpots = QtWidgets.QCheckBox(self.generalGroup)
         self.checkBox_fitSpots.setObjectName("checkBox_fitSpots")
         self.gridLayout_2.addWidget(self.checkBox_fitSpots, 11, 0, 1, 1)
-        self.checkBox_twoChannelsNoALEX=QtWidgets.QCheckBox(self.generalGroup)
-        self.checkBox_twoChannelsNoALEX.setObjectName("checkBox_twoChannelsNoALEX")
-        self.gridLayout_2.addWidget(self.checkBox_twoChannelsNoALEX, 13, 0, 1, 1)
         self.checkBox_illuCorrect = QtWidgets.QCheckBox(self.generalGroup)
         self.checkBox_illuCorrect.setObjectName("checkBox_illuCorrect")
         self.gridLayout_2.addWidget(self.checkBox_illuCorrect, 9, 0, 1, 1)
@@ -151,7 +148,6 @@ class Ui_Preferences(object):
         self.label.setText(_translate("Preferences", "      For determining acceptor bleedthrough"))
         self.checkBox_fitSpots.setText(_translate("Preferences", "Detect spots using Laplacian of Gaussian fitting"))
         self.checkBox_illuCorrect.setText(_translate("Preferences", "Correct for illumination background"))
-        self.checkBox_twoChannelsNoALEX.setText(_translate("Preferences", "Only two channels!"))
         self.imagingGroup.setTitle(_translate("Preferences", "Imaging Setup (restart required!)"))
         self.radioButton_2_col_inv.setText(_translate("Preferences", "Quad View (inverted 2-channel)"))
         self.radioButton_2_col.setText(_translate("Preferences", "Quad Viw (2-channel)"))

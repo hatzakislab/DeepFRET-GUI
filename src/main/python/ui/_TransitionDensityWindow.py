@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ui/_TransitionDensityWindow.ui'
 #
-# Created by: PyQt5 UI code generator 5.13.1
+# Created by: PyQt5 UI code generator 5.14.1
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -51,7 +51,7 @@ class Ui_TransitionDensityWindow(object):
         self.nClustersSpinBox.setFrame(True)
         self.nClustersSpinBox.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
         self.nClustersSpinBox.setMinimum(1)
-        self.nClustersSpinBox.setMaximum(4)
+        self.nClustersSpinBox.setMaximum(9)
         self.nClustersSpinBox.setObjectName("nClustersSpinBox")
         self.gridLayout.addWidget(self.nClustersSpinBox, 0, 1, 1, 1)
         spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)

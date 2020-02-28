@@ -33,7 +33,6 @@ import scipy.stats
 import scipy.signal
 import scipy.optimize
 import scipy.special
-import warnings
 import sklearn.preprocessing
 from tensorflow_core.python.keras.models import load_model
 
@@ -87,7 +86,7 @@ class PreferencesWindow(QDialog):
             self.ui.checkBox_unColocRed,
             self.ui.checkBox_illuCorrect,
             self.ui.checkBox_fitSpots,
-            self.ui.checkBox_twoChannelsNoALEX,
+            # self.ui.checkBox_twoChannelsNoALEX,
         )
 
         self.imgModeRadioButtons = (
@@ -1937,8 +1936,7 @@ class TraceWindow(BaseWindow):
         filenames, selectedFilter = QFileDialog.getOpenFileNames(
             self,
             caption="Open File",
-            filter="Trace ASCII and datafiles (*.txt, *.dat)",
-            # filter="Trace ASCII files (*.txt);;Trace Datafiles (*.dat)",
+            filter="Trace files (*.txt *.dat)",
             directory=directory,
         )
 
@@ -2013,11 +2011,7 @@ class TraceWindow(BaseWindow):
         delta = self.getConfig(gvars.key_deltaFactor)
 
         if self.currName is not None and len(self.data.traces) > 0:
-            # Predict number of states using deep learning first
             trace = self.currentTrace()
-
-            if trace.y_class is None:
-                self.classifyTraces(single=refresh)
 
             F_DA, I_DD, I_DA, I_AA = lib.math.correct_DA(
                 trace.get_intensities(), alpha=alpha, delta=delta
@@ -2027,16 +2021,15 @@ class TraceWindow(BaseWindow):
             X /= X.max()
 
             # Count states, if any
-            n_states = lib.math.count_n_states(trace.y_class)
-            if n_states is not None:
-                idealized, time, transitions = lib.math.fit_dl_hmm(
-                    X=X[: trace.first_bleach],
-                    y=fret[: trace.first_bleach],
-                    n_components=n_states,
+            try:
+                idealized, time, transitions = lib.math.fit_hmm_single(
+                    X=X[: trace.first_bleach], y=fret[: trace.first_bleach],
                 )
                 trace.hmm = idealized
                 trace.hmm_idx = time
                 trace.transitions = transitions
+            except Exception as e:
+                return
 
         # Only refresh immediately for single fits
         if refresh:
@@ -2052,17 +2045,72 @@ class TraceWindow(BaseWindow):
         traces = [
             trace for trace in self.data.traces.values() if trace.is_checked
         ]
-        self.classifyTraces(single=False, checked_only=True)
 
-        if traces:
-            progressbar = ProgressBar(loop_len=len(traces), parent=TraceWindow_)
-            for trace in traces:  # type: TraceContainer
-                if progressbar.wasCanceled():
-                    break
-                self.currName = trace.name
-                self.fitSingleTraceHiddenMarkovModel(refresh=False)
-                progressbar.increment()
-        self.resetCurrentName()
+        DD, DA, E, lengths = [], [], [], []
+        for trace in traces:
+            _, I_DD, I_DA, _ = lib.math.correct_DA(trace.get_intensities())
+            DD.append(I_DD[: trace.first_bleach])
+            DA.append(I_DA[: trace.first_bleach])
+            E.append(trace.fret[: trace.first_bleach])
+            lengths.append(len(I_DD[: trace.first_bleach]))
+
+        DD = np.concatenate(DD)
+        DA = np.concatenate(DA)
+        E = np.concatenate(E).reshape(-1, 1)
+
+        X = np.column_stack((DD, DA))
+        states, transmat, state_means, state_sigs = lib.math.fit_hmm_all(
+            X=X, fret=E, lengths=lengths
+        )
+
+        print("States: ", np.unique(states))
+        print("Transition matrix:\n", np.round(transmat, 2))
+        print("State means:\n", state_means)
+        print("State sigmas:\n", state_sigs)
+
+        pos = 0
+        for l, trace in zip(lengths, traces):
+            si = states[pos : pos + l]
+            pos += l
+
+            idealized, time, transitions = lib.math.assign_state(
+                states=si, fret=trace.fret
+            )
+            trace.hmm = idealized
+            trace.hmm_idx = time
+            trace.transitions = transitions
+
+        transitions = pd.concat([trace.transitions for trace in traces])
+
+        for _, t in transitions.groupby(["state", "state+1"]):
+            print(
+                "{} -> {}".format(t["state"].values[0], t["state+1"].values[0])
+            )
+            print("number of datapoints: ", len(t["lifetime"]))
+
+            try:
+                max_lifetime = np.max(t["lifetime"])
+                bins = np.arange(0, max_lifetime, 1)
+
+                hx, hy, *_ = lib.math.histpoints_w_err(
+                    data=t["lifetime"], bins=bins, density=False, least_count=1,
+                )
+                popt, pcov = scipy.optimize.curve_fit(
+                    lib.math.exp_function, xdata=hx, ydata=hy
+                )
+                perr = np.sqrt(np.diag(pcov))
+
+                rate = popt[1]
+                rate_err = perr[1]
+
+                if rate_err > 3 * rate:
+                    rate_err = np.inf
+
+                print(round(rate, 4), "+/-", round(rate_err, 4))
+            except TypeError:
+                continue
+            print()
+
         self.refreshPlot()
 
         if TransitionDensityWindow_.isVisible():
@@ -2087,6 +2135,9 @@ class TraceWindow(BaseWindow):
         """
         ctxt.app.processEvents()
 
+        alpha = self.getConfig(gvars.key_alphaFactor)
+        delta = self.getConfig(gvars.key_deltaFactor)
+
         if single:
             traces = [self.currentTrace()]
             if traces == [None]:
@@ -2110,7 +2161,7 @@ class TraceWindow(BaseWindow):
                     [trace.frames_max for trace in traces]
                 )
                 all_features_eq = lib.math.all_equal(
-                    [np.isnan(np.sum(trace.red.int)) for trace in traces]
+                    [lib.math.contains_nan(trace.red.int) for trace in traces]
                 )
             else:
                 all_lengths_eq = False
@@ -2120,7 +2171,9 @@ class TraceWindow(BaseWindow):
                 # shape is (n_traces) if traces have uneven length
                 X = np.array(
                     [
-                        lib.math.correct_DA(trace.get_intensities())
+                        lib.math.correct_DA(
+                            trace.get_intensities(), alpha=alpha, delta=delta
+                        )
                         for trace in traces
                     ]
                 )
@@ -2131,7 +2184,7 @@ class TraceWindow(BaseWindow):
 
                 X = (
                     X[..., [1, 2]]
-                    if np.isnan(np.sum(X[..., -1]))
+                    if lib.math.contains_nan(X[..., -1])
                     else X[..., [1, 2, 3]]
                 )
                 # Normalize tensor
@@ -2157,13 +2210,17 @@ class TraceWindow(BaseWindow):
                 Y = []
                 for n, trace in enumerate(traces):
                     xi = np.column_stack(
-                        lib.math.correct_DA(trace.get_intensities())
+                        lib.math.correct_DA(
+                            trace.get_intensities(), alpha=alpha, delta=delta
+                        )
                     )
 
-                    if np.isnan(np.sum(xi[..., -1])):
+                    if lib.math.contains_nan(xi[..., -1]):
                         model = ctxt.keras_2c_model
+                        xi = xi[..., [1, 2]]
                     else:
                         model = ctxt.keras_3c_model
+                        xi = xi[..., [1, 2, 3]]
 
                     xi = lib.math.sample_max_normalize_3d(X=xi)
                     yi = lib.math.predict_single(xi=xi, model=model)
@@ -2292,7 +2349,11 @@ class TraceWindow(BaseWindow):
                 S = trace.stoi[: trace.first_bleach]
                 E = trace.fret[: trace.first_bleach]
 
-                cond1 = S_med_lo < np.median(S) < S_med_hi
+                # TODO: write a warning that stoichiometry will be ignored
+                if lib.math.contains_nan(trace.red.int):
+                    cond1 = True
+                else:
+                    cond1 = S_med_lo < np.median(S) < S_med_hi
                 cond2 = E_med_lo < np.median(E) < E_med_hi
                 cond3 = (
                     True
@@ -2309,7 +2370,12 @@ class TraceWindow(BaseWindow):
                         cond5 = trace.y_class >= dynamics
                         conditions += [cond5]
 
-                cond6 = False if trace.first_bleach is None else True
+                cond6 = (
+                    False
+                    if bleached_only and trace.first_bleach is None
+                    else True
+                )
+
                 conditions += [cond6]
 
                 pass_all = all(conditions)
@@ -2761,28 +2827,33 @@ class HistogramWindow(BaseWindow):
             )
             E_app.extend(E)
             S_app.extend(S)
+
         self.E_un, self.S_un = lib.math.trim_ES(E_app, S_app)
 
-        if len(self.E_un) > 0:
-            beta, gamma = lib.math.beta_gamma_factor(
-                E_app=self.E_un, S_app=self.S_un
-            )
-            E_real, S_real, = [], []
-            for trace in checkedTraces:
-                E, S = lib.math.drop_bleached_frames(
-                    intensities=trace.get_intensities(),
-                    bleaches=trace.get_bleaches(),
-                    alpha=alpha,
-                    delta=delta,
-                    beta=beta,
-                    gamma=gamma,
-                    max_frames=n_first_frames,
+        # Skip ensemble correction if stoichiometry is missing
+        if not lib.math.contains_nan(self.S_un):
+            if len(self.E_un) > 0 and not lib.math.contains_nan(self.S_un):
+                beta, gamma = lib.math.beta_gamma_factor(
+                    E_app=self.E_un, S_app=self.S_un
                 )
-                E_real.extend(E)
-                S_real.extend(S)
-            self.E, self.S = lib.math.trim_ES(E_real, S_real)
-            self.beta = beta
-            self.gamma = gamma
+                E_real, S_real, = [], []
+                for trace in checkedTraces:
+                    E, S = lib.math.drop_bleached_frames(
+                        intensities=trace.get_intensities(),
+                        bleaches=trace.get_bleaches(),
+                        alpha=alpha,
+                        delta=delta,
+                        beta=beta,
+                        gamma=gamma,
+                        max_frames=n_first_frames,
+                    )
+                    E_real.extend(E)
+                    S_real.extend(S)
+                self.E, self.S = lib.math.trim_ES(E_real, S_real)
+                self.beta = beta
+                self.gamma = gamma
+        else:
+            self.E = self.E_un
 
         self.alpha = alpha
         self.delta = delta
@@ -2801,7 +2872,7 @@ class HistogramWindow(BaseWindow):
                 else self.ui.gaussianSpinBox.value()
             )
             try:
-                fitdict = lib.math.fit_gaussian_mixture(
+                fitdict = lib.math.fit_1d_gaussian_mixture(
                     arr=E, k_states=k_states
                 )
                 self.gauss_params = fitdict["params"]
@@ -2887,24 +2958,6 @@ class HistogramWindow(BaseWindow):
 
         self.canvas.ax_ctr.clear()
 
-        c = lib.math.contour_2d(
-            xdata=E,
-            ydata=S,
-            bandwidth=bandwidth / 200,
-            resolution=resolution,
-            kernel="linear",
-            n_colors=n_colors,
-        )
-        self.canvas.ax_ctr.contourf(*c, cmap="plasma")
-
-        if overlay_pts:
-            self.canvas.ax_ctr.scatter(
-                E, S, s=20, color="black", zorder=1, alpha=pts_alpha / 20
-            )  # Conversion factor, because sliders can't do [0,1]
-        self.canvas.ax_ctr.axhline(
-            0.5, color="black", alpha=0.3, lw=0.5, ls="--", zorder=2
-        )
-
         n_equals_txt = "N = {}\n".format(self.n_samples)
         if not np.isnan(self.trace_median_len):
             n_equals_txt += "(median length {:.0f})".format(
@@ -2934,12 +2987,32 @@ class HistogramWindow(BaseWindow):
                 ("alpha", "delta", "beta", "gamma"),
             )
         ):
-            self.canvas.ax_ctr.text(
-                x=0.0,
-                y=0.15 - 0.05 * n,
-                s=r"$\{}$ = {:.2f}".format(name, factor),
-                color=gvars.color_gui_text,
-                zorder=10,
+            if factor is not None:
+                self.canvas.ax_ctr.text(
+                    x=0.0,
+                    y=0.15 - 0.05 * n,
+                    s=r"$\{}$ = {:.2f}".format(name, factor),
+                    color=gvars.color_gui_text,
+                    zorder=10,
+                )
+
+        if S is not None:
+            c = lib.math.contour_2d(
+                xdata=E,
+                ydata=S,
+                bandwidth=bandwidth / 200,
+                resolution=resolution,
+                kernel="linear",
+                n_colors=n_colors,
+            )
+            self.canvas.ax_ctr.contourf(*c, cmap="plasma")
+
+            if overlay_pts:
+                self.canvas.ax_ctr.scatter(
+                    E, S, s=20, color="black", zorder=1, alpha=pts_alpha / 20
+                )  # Conversion factor, because sliders can't do [0,1]
+            self.canvas.ax_ctr.axhline(
+                0.5, color="black", alpha=0.3, lw=0.5, ls="--", zorder=2
             )
 
     def refreshPlot(self, autofit=False):
@@ -2952,6 +3025,10 @@ class HistogramWindow(BaseWindow):
         try:
             self.setPooledES()
             if self.E is not None:
+                # Force unchecked
+                if self.S is None:
+                    self.ui.applyCorrectionsCheckBox.setChecked(False)
+                    corrected = False
                 self.plotTop(corrected)
                 self.plotRight(corrected)
                 self.plotCenter(corrected)
@@ -2978,22 +3055,13 @@ class TransitionDensityWindow(BaseWindow):
     def __init__(self):
         super().__init__()
         self.currDir = None
-        self.fret_before = None
-        self.fret_after = None
-        self.fret_lifetime = None
+        self.state_before = None
+        self.state_after = None
+        self.state_lifetime = None
         self.n_samples = None
         self.selected_data = None
         self.tdp_df = None
-        self.colors = (
-            "#66c2a5",
-            "#fc8d62",
-            "#8da0cb",
-            "#e78ac3",
-            "#a6d854",
-            "#ffd92f",
-            "#e5c494",
-            "#b3b3b3",
-        )
+        self.colors = None
         self.data = MainWindow_.data
 
         # dynamically created once plot is refreshed
@@ -3045,10 +3113,12 @@ class TransitionDensityWindow(BaseWindow):
         """
         Re-plot non-persistent plot settings for left (TDP)
         """
-        self.tdp_ax.set_xlim(-0.15, 1.15)
-        self.tdp_ax.set_ylim(-0.15, 1.15)
-        self.tdp_ax.set_xlabel(xlabel="E", color=gvars.color_gui_text)
-        self.tdp_ax.set_ylabel(ylabel="E + 1", color=gvars.color_gui_text)
+        smax = max(self.state_before)
+
+        self.tdp_ax.set_xlim(-0.15, smax + 0.15)
+        self.tdp_ax.set_ylim(-0.15, smax + 0.15)
+        self.tdp_ax.set_xlabel(xlabel="Before", color=gvars.color_gui_text)
+        self.tdp_ax.set_ylabel(ylabel="After", color=gvars.color_gui_text)
         self.tdp_ax.tick_params(axis="both", colors=gvars.color_gui_text)
 
     def plotDefaultElementsRight(self):
@@ -3083,37 +3153,37 @@ class TransitionDensityWindow(BaseWindow):
             )
             transitions.reset_index(inplace=True)
 
-            self.fret_lifetime = transitions["lifetime"]
-            self.fret_before = transitions["y_before"]
-            self.fret_after = transitions["y_after"]
+            self.state_lifetime = transitions["lifetime"]
+            self.state_before = transitions["state"]
+            self.state_after = transitions["state+1"]
 
         except ValueError:
-            self.fret_lifetime = None
-            self.fret_before = None
-            self.fret_after = None
+            self.state_lifetime = None
+            self.state_before = None
+            self.state_after = None
             self.tdp_df = None
 
     def setClusteredTransitions(self):
-        if self.fret_before is not None:
+        if self.state_before is not None:
             n_clusters = self.ui.nClustersSpinBox.value()
 
             tdp_df = pd.DataFrame(
                 {
-                    "E_bf": self.fret_before,
-                    "E_af": self.fret_after,
-                    "lifetime": self.fret_lifetime,
+                    "state": self.state_before,
+                    "state+1": self.state_after,
+                    "lifetime": self.state_lifetime,
                 }
             )
 
             tdp_df.dropna(inplace=True)
 
-            up_diag = tdp_df[tdp_df["E_bf"] < tdp_df["E_af"]]  # 0
-            lw_diag = tdp_df[tdp_df["E_bf"] > tdp_df["E_af"]]  # 1
+            up_diag = tdp_df[tdp_df["state"] < tdp_df["state+1"]]  # 0
+            lw_diag = tdp_df[tdp_df["state"] > tdp_df["state+1"]]  # 1
 
             halves = up_diag, lw_diag
             for n, half in enumerate(halves):
                 m = sklearn.cluster.KMeans(n_clusters=n_clusters)
-                m.fit(half[["E_bf", "E_af"]])
+                m.fit(half[["state", "state+1"]])
                 half["label"] = m.labels_ + n_clusters * n
 
             diags = pd.concat(halves)
@@ -3154,12 +3224,18 @@ class TransitionDensityWindow(BaseWindow):
         Plots TDP contents
         """
         bandwidth, resolution, n_colors, overlay_pts, pts_alpha = params
+        smax = max(self.state_before)
 
-        self.tdp_ax.plot([-1, 2], [-1, 2], color="lightgrey", ls="--")
-        if self.fret_before is not None and len(self.fret_before) > 0:
+        self.tdp_ax.plot(
+            [-0.15, smax + 0.15],
+            [-0.15, smax + 0.15],
+            color="lightgrey",
+            ls="--",
+        )
+        if self.state_before is not None and len(self.state_before) > 0:
             cont = lib.math.contour_2d(
-                xdata=self.fret_before,
-                ydata=self.fret_after,
+                xdata=self.state_before,
+                ydata=self.state_after,
                 bandwidth=bandwidth / 200,
                 resolution=resolution,
                 kernel="linear",
@@ -3168,17 +3244,22 @@ class TransitionDensityWindow(BaseWindow):
             self.tdp_ax.contourf(*cont, cmap="viridis")
             self.tdp_ax.text(
                 x=0,
-                y=0.9,
+                y=smax - 0.1,
                 s="N = {}\n"
                 "{} transitions\n".format(
-                    self.n_samples, len(self.fret_lifetime)
+                    self.n_samples, len(self.state_lifetime)
                 ),
                 color=gvars.color_gui_text,
             )
 
-            for i, cluster in self.tdp_df.groupby("label"):
-                xi = self.tdp_df["E_bf"][self.tdp_df["label"] == i]
-                yi = self.tdp_df["E_af"][self.tdp_df["label"] == i]
+            tdp_df_grp = self.tdp_df.groupby("label")
+            self.colors = lib.plotting.get_colors(
+                "viridis", tdp_df_grp.ngroups * 2
+            )
+
+            for i, cluster in tdp_df_grp:
+                xi = self.tdp_df["state"][self.tdp_df["label"] == i]
+                yi = self.tdp_df["state+1"][self.tdp_df["label"] == i]
 
                 self.tdp_ax.scatter(
                     x=xi,
@@ -3201,18 +3282,10 @@ class TransitionDensityWindow(BaseWindow):
         """
         np.random.seed(1)  # make sure histograms don't change on every re-fit
 
-        def estimate_binwidth(x):
-            """Estimate optimal binwidth by the Freedman-Diaconis rule."""
-            return 2 * scipy.stats.iqr(x) / np.size(x) ** (1 / 3)
-
-        def exp_(x, N, l):
-            e = scipy.special.expit
-            return N * (l * e(-l * x))
-
         if self.tdp_df is not None:
             fret_lifetimes = self.tdp_df["lifetime"]
             max_lifetime = np.max(fret_lifetimes)
-            bw = estimate_binwidth(fret_lifetimes)
+            bw = lib.math.estimate_binwidth(fret_lifetimes)
             bins = np.arange(0, max_lifetime, bw)
 
             for k, cluster in self.tdp_df.groupby("label"):
@@ -3224,7 +3297,7 @@ class TransitionDensityWindow(BaseWindow):
                         least_count=1,
                     )
                     popt, pcov = scipy.optimize.curve_fit(
-                        exp_, xdata=hx, ydata=hy
+                        lib.math.exp_function, xdata=hx, ydata=hy
                     )
                     perr = np.sqrt(np.diag(pcov))
 
@@ -3236,7 +3309,7 @@ class TransitionDensityWindow(BaseWindow):
 
                     self.hist_axes[k].plot(
                         bins,
-                        exp_(bins, *popt),
+                        lib.math.exp_function(bins, *popt),
                         "--",
                         color="black",
                         label="label: {}\n"

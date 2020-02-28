@@ -240,8 +240,9 @@ class TraceContainer:
                 line_starts=("Donor bleaches at", "Bleaches at"),
             )
 
-        except AttributeError:
-            return None
+        except (ValueError, AttributeError):
+            pass
+
         self.load_successful = True
 
         # Add flag to see if incomplete trace
@@ -295,20 +296,19 @@ class TraceContainer:
         self.frames = np.arange(1, len(self.grn.int) + 1, 1)
         self.frames_max = self.frames.max()
 
-        # TODO: revert mechanism to first bleaching or separate D/A bleaching
-        #  for consistency throughout code (and speedups)
-        try:
-            bleaching = re.findall(r"\d+", str(bleaching))
-            if any(bleaching):  # check if list is not empty
-                self.grn.bleach, self.red.bleach = (
-                    int(bleaching[0]),
-                    int(bleaching[-1]),
-                )  # works for both 1 or 2 values by indexing both ways
-                self.first_bleach = lib.misc.min_none(
-                    (self.grn.bleach, self.red.bleach)
-                )
-        except (ValueError, AttributeError):
-            pass
+        # TODO: figure out why this is an UnboundLocalError
+        # try:
+        #     bleaching = re.findall(r"\d+", str(bleaching))
+        #     if any(bleaching):  # check if list is not empty
+        #         self.grn.bleach, self.red.bleach = (
+        #             int(bleaching[0]),
+        #             int(bleaching[-1]),
+        #         )  # works for both 1 or 2 values by indexing both ways
+        #         self.first_bleach = lib.misc.min_none(
+        #             (self.grn.bleach, self.red.bleach)
+        #         )
+        # except (ValueError, AttributeError):
+        #     pass
 
     def load_from_dat(self):
         """
@@ -317,11 +317,17 @@ class TraceContainer:
         with open(self.filename) as f:
             _arr = np.loadtxt(f)
 
-        zeros = np.zeros(len(_arr))
+        l = 300 if len(_arr) > 300 else len(_arr)
+        zeros = np.zeros(l)
 
         self.grn.int = _arr[:, 1]
         self.acc.int = _arr[:, 2]
         self.red.int = zeros * np.nan
+
+        #TODO: remove after experiment
+        self.grn.int = self.grn.int[0:l]
+        self.acc.int = self.acc.int[0:l]
+        self.red.int = self.red.int[0:l]
 
         self.grn.bg = zeros
         self.acc.bg = zeros
@@ -332,7 +338,7 @@ class TraceContainer:
         self.calculate_fret()
         self.calculate_stoi()
 
-        self.frames = np.arange(1, len(_arr) + 1, 1)
+        self.frames = np.arange(1, l + 1, 1)
         self.frames_max = self.frames.max()
 
         self.load_successful = True

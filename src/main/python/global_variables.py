@@ -19,9 +19,15 @@ class GlobalVariables:
     key_unColocRed = "unColocRed"  # Uncolocalized red
     key_illuCorrect = "illuCorrect"  # Illumination profile correction
     key_fitSpots = "fitSpots"  # Whether to use LoG-based spot detection
-    key_twoChannelsNoALEX = "twoChannelsNoALEX" # Whether the Video is Non-ALEX
+    # key_twoChannelsNoALEX = "twoChannelsNoALEX"  # Whether the Video is Non-ALEX
 
-    keys_globalCheckBoxes = key_batchLoadingMode, key_unColocRed, key_illuCorrect, key_fitSpots, key_twoChannelsNoALEX
+    keys_globalCheckBoxes = (
+        key_batchLoadingMode,
+        key_unColocRed,
+        key_illuCorrect,
+        key_fitSpots,
+        # key_twoChannelsNoALEX,
+    )
 
     key_spotDetection = "spotDetection"  # Spot detection speed
     key_lastOpenedDir = "lastOpenedDir"  # Sets recent directory
@@ -32,14 +38,23 @@ class GlobalVariables:
     key_contrastBoxHiGrnVal = "contrastBoxHiGrnVal"
     key_contrastBoxHiRedVal = "contrastBoxHiRedVal"
 
-    keys_contrastBoxHiVals = key_contrastBoxHiBluVal, key_contrastBoxHiGrnVal, key_contrastBoxHiRedVal
+    keys_contrastBoxHiVals = (
+        key_contrastBoxHiBluVal,
+        key_contrastBoxHiGrnVal,
+        key_contrastBoxHiRedVal,
+    )
 
     key_alphaFactor = "alpha_factor"
     key_deltaFactor = "delta_factor"
     key_gammaFactor = "gammaFactor"
     key_betaFactor = "betaFactor"
 
-    keys_correctionFactors = key_alphaFactor, key_deltaFactor, key_betaFactor, key_gammaFactor
+    keys_correctionFactors = (
+        key_alphaFactor,
+        key_deltaFactor,
+        key_betaFactor,
+        key_gammaFactor,
+    )
 
     key_colocTolerance = "colocTolerance"
     key_autoDetectPairs = "autoDetectPairs"
@@ -51,7 +66,13 @@ class GlobalVariables:
     key_traceFretHi = "traceFretHi"
     key_traceMinFrames = "traceMinFrames"
 
-    keys_trace = key_traceStoiLo, key_traceStoiHi, key_traceFretLo, key_traceFretHi, key_traceMinFrames
+    keys_trace = (
+        key_traceStoiLo,
+        key_traceStoiHi,
+        key_traceFretLo,
+        key_traceFretHi,
+        key_traceMinFrames,
+    )
 
     # TransitionDensityWindow
     key_tdpBandwidth = "tdpBandwidth"
@@ -60,7 +81,13 @@ class GlobalVariables:
     key_tdpOverlayPts = "tdpOverlayPts"
     key_tdpPtsAlpha = "tdpPtsAlpha"
 
-    keys_tdp = key_tdpBandwidth, key_tdpResolution, key_tdpColors, key_tdpOverlayPts, key_tdpPtsAlpha
+    keys_tdp = (
+        key_tdpBandwidth,
+        key_tdpResolution,
+        key_tdpColors,
+        key_tdpOverlayPts,
+        key_tdpPtsAlpha,
+    )
 
     # HistogramWindow
     key_histBandwidth = "histBandwidth"
@@ -69,27 +96,54 @@ class GlobalVariables:
     key_histOverlayPts = "histOverlayPts"
     key_histPtsAlpha = "histPtsAlpha"
 
-    keys_hist = key_histBandwidth, key_histResolution, key_histColors, key_histOverlayPts, key_histPtsAlpha
+    keys_hist = (
+        key_histBandwidth,
+        key_histResolution,
+        key_histColors,
+        key_histOverlayPts,
+        key_histPtsAlpha,
+    )
 
     # ROIs
     roi_math_radius = 5  # How large ROI circles are, mathematicaly
-    roi_draw_radius = 7  # How large circles are, visually (has no impact on colocalization)
+    roi_draw_radius = (
+        7  # How large circles are, visually (has no impact on colocalization)
+    )
     roi_draw_linewidth = 0.9  # ROI linewidth
-    roi_inner_area = 2.3  # Inner area of ROI pixel intensity mask (adjusted to iSMS)
-    roi_outer_area = 5.6  # Outer area of ROI pixel intensity mask (adjusted to iSMS)
-    roi_gap_space = 4.4  # Gap space of ROI pixel intensity mask (adjusted to iSMS)
-    roi_coloc_overlap_factor = 2  # Degree of overlap before it counts (this is roughly 90%)
+    roi_inner_area = (
+        2.3  # Inner area of ROI pixel intensity mask (adjusted to iSMS)
+    )
+    roi_outer_area = (
+        5.6  # Outer area of ROI pixel intensity mask (adjusted to iSMS)
+    )
+    roi_gap_space = (
+        4.4  # Gap space of ROI pixel intensity mask (adjusted to iSMS)
+    )
+    roi_coloc_overlap_factor = (
+        2  # Degree of overlap before it counts (this is roughly 90%)
+    )
 
     roi_coloc_tolerances = {"loose": 2, "moderate": 5, "strict": 20}
 
     # Parameters for functions
-    peak_local_max_p = {"min_distance": 5}  # Spot finder parameters for localization
+    peak_local_max_p = {
+        "min_distance": 5
+    }  # Spot finder parameters for localization
 
     bg_p = {"alpha": 0.5, "linestyle": "--"}
 
-    cmask_p = {"inner_area": roi_inner_area, "outer_area": roi_outer_area, "gap_space": roi_gap_space}
+    cmask_p = {
+        "inner_area": roi_inner_area,
+        "outer_area": roi_outer_area,
+        "gap_space": roi_gap_space,
+    }
 
-    circle_p = {"linewidth": 1, "alpha": 1, "fill": False, "radius": roi_draw_radius}
+    circle_p = {
+        "linewidth": 1,
+        "alpha": 1,
+        "fill": False,
+        "radius": roi_draw_radius,
+    }
 
     # Colors
     color_gui_bg = "#ECECEC"

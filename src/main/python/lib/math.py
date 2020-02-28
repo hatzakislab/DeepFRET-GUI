@@ -18,8 +18,17 @@ import scipy.stats
 import sklearn.cluster
 import sklearn.mixture
 import hmmlearn.hmm
+import scipy.stats
+from scipy.special import expit
 
 pd.options.mode.chained_assignment = None
+
+
+def contains_nan(array):
+    """
+    Returns True if array contains nan values
+    """
+    return np.isnan(np.sum(array))
 
 
 def count_n_states(class_probs):
@@ -31,12 +40,8 @@ def count_n_states(class_probs):
     class 5 -> 2 states
     etc...
     """
-    adjust = 3
-    n_states = np.argmax(class_probs) - adjust
-    if n_states < 1:
-        n_states = None
-    return n_states
-
+    classes_w_states = class_probs[[4, 5, 6, 7, 8]]
+    return np.argmax(classes_w_states) + 1
 
 
 def single_exp_fit(x, scale):
@@ -65,7 +70,7 @@ def correct_DA(intensities, alpha=0, delta=0):
     I_DA = acc_int - acc_bg
     I_AA = red_int - red_bg
 
-    if np.isnan(np.sum(I_AA)):
+    if contains_nan(I_AA):
         F_DA = I_DA - (alpha * I_DD)
     else:
         F_DA = I_DA - (alpha * I_DD) - (delta * I_AA)
@@ -199,109 +204,34 @@ def trim_ES(E: list, S: list):
     Trims out-of-range values of E/S values
     """
     E, S = np.array(E), np.array(S)
-    idx = (S > -0.3) & (S < 1.3)
-    E, S = E[idx], S[idx]
+    if contains_nan(S):
+        # Use E only
+        E = E[(E > -0.3) & (E < 1.3)]
+    else:
+        idx = (S > -0.3) & (S < 1.3)
+        E, S = E[idx], S[idx]
     return E, S
 
 
-def fit_hmm(X, y, n_components_max=3, bic_tol=20):
+def fit_best_gaussian_model(X, covariance_type):
     """
-    Parameters
-    ----------
-    X:
-        Timeseries of shape (-1, n_features), e.g. DD/DA
-    y:
-        Observed y, e.g. FRET
-    bic_tol:
-        Heuristic tolerance value for BIC to prevent overfitting. Increase to
-        punish overfitting more.
-
-    Returns
-    -------
-    Hidden y
+    Fits the best gaussian mixture model, based on BIC
     """
-
-    def _bic(data, k_states, logL):
-        """Bayesian Information Criterion"""
-        p = k_states * 4 + k_states ** 2
-        N = len(data)
-        log = np.log
-        return -2 * logL + p * log(N)
-
-    def _heuristic_bic(s, tol):
-        """
-        Heuristic for determining the lowest reasonable BIC by setting a
-        tolerance for the difference in BIC
-        """
-        s = np.array(s)
-        best_idx, sec_best_idx = np.argpartition(s, 2)[:2]
-
-        if sec_best_idx < best_idx:
-            if s[best_idx] + tol > s[sec_best_idx]:
-                best_idx = sec_best_idx
-        return best_idx
-
     scores, models = [], []
-    for components in range(1, n_components_max + 1):
-        model = hmmlearn.hmm.GMMHMM(
-            n_components=components,
-            covariance_type="full",
-            n_iter=1000,
-            algorithm="viterbi",
+    for n in range(6):
+        mixture_model = sklearn.mixture.GaussianMixture(
+            n_components=n + 1, covariance_type=covariance_type, n_init=100
         )
-        model.fit(X)
-        try:
-            logL = model.score(
-                X
-            )  # This thing is numerically unstable for some reason
-            BIC = _bic(X, logL=logL, k_states=components)
-        except ValueError:
-            BIC = 10e5
-
-        models.append(model)
-        scores.append(BIC)
-
-    idx_best = _heuristic_bic(scores, tol=bic_tol)
-    best_model = models[idx_best]
-
-    hf = pd.DataFrame()
-    hf["state"] = best_model.predict(X)
-    hf["y_obs"] = y
-    hf["y_fit"] = hf.groupby(["state"], as_index=False)["y_obs"].transform(
-        "median"
-    )
-    hf["time"] = hf["y_fit"].index + 1
-
-    # Calculate lifetimes now, by making a copy to work on
-    lf = hf.copy()
-
-    # # Find y_after from y_before
-    lf["y_after"] = np.roll(lf["y_fit"], -1)
-
-    # Find out when there's a change in state, depending on the minimum
-    # transition size set
-    lf["state_jump"] = lf["y_fit"].transform(
-        lambda group: (abs(group.diff()) > 0).cumsum()
-    )
-
-    # Drop duplicates
-    lf.drop_duplicates(subset="state_jump", keep="last", inplace=True)
-
-    # Find the difference for every time
-    lf["lifetime"] = np.append(np.nan, np.diff(lf["time"]))
-
-    lf.rename(columns={"y_fit": "y_before"}, inplace=True)
-    lf = lf[["y_before", "y_after", "lifetime"]]
-    lf = lf[:-1]
-
-    idealized = hf["y_fit"].values
-    idealized_idx = hf["time"].values
-    lifetimes = lf
-
-    return idealized, idealized_idx, lifetimes
+        mixture_model.fit(X)
+        bic = mixture_model.bic(X)
+        scores.append(bic)
+        models.append(mixture_model)
+    best_idx = int(np.argmin(scores))
+    best_model = models[best_idx]
+    return best_model, scores
 
 
-def fit_dl_hmm(X, y, n_components=3):
+def fit_hmm_single(X, y, covariance_type="full"):
     """
     Parameters
     ----------
@@ -316,16 +246,22 @@ def fit_dl_hmm(X, y, n_components=3):
     -------
     Hidden y
     """
-    model = hmmlearn.hmm.GaussianHMM(
-        n_components=n_components,
-        covariance_type="tied",
-        n_iter=1000,
+    mixture_model, bic = fit_best_gaussian_model(
+        X, covariance_type=covariance_type,
+    )
+
+    hmm_model = hmmlearn.hmm.GaussianHMM(
+        n_components=mixture_model.n_components,
+        init_params="st",
+        covariance_type=covariance_type,
         algorithm="viterbi",
     )
-    model.fit(X)
+    hmm_model.means_ = mixture_model.means_
+    hmm_model.covars_ = mixture_model.covariances_
+    hmm_model.fit(X)
 
     hf = pd.DataFrame()
-    hf["state"] = model.predict(X)
+    hf["state"] = hmm_model.predict(X)
     hf["y_obs"] = y
     hf["y_fit"] = hf.groupby(["state"], as_index=False)["y_obs"].transform(
         "median"
@@ -361,7 +297,70 @@ def fit_dl_hmm(X, y, n_components=3):
     return idealized, idealized_idx, lifetimes
 
 
-def fit_gaussian_mixture(arr, k_states):
+def fit_hmm_all(X, fret, lengths, covariance_type="full"):
+    mixture_model, bic = fit_best_gaussian_model(
+        fret, covariance_type=covariance_type,
+    )
+
+    hmm_model = hmmlearn.hmm.GaussianHMM(
+        n_components=mixture_model.n_components,
+        init_params="st",
+        covariance_type=covariance_type,
+        algorithm="viterbi",
+    )
+    hmm_model.fit(X, lengths)
+
+    states = hmm_model.predict(X, lengths)
+    transmat = hmm_model.transmat_
+
+    state_means, state_sigs = [], []
+    for si in sorted(np.unique(states)):
+        fitdict = fit_1d_gaussian_mixture(fret[states==si], k_states = 1)
+        m, s, _ = fitdict["params"][0]
+        state_means.append(round(m, 3))
+        state_sigs.append(round(s, 3))
+
+    return states, transmat, state_means, state_sigs
+
+
+def assign_state(states, fret):
+    hf = pd.DataFrame()
+    hf["state"] = states
+    hf["y_obs"] = fret
+    hf["y_fit"] = hf.groupby(["state"], as_index=False)["y_obs"].transform("median")
+
+
+    hf["time"] = hf["y_fit"].index + 1
+
+    # Calculate lifetimes now, by making a copy to work on
+    lf = hf.copy()
+
+    # # Find y_after from y_before
+    lf["state+1"] = np.roll(lf["state"], -1)
+
+    # Find out when there's a change in state, depending on the minimum
+    # transition size set
+    lf["state_jump"] = lf["state"].transform(
+        lambda group: (abs(group.diff()) > 0).cumsum()
+    )
+
+    # Drop duplicates
+    lf.drop_duplicates(subset="state_jump", keep="last", inplace=True)
+
+    # Find the difference for every time
+    lf["lifetime"] = np.append(np.nan, np.diff(lf["time"]))
+
+    lf = lf[["state", "state+1", "lifetime"]]
+    lf = lf[:-1]
+    lf.dropna(inplace=True)
+
+    idealized = hf["y_fit"].values
+    idealized_idx = hf["time"].values
+    transitions = lf
+    return idealized, idealized_idx, transitions
+
+
+def fit_1d_gaussian_mixture(arr, k_states):
     """
     Fits k gaussians to a set of data.
 
@@ -401,7 +400,7 @@ def fit_gaussian_mixture(arr, k_states):
     best_k = None
     if type(k_states) == range:
         for k in k_states:
-            g = sklearn.mixture.GaussianMixture(n_components=k)
+            g = sklearn.mixture.GaussianMixture(n_components=k, n_init=100)
             g.fit(arr)
             bic = g.bic(arr)
             gs_.append(g)
@@ -708,11 +707,11 @@ def histpoints_w_err(
     return x, y, sy, norm_const
 
 
-def estimate_binwidth(scipy, x):
+def estimate_binwidth(x):
     """Estimate optimal binwidth by the Freedman-Diaconis rule."""
     return 2 * scipy.stats.iqr(x) / np.size(x) ** (1 / 3)
 
 
-def exp_fit(scipy, x, N, l):
+def exp_function(x, N, l):
     e = scipy.special.expit
     return N * (l * e(-l * x))

@@ -15,6 +15,7 @@ from matplotlib.collections import PatchCollection
 from matplotlib.patches import Patch
 import sklearn.neighbors
 import lib.misc
+from matplotlib.colors import Normalize
 import lib.math
 
 
@@ -262,3 +263,9 @@ def plot_predictions(yi_pred, fig, ax):
         ),
     )
     ax.set_ylabel("$p_i$")
+
+
+def get_colors(cmap, n_colors):
+    """Extracts n colors from a colormap"""
+    norm = Normalize(vmin = 0, vmax = n_colors)
+    return [plt.get_cmap(cmap)(norm(i)) for i in range(n_colors)]

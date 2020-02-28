@@ -1,2 +1,6 @@
-/venv/
+/.idea
+/venv
+/target
+/test
+.gitignore
 /temp.txt

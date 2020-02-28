@@ -19,14 +19,14 @@ Publication coming soon!
 1. Download the repository contents. Install requirements.txt either globally or in a venv (strongly recommended)
 2. Run `src/main/python/main.py`
 
-### Modifying and compiling the DeepFRET GUI:
+### Modifying and compiling the DeepFRET GUI to a standalone executable:
 1. Download all contents to a directory.
 2. Open a terminal and navigate to the root of the directory.
 3. Create a venv with `python3 -m venv venv` in the current directory.
 4. Activate environment with `source venv/bin/activate` if on MacOS/Linux or `call venv\scripts\activate.bat` if on Windows.
 5. While still in the environment, install all packages with `pip install -r requirements.txt`
 6. Unzip the `hooks.zip` and overwrite the files in `venv/lib/python3.7/site-packages/PyInstaller/hooks/`.
-7. While still in the venv, write `fbs freeze` and wait for the process to finish. If everything went well, there will be a `target/` directory with the DeepFRET application inside.
+7. Run `compile.py`
 
 If the above steps worked, you can now edit any part of the code, and re-compile it (or just run it from the main.py script, if desired). The `.ui` files for the interface can be edited through Qt Creator and converted with `generate_ui.py` 
 

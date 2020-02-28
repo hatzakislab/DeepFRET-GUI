@@ -1937,7 +1937,8 @@ class TraceWindow(BaseWindow):
         filenames, selectedFilter = QFileDialog.getOpenFileNames(
             self,
             caption="Open File",
-            filter="Trace ASCII files (*.txt)",
+            filter="Trace ASCII and datafiles (*.txt, *.dat)",
+            # filter="Trace ASCII files (*.txt);;Trace Datafiles (*.dat)",
             directory=directory,
         )
 

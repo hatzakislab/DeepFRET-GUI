@@ -169,7 +169,10 @@ class TraceContainer:
         try:
             self.load_from_ascii()
         except TypeError as e:
-            self.load_from_dat()
+            try:
+                self.load_from_dat()
+            except TypeError as e:
+                warnings.warn('Warning! No data loaded for this trace!', UserWarning)
 
     def load_from_ascii(self):
         """
@@ -448,7 +451,6 @@ class TraceContainer:
 
     def export_trace_to_txt(self, dir_to_join: Union[None, str] = None, keep_nan_columns: Union[bool, None] = None):
         savename = self.get_savename(dir_to_join=dir_to_join)
-        # print(self)
         with open(savename, "w") as f:
             f.write(self.get_export_txt(keep_nan_columns=keep_nan_columns))
 

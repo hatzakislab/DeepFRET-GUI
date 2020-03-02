@@ -86,7 +86,6 @@ class ImageChannel:
         self.color = color  # type: str
         self.raw = None  # type: Union[None, np.ndarray]
         self.mean = None  # type: Union[None, np.ndarray]
-        self.mean = None  # type: Union[None, np.ndarray]
         self.rgba = None  # type: Union[None, np.ndarray]
         self.spots = None  # type: Union[None, np.ndarray]
         self.n_spots = 0  # type: int
@@ -144,11 +143,12 @@ class TraceContainer:
         "p_5-state",
     ]
 
-    def __init__(self, filename, name=None):
+    def __init__(self, filename, name=None, movie=None, n=None):
         self.filename = filename  # type: str
         self.name = name if name is not None else os.path.basename(filename)  # type: str
-        self.movie = None  # type: Union[None, str]
-        self.n = None  # type: Union[None, str]
+        self.movie = movie  # type: str
+        self.n = n  # type: str
+        
         self.tracename = None  # type: Union[None, str]
         self.savename = None  # type: Union[None, str]
 
@@ -183,8 +183,11 @@ class TraceContainer:
         self.channels = self.grn, self.red, self.acc
         try:
             self.load_from_ascii()
-        except TypeError as e:
-            self.load_from_dat()
+        except (TypeError, FileNotFoundError) as e:
+            try:
+                self.load_from_dat()
+            except (TypeError, FileNotFoundError) as e:
+                warnings.warn('Warning! No data loaded for this trace!', UserWarning)
 
     def load_from_ascii(self):
         """
@@ -459,7 +462,6 @@ class TraceContainer:
         keep_nan_columns: Union[bool, None] = None,
     ):
         savename = self.get_savename(dir_to_join=dir_to_join)
-        # print(self)
         with open(savename, "w") as f:
             f.write(self.get_export_txt(keep_nan_columns=keep_nan_columns))
 
@@ -494,7 +496,7 @@ class MovieData:
         if self.currName is not None:
             return self.movies[self.currName]
 
-    def load_img(self, path, name, setup, bg_correction):
+    def load_img(self, path, name, setup, bg_correction: bool = False):
         """
         Loads movie and extracts all parameters depending on the number of
         channels
@@ -519,8 +521,18 @@ class MovieData:
         # Populate metadata
         self._data().img = skimage.io.imread(path)
 
-        if setup != "dual" and self._data().img.shape[3] > 3:
-            self._data().img = self._data().img.swapaxes(3, 1).swapaxes(2, 1)
+
+        swapflag = False
+        try:
+            swapflag = (setup != "dual") and (self._data().img.shape[3] > 3)
+        except IndexError as e:
+            pass
+
+        if swapflag is True:
+            self._data().img = (
+                self._data().img.swapaxes(3, 1).swapaxes(2, 1)
+            )
+
 
         self._data().height = self._data().img.shape[1]
         self._data().width = self._data().img.shape[2]
@@ -528,118 +540,97 @@ class MovieData:
         self._data().roi_radius = (
             max(self._data().height, self._data().width) / 80
         )
+        if self._data().height == self._data().width:  # square image
+            if setup == "dual":
+                c1, c2, c3, _ = imgdata.image_channels(4)
 
-        if setup == "dual":
-            c1, c2, c3, _ = lib.imgdata.image_channels(4)
 
-            # Acceptor   (Dexc-Aem)
-            self._data().acc.raw = self._data().img[c1, :, :]
+                # Acceptor   (Dexc-Aem)
+                self._data().acc.raw = self._data().img[c1, :, :]
+                # ALEX  (Aexc-Aem)
+                self._data().red.raw = self._data().img[c2, :, :]
+                # Donor (Dexc-Dem)
+                self._data().grn.raw = self._data().img[c3, :, :]
+
+                self._data().channels = self._data().grn, self._data().red
+
+            elif setup == "2-color":
+                top, btm, lft, rgt = imgdata.image_quadrants(
+                    height=self._data().height, width=self._data().width
+                )
+
+                self._data().grn.raw = self._data().img[:, top, lft, 0]
+                self._data().acc.raw = self._data().img[:, top, rgt, 0]
+                self._data().red.raw = self._data().img[:, top, rgt, 1]
+
+                self._data().channels = self._data().grn, self._data().red
+
+            elif setup == "2-color-inv":
+                top, btm, lft, rgt = imgdata.image_quadrants(
+                    height=self._data().height, width=self._data().width
+                )
+
+
+                # No support for blue!
+                if self._data().img.shape[3] == 2:
+                    self._data().grn.raw = self._data().img[:, btm, rgt, 0]
+                    self._data().acc.raw = self._data().img[:, btm, lft, 0]
+                    self._data().red.raw = self._data().img[:, btm, lft, 1]
+
+                    self._data().channels = self._data().grn, self._data().red
+                    # self._data().blu.exists = False
+
+                else:
+                    raise ValueError("Format not supported.")
+
+            elif setup == "bypass":
+                self._data().grn.raw = self._data().img[:, :, :, 0]
+                self._data().red.raw = self._data().img[:, :, :, 1]
+
+                self._data().channels = (
+                    self._data().grn,
+                    self._data().red,
+                )
+
+                self._data().red.exists = True
+                self._data().acc.exists = False
+            else:
+                raise ValueError("Format not supported.")
+        else:
+            lft, rgt = imgdata.rectangle_quadrants(
+                h=self._data().height, w=self._data().width
+            )
             # ALEX  (Aexc-Aem)
-            self._data().red.raw = self._data().img[c2, :, :]
+            self._data().red.raw = self._data().img[0::2, :, lft]
+            # Acceptor   (Dexc-Aem)
+            self._data().acc.raw = self._data().img[1::2, :, lft]
             # Donor (Dexc-Dem)
-            self._data().grn.raw = self._data().img[c3, :, :]
+            self._data().grn.raw = self._data().img[1::2, :, rgt]
 
             self._data().channels = self._data().grn, self._data().red
 
-        elif setup in ["2-color", "3-color"]:
-            top, btm, lft, rgt = lib.imgdata.image_quadrants(
-                height=self._data().height, width=self._data().width
-            )
-
-            if (
-                self._data().img.shape[3] == 3
-                and self._data().img.shape[0] < 99
-            ):
-                # self._data().blu.raw = self._data().img[:, btm, lft, 0]
-                self._data().grn.raw = self._data().img[:, top, lft, 1]
-                self._data().red.raw = self._data().img[:, top, rgt, 2]
-                self._data().acc.raw = self._data().img[:, top, rgt, 1]
-
-                self._data().channels = (
-                    # self._data().blu,
-                    self._data().grn,
-                    self._data().red,
-                )
-
-            # for FRET movies, channels ordered (green, red, blue)
-            elif (
-                self._data().img.shape[3] == 3
-                and self._data().img.shape[0] > 99
-            ):
-                # self._data().blu.raw = self._data().img[:, btm, lft, 2]
-                self._data().grn.raw = self._data().img[:, top, lft, 0]
-                self._data().red.raw = self._data().img[:, top, rgt, 1]
-                self._data().acc.raw = self._data().img[:, top, rgt, 0]
-
-                self._data().channels = (
-                    # self._data().blu,
-                    self._data().grn,
-                    self._data().red,
-                )
-
-            # if recording standard ALEX FRET with no blue
-            elif self._data().img.shape[3] == 2:
-                self._data().grn.raw = self._data().img[:, top, lft, 0]
-                self._data().acc.raw = self._data().img[:, top, rgt, 0]
-                self._data().red.raw = self._data().img[:, top, rgt, 1]
-
-                self._data().channels = self._data().grn, self._data().red
-
-                # self._data().blu.exists = False
-
-        elif setup == "2-color-inv":
-            top, btm, lft, rgt = lib.imgdata.image_quadrants(
-                height=self._data().height, width=self._data().width
-            )
-
-            # No support for blue!
-            if self._data().img.shape[3] == 2:
-                self._data().grn.raw = self._data().img[:, btm, rgt, 0]
-                self._data().acc.raw = self._data().img[:, btm, lft, 0]
-                self._data().red.raw = self._data().img[:, btm, lft, 1]
-
-                self._data().channels = self._data().grn, self._data().red
-                # self._data().blu.exists = False
-
-            else:
-                raise ValueError("Format not supported.")
-
-        elif setup == "bypass":
-            self._data().grn.raw = self._data().img[:, :, :, 0]
-            self._data().red.raw = self._data().img[:, :, :, 1]
-            # self._data().blu.raw = self._data().img[:, :, :, 2]
-
-            self._data().channels = (
-                # self._data().blu,
-                self._data().grn,
-                self._data().red,
-            )
-
-            # self._data().blu.exists = True
             self._data().red.exists = True
-            self._data().acc.exists = False
+            self._data().acc.exists = True
+            self._data().grn.exists = True
 
-        else:
-            raise ValueError("Invalid value. Config.ini corrupted?")
 
         for c in self._data().channels + (self._data().acc,):
             if c.raw is not None:
                 c.raw = np.abs(c.raw)
                 t, h, w = c.raw.shape
 
+                # Crop 2% of sides to avoid messing up background detection
+                crop_h = int(h // 50)
+                crop_w = int(w // 50)
+                c.raw = c.raw[:, crop_h: h - crop_h, crop_w: w - crop_w]
+                c.mean = c.raw[0: t // 20, :, :].mean(axis=0)
+                c.mean = imgdata.zero_one_scale(c.mean)
                 if bg_correction:
-                    # Crop 2% of sides to avoid messing up background detection
-                    crop_h = int(h // 50)
-                    crop_w = int(w // 50)
 
-                    c.raw = c.raw[:, crop_h : h - crop_h, crop_w : w - crop_w]
-                    c.mean = c.raw[0 : t // 20, :, :].mean(axis=0)
-                    c.mean = lib.imgdata.zero_one_scale(c.mean)
-                    c.mean_nobg = lib.imgdata.subtract_background(
+                    c.mean_nobg = imgdata.subtract_background(
                         c.mean, by="row", return_bg_only=False
                     )
                 else:
-                    c.mean = lib.imgdata.zero_one_scale(c.mean)
                     c.mean_nobg = c.mean
 
         if self._data().red.exists:

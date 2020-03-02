@@ -33,6 +33,12 @@ def image_quadrants(height, width):
 
     return top, bottom, left, right
 
+def rectangle_quadrants(h, w):
+    m_xi = w // 2
+    left = slice(0, m_xi)
+    right = slice(m_xi, w)
+    return left, right
+
 
 def image_channels(cmax):
     """

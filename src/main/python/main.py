@@ -1209,7 +1209,7 @@ class MainWindow(BaseWindow):
         tracename = self.currName + "_" + str(n)
         if tracename not in self.data.traces:
             self.data.traces[tracename] = TraceContainer(
-                name=tracename, movie=self.currName, n=n
+                filename=tracename, movie=self.currName, n=n
             )
         return self.data.traces[tracename]
 
@@ -1243,7 +1243,7 @@ class MainWindow(BaseWindow):
             filenames, selectedFilter = QFileDialog.getOpenFileNames(
                 self,
                 caption="Open File",
-                filter="Tiff movie files (*.tif)",
+                filter="Movie files (*.tif)",
                 directory=directory,
             )
 
@@ -1306,7 +1306,7 @@ class MainWindow(BaseWindow):
             self,
             caption="Open File",
             directory=directory,
-            filter="Tiff movie files (*.tif)",
+            filter="Movie files (*.tif)",
         )
 
         if len(filenames) > 0:
@@ -1389,7 +1389,6 @@ class MainWindow(BaseWindow):
         tolerance = gvars.roi_coloc_tolerances.get(
             self.getConfig(gvars.key_colocTolerance)
         )
-
         if channel == "green":
             channel = mov.grn
             spinBox = self.ui.spotsGrnSpinBox

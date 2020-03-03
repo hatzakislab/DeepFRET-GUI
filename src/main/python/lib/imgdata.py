@@ -61,7 +61,7 @@ def subtract_background(
     arr, deg=2, s=1e4, by="row", return_bg_only=False, **filter_kwargs
 ):
     """
-    Subtracts background with a row-wise spline fit or filter, to correct for
+    Subtracts background with a row-wise spline -fit or filter, to correct for
     non-uniform illumination profile
 
     Parameters

@@ -8,7 +8,7 @@ import sklearn.neighbors
 
 import itertools
 from ui.misc import ProgressBar
-from typing import Union, Tuple
+from typing import Union, Tuple, List
 import scipy.signal
 import numpy as np
 import pandas as pd
@@ -97,7 +97,7 @@ def calc_E(intensities, alpha=0, delta=0, clip_range=(-0.3, 1.3)):
 
 
 def calc_S(
-    intensities, alpha=0, delta=0, beta=1, gamma=1, clip_range=(-0.3, 1.3)
+        intensities, alpha=0, delta=0, beta=1, gamma=1, clip_range=(-0.3, 1.3)
 ):
     """
     Calculates raw calc_S from donor (Dexc-Dem), acceptor (Dexc-Aem) and direct
@@ -118,7 +118,7 @@ def calc_S(
 
 
 def corrected_ES(
-    intensities, alpha, delta, beta, gamma, clip_range=(-0.3, 1.3)
+        intensities, alpha, delta, beta, gamma, clip_range=(-0.3, 1.3)
 ):
     """
     Calculates the fully corrected FRET and stoichiometry, given all the
@@ -141,7 +141,7 @@ def corrected_ES(
 
 
 def drop_bleached_frames(
-    intensities, bleaches, max_frames=None, alpha=0, delta=0, beta=1, gamma=1
+        intensities, bleaches, max_frames=None, alpha=0, delta=0, beta=1, gamma=1
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Removes all frames after bleaching
@@ -223,7 +223,9 @@ def fit_best_gaussian_model(X, covariance_type):
             n_components=n + 1, covariance_type=covariance_type, n_init=100,
         )
         mixture_model.fit(X)
-        bic = mixture_model.bic(X)
+        # bic = mixture_model.bic(X)
+        bic = (-2 * mixture_model.score(X) * X.shape[0] +
+               mixture_model._n_parameters() * np.log(2 * X.shape[0])) * 2
         scores.append(bic)
         models.append(mixture_model)
     best_idx = int(np.argmin(scores))
@@ -297,7 +299,7 @@ def fit_hmm_single(X, y, covariance_type="full"):
     return idealized, idealized_idx, lifetimes
 
 
-def fit_hmm_all(X, fret, lengths, covariance_type="full"):
+def fit_hmm_all(X, fret, lengths, covariance_type="full") -> Tuple[np.ndarray, np.ndarray, List[float], List[float]]:
     mixture_model, bic = fit_best_gaussian_model(
         fret, covariance_type=covariance_type,
     )
@@ -403,12 +405,14 @@ def fit_1d_gaussian_mixture(arr, k_states):
         for k in k_states:
             g = sklearn.mixture.GaussianMixture(n_components=k, n_init=100)
             g.fit(arr)
-            bic = g.bic(arr)
+            bic = (-2 * g.score(X) * arr.shape[0] +
+                   g._n_parameters() * np.log(2 * arr.shape[0])) * 2
+            # bic = g.bic(arr)
             gs_.append(g)
             bics_.append(bic)
 
         best_k = np.argmin(bics_).astype(int) + 1
-        g = sklearn.mixture.GaussianMixture(n_components=best_k, n_init = 100)
+        g = sklearn.mixture.GaussianMixture(n_components=best_k, n_init=100)
     else:
         g = sklearn.mixture.GaussianMixture(n_components=k_states)
 
@@ -530,7 +534,7 @@ def count_adjacent_values(arr):
     starts = []
     lengths = []
     for v, l in same:
-        _len = len(arr[n : n + l])
+        _len = len(arr[n: n + l])
         _idx = n
         n += l
         lengths.append(_len)
@@ -561,15 +565,15 @@ def min_real(ls) -> Union[Union[int, float], None]:
 
 
 def contour_2d(
-    xdata,
-    ydata,
-    bandwidth=0.1,
-    n_colors=2,
-    kernel="gaussian",
-    extend_grid=1,
-    shade_lowest=False,
-    resolution=100,
-    cbins="auto",
+        xdata,
+        ydata,
+        bandwidth=0.1,
+        n_colors=2,
+        kernel="gaussian",
+        extend_grid=1,
+        shade_lowest=False,
+        resolution=100,
+        cbins="auto",
 ):
     """
     Calculates the 2D kernel density estimate for a dataset.
@@ -605,9 +609,9 @@ def contour_2d(
 
     # Create a grid for KDE
     x, y = np.mgrid[
-        min(xdata) - meanx : max(xdata) + meanx : complex(resolution),
-        min(ydata) - meany : max(ydata) + meany : complex(resolution),
-    ]
+           min(xdata) - meanx: max(xdata) + meanx: complex(resolution),
+           min(ydata) - meany: max(ydata) + meany: complex(resolution),
+           ]
 
     positions = np.vstack([x.ravel(), y.ravel()])
     values = np.vstack([xdata, ydata])
@@ -660,7 +664,7 @@ def estimate_bw(n, d, factor):
 
 
 def histpoints_w_err(
-    data, bins, density, remove_empty_bins=False, least_count=5
+        data, bins, density, remove_empty_bins=False, least_count=5
 ):
     """
     Converts unbinned data to x,y-curvefitable points with Poisson errors.

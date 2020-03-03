@@ -33,15 +33,11 @@ class ImageContainer:
         self.coloc_frac = None  # type: Union[None, float]
 
         # Image color channels
-        self.blu = ImageChannel("blue")
         self.grn = ImageChannel("green")
         self.red = ImageChannel("red")
         self.acc = ImageChannel("red")
 
         # Colocalized channels
-        self.coloc_blu_grn = ColocalizedParticles("blue", "green")
-        self.coloc_blu_red = ColocalizedParticles("blue", "red")
-
         self.coloc_grn_red = ColocalizedParticles("green", "red")
         self.coloc_all = ColocalizedAll()
 
@@ -62,12 +58,7 @@ class ImageChannel:
     """
 
     def __init__(self, color):
-
-        if color == "blue":
-            cmap = LinearSegmentedColormap.from_list(
-                "", ["black", gvars.color_blue]
-            )
-        elif color == "green":
+        if color == "green":
             cmap = LinearSegmentedColormap.from_list(
                 "", ["black", gvars.color_green]
             )
@@ -77,8 +68,7 @@ class ImageChannel:
             )
         else:
             raise ValueError(
-                "Invalid color. Available options are 'green' or 'red' (or "
-                "'blue' for compatibility reasons)."
+                "Invalid color. Available options are 'green' or 'red'"
             )
 
         self.exists = True  # type: bool
@@ -145,10 +135,12 @@ class TraceContainer:
 
     def __init__(self, filename, name=None, movie=None, n=None):
         self.filename = filename  # type: str
-        self.name = name if name is not None else os.path.basename(filename)  # type: str
+        self.name = (
+            name if name is not None else os.path.basename(filename)
+        )  # type: str
         self.movie = movie  # type: str
         self.n = n  # type: str
-        
+
         self.tracename = None  # type: Union[None, str]
         self.savename = None  # type: Union[None, str]
 
@@ -157,10 +149,9 @@ class TraceContainer:
         self.is_checked = False  # type: bool
         self.xdata = []  # type: [int, int]
 
-        # self.blu = TraceChannel("blue")
-        self.grn = TraceChannel("green")
-        self.red = TraceChannel("red")
-        self.acc = TraceChannel("red")
+        self.grn = TraceChannel(color="green")
+        self.red = TraceChannel(color="red")
+        self.acc = TraceChannel(color="red")
 
         self.first_bleach = None  # int
         self.zerobg = None  # type: (None, np.ndarray)
@@ -187,7 +178,9 @@ class TraceContainer:
             try:
                 self.load_from_dat()
             except (TypeError, FileNotFoundError) as e:
-                warnings.warn('Warning! No data loaded for this trace!', UserWarning)
+                warnings.warn(
+                    "Warning! No data loaded for this trace!", UserWarning
+                )
 
     def load_from_ascii(self):
         """
@@ -205,7 +198,7 @@ class TraceContainer:
             "S",
             "E",
         ]
-        if self.filename.endswith('.dat'):
+        if self.filename.endswith(".dat"):
             raise TypeError("Datafile is not the right type for this function!")
 
         with open(self.filename) as f:
@@ -237,11 +230,6 @@ class TraceContainer:
                 path=self.filename, line_starts="Movie filename"
             )
             self.movie = movie.split(": ")[-1]
-
-            bleaching = lib.misc.seek_line(
-                path=self.filename,
-                line_starts=("Donor bleaches at", "Bleaches at"),
-            )
 
         except (ValueError, AttributeError):
             pass
@@ -299,44 +287,25 @@ class TraceContainer:
         self.frames = np.arange(1, len(self.grn.int) + 1, 1)
         self.frames_max = self.frames.max()
 
-        # TODO: figure out why this is an UnboundLocalError
-        # try:
-        #     bleaching = re.findall(r"\d+", str(bleaching))
-        #     if any(bleaching):  # check if list is not empty
-        #         self.grn.bleach, self.red.bleach = (
-        #             int(bleaching[0]),
-        #             int(bleaching[-1]),
-        #         )  # works for both 1 or 2 values by indexing both ways
-        #         self.first_bleach = lib.misc.min_none(
-        #             (self.grn.bleach, self.red.bleach)
-        #         )
-        # except (ValueError, AttributeError):
-        #     pass
-
     def load_from_dat(self):
         """
         Loading from .dat files, as supplied in the kinSoft challenge
         """
         with open(self.filename) as f:
-            _arr = np.loadtxt(f)
+            arr = np.loadtxt(str(f))
 
-        l = 300 if len(_arr) > 300 else len(_arr)
-        zeros = np.zeros(l)
+        l = len(arr)
+        zeros = np.zeros(len(arr))
 
-        self.grn.int = _arr[:, 1]
-        self.acc.int = _arr[:, 2]
+        self.grn.int = arr[:, 1]
+        self.acc.int = arr[:, 2]
         self.red.int = zeros * np.nan
-
-        #TODO: remove after experiment
-        self.grn.int = self.grn.int[0:l]
-        self.acc.int = self.acc.int[0:l]
-        self.red.int = self.red.int[0:l]
 
         self.grn.bg = zeros
         self.acc.bg = zeros
         self.red.bg = zeros * np.nan
 
-        self.framerate = int(1 / (_arr[0, 1] - _arr[0, 0]))
+        self.framerate = int(1 / (arr[0, 1] - arr[0, 0]))
 
         self.calculate_fret()
         self.calculate_stoi()
@@ -521,18 +490,14 @@ class MovieData:
         # Populate metadata
         self._data().img = skimage.io.imread(path)
 
-
         swapflag = False
         try:
             swapflag = (setup != "dual") and (self._data().img.shape[3] > 3)
         except IndexError as e:
             pass
 
-        if swapflag is True:
-            self._data().img = (
-                self._data().img.swapaxes(3, 1).swapaxes(2, 1)
-            )
-
+        if swapflag:
+            self._data().img = self._data().img.swapaxes(3, 1).swapaxes(2, 1)
 
         self._data().height = self._data().img.shape[1]
         self._data().width = self._data().img.shape[2]
@@ -540,14 +505,13 @@ class MovieData:
         self._data().roi_radius = (
             max(self._data().height, self._data().width) / 80
         )
-        if self._data().height == self._data().width:  # square image
+        if self._data().height == self._data().width:  # quadratic image
             if setup == "dual":
-                c1, c2, c3, _ = imgdata.image_channels(4)
+                c1, c2, c3, _ = lib.imgdata.image_channels(4)
 
-
-                # Acceptor   (Dexc-Aem)
+                # Acceptor (Dexc-Aem)
                 self._data().acc.raw = self._data().img[c1, :, :]
-                # ALEX  (Aexc-Aem)
+                # ALEX (Aexc-Aem)
                 self._data().red.raw = self._data().img[c2, :, :]
                 # Donor (Dexc-Dem)
                 self._data().grn.raw = self._data().img[c3, :, :]
@@ -555,7 +519,7 @@ class MovieData:
                 self._data().channels = self._data().grn, self._data().red
 
             elif setup == "2-color":
-                top, btm, lft, rgt = imgdata.image_quadrants(
+                top, btm, lft, rgt = lib.imgdata.image_quadrants(
                     height=self._data().height, width=self._data().width
                 )
 
@@ -566,19 +530,16 @@ class MovieData:
                 self._data().channels = self._data().grn, self._data().red
 
             elif setup == "2-color-inv":
-                top, btm, lft, rgt = imgdata.image_quadrants(
+                top, btm, lft, rgt = lib.imgdata.image_quadrants(
                     height=self._data().height, width=self._data().width
                 )
 
-
-                # No support for blue!
                 if self._data().img.shape[3] == 2:
                     self._data().grn.raw = self._data().img[:, btm, rgt, 0]
                     self._data().acc.raw = self._data().img[:, btm, lft, 0]
                     self._data().red.raw = self._data().img[:, btm, lft, 1]
 
                     self._data().channels = self._data().grn, self._data().red
-                    # self._data().blu.exists = False
 
                 else:
                     raise ValueError("Format not supported.")
@@ -597,12 +558,12 @@ class MovieData:
             else:
                 raise ValueError("Format not supported.")
         else:
-            lft, rgt = imgdata.rectangle_quadrants(
+            lft, rgt = lib.imgdata.rectangle_quadrants(
                 h=self._data().height, w=self._data().width
             )
-            # ALEX  (Aexc-Aem)
+            # ALEX (Aexc-Aem)
             self._data().red.raw = self._data().img[0::2, :, lft]
-            # Acceptor   (Dexc-Aem)
+            # Acceptor (Dexc-Aem)
             self._data().acc.raw = self._data().img[1::2, :, lft]
             # Donor (Dexc-Dem)
             self._data().grn.raw = self._data().img[1::2, :, rgt]
@@ -613,7 +574,6 @@ class MovieData:
             self._data().acc.exists = True
             self._data().grn.exists = True
 
-
         for c in self._data().channels + (self._data().acc,):
             if c.raw is not None:
                 c.raw = np.abs(c.raw)
@@ -622,12 +582,11 @@ class MovieData:
                 # Crop 2% of sides to avoid messing up background detection
                 crop_h = int(h // 50)
                 crop_w = int(w // 50)
-                c.raw = c.raw[:, crop_h: h - crop_h, crop_w: w - crop_w]
-                c.mean = c.raw[0: t // 20, :, :].mean(axis=0)
-                c.mean = imgdata.zero_one_scale(c.mean)
+                c.raw = c.raw[:, crop_h : h - crop_h, crop_w : w - crop_w]
+                c.mean = c.raw[0 : t // 20, :, :].mean(axis=0)
+                c.mean = lib.imgdata.zero_one_scale(c.mean)
                 if bg_correction:
-
-                    c.mean_nobg = imgdata.subtract_background(
+                    c.mean_nobg = lib.imgdata.subtract_background(
                         c.mean, by="row", return_bg_only=False
                     )
                 else:

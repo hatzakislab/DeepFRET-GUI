@@ -89,7 +89,6 @@ class MatplotlibCanvas(FigureCanvas):
         self.ax_grn_red = self.fig.add_subplot(133)  # Blend
 
         self.axes_single = self.ax_grn, self.ax_red
-        self.axes_blend = (self.ax_grn_red,)
         self.axes_all = self.ax_grn, self.ax_red, self.ax_grn_red
 
         self.fig.subplots_adjust(

@@ -220,7 +220,7 @@ def fit_best_gaussian_model(X, covariance_type):
     scores, models = [], []
     for n in range(6):
         mixture_model = sklearn.mixture.GaussianMixture(
-            n_components=n + 1, covariance_type=covariance_type, n_init=100
+            n_components=n + 1, covariance_type=covariance_type, n_init=100,
         )
         mixture_model.fit(X)
         bic = mixture_model.bic(X)
@@ -304,8 +304,8 @@ def fit_hmm_all(X, fret, lengths, covariance_type="full"):
 
     hmm_model = hmmlearn.hmm.GaussianHMM(
         n_components=mixture_model.n_components,
-        init_params="st",
         covariance_type=covariance_type,
+        init_params="stmc",  # auto init all params
         algorithm="viterbi",
     )
     hmm_model.fit(X, lengths)
@@ -315,7 +315,7 @@ def fit_hmm_all(X, fret, lengths, covariance_type="full"):
 
     state_means, state_sigs = [], []
     for si in sorted(np.unique(states)):
-        fitdict = fit_1d_gaussian_mixture(fret[states==si], k_states = 1)
+        fitdict = fit_1d_gaussian_mixture(fret[states == si], k_states=1)
         m, s, _ = fitdict["params"][0]
         state_means.append(round(m, 3))
         state_sigs.append(round(s, 3))
@@ -327,8 +327,9 @@ def assign_state(states, fret):
     hf = pd.DataFrame()
     hf["state"] = states
     hf["y_obs"] = fret
-    hf["y_fit"] = hf.groupby(["state"], as_index=False)["y_obs"].transform("median")
-
+    hf["y_fit"] = hf.groupby(["state"], as_index=False)["y_obs"].transform(
+        "median"
+    )
 
     hf["time"] = hf["y_fit"].index + 1
 
@@ -407,7 +408,7 @@ def fit_1d_gaussian_mixture(arr, k_states):
             bics_.append(bic)
 
         best_k = np.argmin(bics_).astype(int) + 1
-        g = sklearn.mixture.GaussianMixture(n_components=best_k)
+        g = sklearn.mixture.GaussianMixture(n_components=best_k, n_init = 100)
     else:
         g = sklearn.mixture.GaussianMixture(n_components=k_states)
 

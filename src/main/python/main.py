@@ -1222,8 +1222,6 @@ class MainWindow(BaseWindow):
         """
         Shortcut to obtain trace channel. See newTrace().
         """
-        # if channel == "blue":
-        #     return self.newTrace(n).blu
         if channel == "green":
             return self.newTrace(n).grn
         elif channel == "red":
@@ -1336,22 +1334,16 @@ class MainWindow(BaseWindow):
                     bg_correction=self.getConfig(gvars.key_illuCorrect),
                 )
 
-                channels = ["blue", "green", "red"]
-                if self.currentMovie().acc.exists:
-                    # Can't have blue and FRET at the same time (at least not
-                    # currently)
-                    channels.remove("blue")
-
-                    for c in channels:
+                channels = ("green", "red")
+                for c in channels:
+                    if self.currentMovie().acc.exists:
                         self.colocalizeSpotsSingleMovie(
                             channel=c, find_npairs="auto"
                         )
-                else:
-                    for c in channels:
+                    else:
                         self.colocalizeSpotsSingleMovie(
                             channel=c, find_npairs="spinbox"
                         )
-
                 self.getTracesSingleMovie()
                 self.currentMovie().img = None
                 for c in self.currentMovie().channels + (
@@ -1505,31 +1497,12 @@ class MainWindow(BaseWindow):
         # Clear all traces previously held traces whenever this is called
         mov.traces = {}
 
-        if (
-            mov.coloc_blu_grn.spots is not None
-            and mov.coloc_grn_red.spots is not None
-        ):
-            mov.coloc_all.spots = lib.imgdata.colocalize_triple(
-                mov.coloc_blu_grn.spots, mov.coloc_grn_red.spots
-            )
-        elif mov.acc.exists:
-            mov.coloc_all.spots = mov.coloc_grn_red.spots
-        else:
-            mov.coloc_all.spots = mov.coloc_blu_red.spots
-
-        if mov.coloc_all.spots is None:
-            for c in "blue", "green", "red":
+        if mov.coloc_grn_red.spots is None:
+            for c in "green", "red":
                 self.colocalizeSpotsSingleMovie(c)
         else:
-            for n, *row in mov.coloc_all.spots.itertuples():
-                # if len(row) == 6:
-                #     yx_blu, yx_grn, yx_red = lib.misc.pairwise(row)
-                if mov.acc.exists:
-                    yx_grn, yx_red = lib.misc.pairwise(row)
-                    # yx_blu = None
-                else:
-                    yx_blu, yx_red = lib.misc.pairwise(row)
-                    yx_grn = None
+            for n, *row in mov.coloc_grn_red.spots.itertuples():
+                yx_grn, yx_red = lib.misc.pairwise(row)
 
                 trace = self.newTrace(n)
 
@@ -1573,13 +1546,12 @@ class MainWindow(BaseWindow):
         """
         for name in self.data.movies.keys():
             self.currName = name
-            for c in "green", "red":  # blue
+            for c in "green", "red":
                 self.colocalizeSpotsSingleMovie(c)
 
             self.getTracesSingleMovie()
 
         self.resetCurrentName()
-        # TraceWindow_.traces = TraceWindow_.returnTracenamesAllMovies()
 
     def savePlot(self):
         """
@@ -1669,27 +1641,16 @@ class MainWindow(BaseWindow):
                 else:
                     lib.plotting.empty_imshow(ax)
 
-            # Blended channels
-            if len(self.canvas.axes_blend) == 3:
-                pairs = (
-                    (mov.blu, mov.grn),
-                    (mov.blu, mov.red),
-                    (mov.grn, mov.red),
+            c1, c2 = mov.grn, mov.red
+            if c1.rgba is not None and c2.rgba is not None:
+                self.canvas.ax_grn_red.imshow(
+                    lib.imgdata.light_blend(
+                        c1.rgba, c2.rgba, cmap1=c1.cmap, cmap2=c2.cmap
+                    ),
+                    vmin=0,
                 )
             else:
-                pairs = ((mov.grn, mov.red),)
-
-            for pair, ax in zip(pairs, self.canvas.axes_blend):
-                c1, c2 = pair
-                if c1.rgba is not None and c2.rgba is not None:
-                    ax.imshow(
-                        lib.imgdata.light_blend(
-                            c1.rgba, c2.rgba, cmap1=c1.cmap, cmap2=c2.cmap
-                        ),
-                        vmin=0,
-                    )
-                else:
-                    lib.plotting.empty_imshow(ax)
+                lib.plotting.empty_imshow(self.canvas.axes_blend.ax)
 
             for ax in self.canvas.axes_all:
                 ax.set_xticks(())
@@ -1723,29 +1684,6 @@ class MainWindow(BaseWindow):
                     radius=roi_radius,
                 )
 
-            if (
-                self.imgMode == "3-color"
-                and mov.blu.exists
-                or self.imgMode == "bypass"
-            ):
-                if mov.coloc_blu_grn.spots is not None:
-                    lib.plotting.plot_roi_coloc(
-                        mov.coloc_blu_grn.spots,
-                        img_ax=self.canvas.ax_blu_grn,
-                        color1=gvars.color_blue,
-                        color2=gvars.color_green,
-                        radius=roi_radius,
-                    )
-
-                if mov.coloc_blu_red.spots is not None:
-                    lib.plotting.plot_roi_coloc(
-                        mov.coloc_blu_red.spots,
-                        img_ax=self.canvas.ax_blu_red,
-                        color1=gvars.color_blue,
-                        color2=gvars.color_red,
-                        radius=roi_radius,
-                    )
-
         else:
             for ax in self.canvas.axes_all:
                 lib.plotting.empty_imshow(ax)
@@ -1760,19 +1698,8 @@ class MainWindow(BaseWindow):
         if self.currName is not None:
             mov = self.currentMovie()
 
-            # if mov.coloc_frac is not None:
-            #     self.ui.labelColocFractionVal.setText(
-            #         "{:.1f}".format(mov.coloc_frac)
-            #     )
-            # else:
-            #     self.ui.labelColocFractionVal.setText(str("-"))
-
             channels = (
-                # mov.coloc_blu_grn,
-                # mov.coloc_blu_red,
                 mov.coloc_grn_red,
-                # mov.coloc_all,
-                # mov.blu,
                 mov.grn,
                 mov.red,
             )
@@ -1785,24 +1712,15 @@ class MainWindow(BaseWindow):
             self.ui.spotsRedSpinBox.setDisabled(not mov.red.exists)
 
             if self.batchLoaded:
-                self.disableSpinBoxes(
-                    (
-                        # "blue",
-                        "green",
-                        "red",
-                    )
-                )
+                self.disableSpinBoxes(("green", "red",))
 
         else:
             for label in self.labels:
                 label.setText(str("-"))
-            # self.ui.labelColocFractionVal.setText(str("-"))
 
         # Repaint all labels
         for label in self.labels:
             label.repaint()
-
-        # self.ui.labelColocFractionVal.repaint()
 
     def findTracesAndShow(self):
         """
@@ -2028,6 +1946,7 @@ class TraceWindow(BaseWindow):
                 trace.hmm_idx = time
                 trace.transitions = transitions
             except Exception as e:
+                print("Couldn't fit HMM trace for some reason")
                 return
 
         # Only refresh immediately for single fits
@@ -2045,19 +1964,25 @@ class TraceWindow(BaseWindow):
             trace for trace in self.data.traces.values() if trace.is_checked
         ]
 
-        DD, DA, E, lengths = [], [], [], []
+        DD, DA, AA, E, lengths = [], [], [], [], []
         for trace in traces:
-            _, I_DD, I_DA, _ = lib.math.correct_DA(trace.get_intensities())
+            _, I_DD, I_DA, I_AA = lib.math.correct_DA(trace.get_intensities())
             DD.append(I_DD[: trace.first_bleach])
             DA.append(I_DA[: trace.first_bleach])
+            AA.append(I_AA[: trace.first_bleach])
             E.append(trace.fret[: trace.first_bleach])
             lengths.append(len(I_DD[: trace.first_bleach]))
 
         DD = np.concatenate(DD)
         DA = np.concatenate(DA)
+        AA = np.concatenate(AA)
         E = np.concatenate(E).reshape(-1, 1)
 
-        X = np.column_stack((DD, DA))
+        if lib.math.contains_nan(AA):
+            X = np.column_stack((DD, DA))
+        else:
+            X = np.column_stack((DD, DA, AA))
+
         states, transmat, state_means, state_sigs = lib.math.fit_hmm_all(
             X=X, fret=E, lengths=lengths
         )
@@ -2081,7 +2006,14 @@ class TraceWindow(BaseWindow):
 
         transitions = pd.concat([trace.transitions for trace in traces])
 
+        # TODO: visualize this
         for _, t in transitions.groupby(["state", "state+1"]):
+            s_before = t["state"].values[0]
+            s_after = t["state+1"].values[0]
+
+            if transmat[s_before, s_after] == 0:
+                continue
+
             print(
                 "{} -> {}".format(t["state"].values[0], t["state+1"].values[0])
             )
@@ -2102,11 +2034,9 @@ class TraceWindow(BaseWindow):
                 rate = popt[1]
                 rate_err = perr[1]
 
-                if rate_err > 3 * rate:
-                    rate_err = np.inf
-
                 print(round(rate, 4), "+/-", round(rate_err, 4))
-            except TypeError:
+            except RuntimeError:
+                print("Couldn't fit. Skipping")
                 continue
             print()
 
@@ -2348,7 +2278,7 @@ class TraceWindow(BaseWindow):
                 S = trace.stoi[: trace.first_bleach]
                 E = trace.fret[: trace.first_bleach]
 
-                # TODO: write a warning that stoichiometry will be ignored
+                # TODO: write a warning that stoichiometry will be ignored?
                 if lib.math.contains_nan(trace.red.int):
                     cond1 = True
                 else:

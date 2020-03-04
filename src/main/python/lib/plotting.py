@@ -17,6 +17,7 @@ import sklearn.neighbors
 import lib.misc
 from matplotlib.colors import Normalize
 import lib.math
+import scipy.stats
 
 
 def empty_imshow(img_ax):
@@ -269,3 +270,13 @@ def get_colors(cmap, n_colors):
     """Extracts n colors from a colormap"""
     norm = Normalize(vmin = 0, vmax = n_colors)
     return [plt.get_cmap(cmap)(norm(i)) for i in range(n_colors)]
+
+
+def plot_gaussian(mean, sigma, ax, x, weight = 1, color = None):
+    """
+    Plots a single gaussian and returns the provided ax, along with computed
+    y values
+    """
+    y = weight * scipy.stats.norm.pdf(x, mean, sigma)
+    ax.plot(x, y, color = color)
+    return ax, y

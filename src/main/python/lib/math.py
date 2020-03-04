@@ -213,22 +213,44 @@ def trim_ES(E: list, S: list):
     return E, S
 
 
-def fit_best_gaussian_model(X, covariance_type):
+def fit_gaussian_mixture(X, min_n_components = 1, max_n_components = 1):
     """
-    Fits the best gaussian mixture model, based on BIC
+    Fits the best univariate gaussian mixture model, based on BIC
     """
-    scores, models = [], []
-    for n in range(6):
-        mixture_model = sklearn.mixture.GaussianMixture(
-            n_components=n + 1, covariance_type=covariance_type, n_init=100,
-        )
-        mixture_model.fit(X)
-        bic = mixture_model.bic(X)
-        scores.append(bic)
-        models.append(mixture_model)
-    best_idx = int(np.argmin(scores))
-    best_model = models[best_idx]
-    return best_model, scores
+    X = X.reshape(-1,1)
+
+    models, bic = [], []
+    n_components_range = range(min_n_components, max_n_components + 1)
+    cv_types = ["spherical", "tied", "diag", "full"]
+
+    for cv_type in cv_types:
+        for n_components in n_components_range:
+            gmm = sklearn.mixture.GaussianMixture(
+                n_components=n_components, covariance_type=cv_type
+            )
+            gmm.fit(X)
+            models.append(gmm)
+            bic.append(gmm.bic(X))
+
+    best_gmm = models[int(np.argmin(bic))]
+    print("number of components ", best_gmm.n_components)
+
+    weights = best_gmm.weights_.ravel()
+    means = best_gmm.means_.ravel()
+    sigs = np.sqrt(best_gmm.covariances_.ravel())
+
+    # Due to covariance type
+    if len(sigs) != len(means):
+        sigs = np.repeat(sigs, len(means))
+
+    print("weights: ", weights)
+    print("means: ", means)
+    print("sigs: ", sigs)
+
+    params = [(m, s, w) for m, s, w in zip(means, sigs, weights)]
+    params = sorted(params, key=lambda tup: tup[0])
+
+    return best_gmm, params
 
 
 def fit_hmm_single(X, y, covariance_type="full"):
@@ -246,7 +268,7 @@ def fit_hmm_single(X, y, covariance_type="full"):
     -------
     Hidden y
     """
-    mixture_model, bic = fit_best_gaussian_model(
+    mixture_model, bic = fit_gaussian_mixture(
         X, covariance_type=covariance_type,
     )
 
@@ -297,14 +319,11 @@ def fit_hmm_single(X, y, covariance_type="full"):
     return idealized, idealized_idx, lifetimes
 
 
-def fit_hmm_all(X, fret, lengths, covariance_type="full"):
-    mixture_model, bic = fit_best_gaussian_model(
-        fret, covariance_type=covariance_type,
-    )
+def fit_hmm_all(X, fret, lengths, covar_type, n_components):
 
     hmm_model = hmmlearn.hmm.GaussianHMM(
-        n_components=mixture_model.n_components,
-        covariance_type=covariance_type,
+        n_components=n_components,
+        covariance_type=covar_type,
         init_params="stmc",  # auto init all params
         algorithm="viterbi",
     )
@@ -315,10 +334,10 @@ def fit_hmm_all(X, fret, lengths, covariance_type="full"):
 
     state_means, state_sigs = [], []
     for si in sorted(np.unique(states)):
-        fitdict = fit_1d_gaussian_mixture(fret[states == si], k_states=1)
-        m, s, _ = fitdict["params"][0]
-        state_means.append(round(m, 3))
-        state_sigs.append(round(s, 3))
+        _, params = fit_gaussian_mixture(fret[states == si])
+        for (m, s, _) in params:
+            state_means.append(m)
+            state_sigs.append(s)
 
     return states, transmat, state_means, state_sigs
 
@@ -361,67 +380,67 @@ def assign_state(states, fret):
     return idealized, idealized_idx, transitions
 
 
-def fit_1d_gaussian_mixture(arr, k_states):
-    """
-    Fits k gaussians to a set of data.
-
-    Parameters
-    ----------
-    arr:
-        Input data (wil be unravelled to single-sample shape)
-    k_states:
-        Maximum number of states to test for:
-
-    Returns
-    -------
-    Parameters zipped as (means, sigmas, weights), BICs and best k if found by
-    BIC method, returned as a dictionary to avoid unpacking the wrong things
-    when having few parameters
-
-    Examples
-    --------
-    # For plotting the returned parameters:
-    for i, params in enumerate(gaussfit_params):
-        m, s, w = params
-
-        ax.plot(xpts, w * scipy.stats.norm.pdf(xpts, m, s))
-        sum.append(np.array(w * stats.norm.pdf(xpts, m, s)))
-
-    joint = np.sum(sum, axis = 0)
-    ax.plot(xpts, joint, color = "black", alpha = 0.05)
-
-    """
-    if len(arr) < 2:
-        return None, None
-
-    arr = arr.reshape(-1, 1)
-
-    bics_ = []
-    gs_ = []
-    best_k = None
-    if type(k_states) == range:
-        for k in k_states:
-            g = sklearn.mixture.GaussianMixture(n_components=k, n_init=100)
-            g.fit(arr)
-            bic = g.bic(arr)
-            gs_.append(g)
-            bics_.append(bic)
-
-        best_k = np.argmin(bics_).astype(int) + 1
-        g = sklearn.mixture.GaussianMixture(n_components=best_k, n_init = 100)
-    else:
-        g = sklearn.mixture.GaussianMixture(n_components=k_states)
-
-    g.fit(arr)
-
-    weights = g.weights_.ravel()
-    means = g.means_.ravel()
-    sigs = np.sqrt(g.covariances_.ravel())
-
-    params = [(m, s, w) for m, s, w in zip(means, sigs, weights)]
-    params = sorted(params, key=lambda tup: tup[0])
-
-    return dict(params=params, bics=bics_, best_k=best_k)
+# def fit_1d_gaussian_mixture(arr, k_states):
+#     """
+#     Fits k gaussians to a set of data.
+#
+#     Parameters
+#     ----------
+#     arr:
+#         Input data (wil be unravelled to single-sample shape)
+#     k_states:
+#         Maximum number of states to test for:
+#
+#     Returns
+#     -------
+#     Parameters zipped as (means, sigmas, weights), BICs and best k if found by
+#     BIC method, returned as a dictionary to avoid unpacking the wrong things
+#     when having few parameters
+#
+#     Examples
+#     --------
+#     # For plotting the returned parameters:
+#     for i, params in enumerate(gaussfit_params):
+#         m, s, w = params
+#
+#         ax.plot(xpts, w * scipy.stats.norm.pdf(xpts, m, s))
+#         sum.append(np.array(w * stats.norm.pdf(xpts, m, s)))
+#
+#     joint = np.sum(sum, axis = 0)
+#     ax.plot(xpts, joint, color = "black", alpha = 0.05)
+#
+#     """
+#     if len(arr) < 2:
+#         return None, None
+#
+#     arr = arr.reshape(-1, 1)
+#
+#     bics_ = []
+#     gs_ = []
+#     best_k = None
+#     if type(k_states) == range:
+#         for k in k_states:
+#             g = sklearn.mixture.GaussianMixture(n_components=k, n_init=100)
+#             g.fit(arr)
+#             bic = g.bic(arr)
+#             gs_.append(g)
+#             bics_.append(bic)
+#
+#         best_k = np.argmin(bics_).astype(int) + 1
+#         g = sklearn.mixture.GaussianMixture(n_components=best_k, n_init=100)
+#     else:
+#         g = sklearn.mixture.GaussianMixture(n_components=k_states)
+#
+#     g.fit(arr)
+#
+#     weights = g.weights_.ravel()
+#     means = g.means_.ravel()
+#     sigs = np.sqrt(g.covariances_.ravel())
+#
+#     params = [(m, s, w) for m, s, w in zip(means, sigs, weights)]
+#     params = sorted(params, key=lambda tup: tup[0])
+#
+#     return params
 
 
 def sample_max_normalize_3d(X):

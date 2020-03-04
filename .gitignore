@@ -2,6 +2,7 @@
 /venv
 /target
 /test
+/playground
 .gitignore
 temp.txt
 test.py

@@ -1976,15 +1976,28 @@ class TraceWindow(BaseWindow):
         DD = np.concatenate(DD)
         DA = np.concatenate(DA)
         AA = np.concatenate(AA)
-        E = np.concatenate(E).reshape(-1, 1)
+        E_trace = np.concatenate(E).reshape(-1, 1)
 
         if lib.math.contains_nan(AA):
             X = np.column_stack((DD, DA))
         else:
             X = np.column_stack((DD, DA, AA))
 
+        if HistogramWindow_.E is not None:
+            E_dist = HistogramWindow_.E
+        else:
+            E_dist = HistogramWindow_.E_un
+
+        best_mixture_model, params = lib.math.fit_gaussian_mixture(
+            E_dist, min_n_components=1, max_n_components=6
+        )
+
         states, transmat, state_means, state_sigs = lib.math.fit_hmm_all(
-            X=X, fret=E, lengths=lengths
+            X=X,
+            fret=E_trace,
+            lengths=lengths,
+            n_components=best_mixture_model.n_components,
+            covar_type=best_mixture_model.covariance_type,
         )
 
         print("States: ", np.unique(states))
@@ -2640,7 +2653,6 @@ class HistogramWindow(BaseWindow):
         self.marg_bins = np.arange(-0.3, 1.3, 0.02)
         self.xpts = np.linspace(-0.3, 1.3, 300)
         self.gauss_params = None
-        self.bics = None
 
         self.alpha = None
         self.delta = None
@@ -2795,24 +2807,20 @@ class HistogramWindow(BaseWindow):
         E = self.E if corrected else self.E_un
 
         if E is not None:
-            k_states = (
-                range(1, 6)
-                if states == "auto"
-                else self.ui.gaussianSpinBox.value()
+            n_components = (
+                (1, 6) if states == "auto" else self.ui.gaussianSpinBox.value()
             )
-            try:
-                fitdict = lib.math.fit_1d_gaussian_mixture(
-                    arr=E, k_states=k_states
-                )
-                self.gauss_params = fitdict["params"]
-                self.bics = fitdict["bics"]
-                self.best_k = fitdict["best_k"]
-            except TypeError:
-                pass
 
-            if self.best_k is not None:
-                self.ui.gaussianSpinBox.setValue(self.best_k)
-                self.ui.gaussianSpinBox.repaint()
+            best_model, params = lib.math.fit_gaussian_mixture(
+                X=E,
+                min_n_components=np.min(n_components),
+                max_n_components=np.max(n_components),
+            )
+
+            self.gauss_params = params
+            self.best_k = best_model.n_components
+            self.ui.gaussianSpinBox.setValue(self.best_k)
+            self.ui.gaussianSpinBox.repaint()
 
     def plotDefaultElements(self):
         """
@@ -2842,17 +2850,24 @@ class HistogramWindow(BaseWindow):
             )
 
         if self.gauss_params is not None:
-            sum_ = []
+            joint_dist = []
             xpts = self.xpts
-            for i, gauss_params in enumerate(self.gauss_params):
-                m, s, w = gauss_params
-                self.canvas.ax_top.plot(
-                    xpts, w * scipy.stats.norm.pdf(xpts, m, s)
+            for (m, s, w) in self.gauss_params:
+                _, y = lib.plotting.plot_gaussian(
+                    mean=m, sigma=s, weight=w, x=xpts, ax=self.canvas.ax_top
                 )
-                sum_.append(np.array(w * scipy.stats.norm.pdf(xpts, m, s)))
-            joint = np.sum(sum_, axis=0)
+                joint_dist.append(y)
+
+            # Sum of all gaussians (joint distribution)
+            joint_dist = np.sum(joint_dist, axis=0)
+
             self.canvas.ax_top.plot(
-                xpts, joint, color=gvars.color_grey, alpha=1, zorder=10
+                xpts,
+                joint_dist,
+                color=gvars.color_grey,
+                alpha=1,
+                zorder=10,
+                ls="--",
             )
         self.canvas.ax_top.set_xlim(-0.1, 1.1)
 

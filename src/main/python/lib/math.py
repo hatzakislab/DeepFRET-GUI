@@ -8,7 +8,7 @@ import sklearn.neighbors
 
 import itertools
 from ui.misc import ProgressBar
-from typing import Union, Tuple
+from typing import Union, Tuple, List
 import scipy.signal
 import numpy as np
 import pandas as pd
@@ -97,7 +97,7 @@ def calc_E(intensities, alpha=0, delta=0, clip_range=(-0.3, 1.3)):
 
 
 def calc_S(
-    intensities, alpha=0, delta=0, beta=1, gamma=1, clip_range=(-0.3, 1.3)
+        intensities, alpha=0, delta=0, beta=1, gamma=1, clip_range=(-0.3, 1.3)
 ):
     """
     Calculates raw calc_S from donor (Dexc-Dem), acceptor (Dexc-Aem) and direct
@@ -118,7 +118,7 @@ def calc_S(
 
 
 def corrected_ES(
-    intensities, alpha, delta, beta, gamma, clip_range=(-0.3, 1.3)
+        intensities, alpha, delta, beta, gamma, clip_range=(-0.3, 1.3)
 ):
     """
     Calculates the fully corrected FRET and stoichiometry, given all the
@@ -141,7 +141,7 @@ def corrected_ES(
 
 
 def drop_bleached_frames(
-    intensities, bleaches, max_frames=None, alpha=0, delta=0, beta=1, gamma=1
+        intensities, bleaches, max_frames=None, alpha=0, delta=0, beta=1, gamma=1
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Removes all frames after bleaching
@@ -549,7 +549,7 @@ def count_adjacent_values(arr):
     starts = []
     lengths = []
     for v, l in same:
-        _len = len(arr[n : n + l])
+        _len = len(arr[n: n + l])
         _idx = n
         n += l
         lengths.append(_len)
@@ -580,15 +580,15 @@ def min_real(ls) -> Union[Union[int, float], None]:
 
 
 def contour_2d(
-    xdata,
-    ydata,
-    bandwidth=0.1,
-    n_colors=2,
-    kernel="gaussian",
-    extend_grid=1,
-    shade_lowest=False,
-    resolution=100,
-    cbins="auto",
+        xdata,
+        ydata,
+        bandwidth=0.1,
+        n_colors=2,
+        kernel="gaussian",
+        extend_grid=1,
+        shade_lowest=False,
+        resolution=100,
+        cbins="auto",
 ):
     """
     Calculates the 2D kernel density estimate for a dataset.
@@ -624,9 +624,9 @@ def contour_2d(
 
     # Create a grid for KDE
     x, y = np.mgrid[
-        min(xdata) - meanx : max(xdata) + meanx : complex(resolution),
-        min(ydata) - meany : max(ydata) + meany : complex(resolution),
-    ]
+           min(xdata) - meanx: max(xdata) + meanx: complex(resolution),
+           min(ydata) - meany: max(ydata) + meany: complex(resolution),
+           ]
 
     positions = np.vstack([x.ravel(), y.ravel()])
     values = np.vstack([xdata, ydata])
@@ -679,7 +679,7 @@ def estimate_bw(n, d, factor):
 
 
 def histpoints_w_err(
-    data, bins, density, remove_empty_bins=False, least_count=5
+        data, bins, density, remove_empty_bins=False, least_count=5
 ):
     """
     Converts unbinned data to x,y-curvefitable points with Poisson errors.

@@ -172,6 +172,8 @@ class TraceContainer:
         self.framerate = None  # type: Union[None, float]
 
         self.channels = self.grn, self.red, self.acc
+        # file loading
+        # TODO make compatible w pathlib
         try:
             self.load_from_ascii()
         except (TypeError, FileNotFoundError) as e:

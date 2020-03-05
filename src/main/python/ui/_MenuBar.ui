@@ -122,13 +122,6 @@
     <property name="title">
      <string>Analyze</string>
     </property>
-    <widget class="QMenu" name="menuFit_Hidden_Markov_Model">
-     <property name="title">
-      <string>Fit Hidden Markov Model</string>
-     </property>
-     <addaction name="actionFit_Hmm_Current"/>
-     <addaction name="actionFit_Hmm_All"/>
-    </widget>
     <widget class="QMenu" name="menuManually_Select_Bleaching">
      <property name="title">
       <string>Manually Select Bleaching</string>
@@ -161,7 +154,7 @@
     <addaction name="separator"/>
     <addaction name="menuManually_Select_Bleaching"/>
     <addaction name="separator"/>
-    <addaction name="menuFit_Hidden_Markov_Model"/>
+    <addaction name="actionFit_Hmm_Selected"/>
     <addaction name="menuPredict_Trace_Type"/>
     <addaction name="actionClear_All_Predictions"/>
    </widget>
@@ -513,12 +506,12 @@
     <string>Current Trace</string>
    </property>
   </action>
-  <action name="actionFit_Hmm_All">
+  <action name="actionFit_Hmm_Selected">
    <property name="enabled">
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Selected Traces</string>
+    <string>Fit Hidden Markov Model to Selected</string>
    </property>
   </action>
   <action name="actionBatch_analyze">

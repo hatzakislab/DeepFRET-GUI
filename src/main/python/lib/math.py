@@ -97,7 +97,7 @@ def calc_E(intensities, alpha=0, delta=0, clip_range=(-0.3, 1.3)):
 
 
 def calc_S(
-        intensities, alpha=0, delta=0, beta=1, gamma=1, clip_range=(-0.3, 1.3)
+    intensities, alpha=0, delta=0, beta=1, gamma=1, clip_range=(-0.3, 1.3)
 ):
     """
     Calculates raw calc_S from donor (Dexc-Dem), acceptor (Dexc-Aem) and direct
@@ -118,7 +118,7 @@ def calc_S(
 
 
 def corrected_ES(
-        intensities, alpha, delta, beta, gamma, clip_range=(-0.3, 1.3)
+    intensities, alpha, delta, beta, gamma, clip_range=(-0.3, 1.3)
 ):
     """
     Calculates the fully corrected FRET and stoichiometry, given all the
@@ -141,7 +141,7 @@ def corrected_ES(
 
 
 def drop_bleached_frames(
-        intensities, bleaches, max_frames=None, alpha=0, delta=0, beta=1, gamma=1
+    intensities, bleaches, max_frames=None, alpha=0, delta=0, beta=1, gamma=1
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Removes all frames after bleaching
@@ -213,11 +213,15 @@ def trim_ES(E: list, S: list):
     return E, S
 
 
-def fit_gaussian_mixture(X, min_n_components = 1, max_n_components = 1):
+def fit_gaussian_mixture(
+    X: np.ndarray, min_n_components: int = 1, max_n_components: int = 1
+):
     """
     Fits the best univariate gaussian mixture model, based on BIC
+    If min_n_components == max_n_components, will lock to selected number, but
+    still test all types of covariances
     """
-    X = X.reshape(-1,1)
+    X = X.reshape(-1, 1)
 
     models, bic = [], []
     n_components_range = range(min_n_components, max_n_components + 1)
@@ -253,74 +257,18 @@ def fit_gaussian_mixture(X, min_n_components = 1, max_n_components = 1):
     return best_gmm, params
 
 
-def fit_hmm_single(X, y, covariance_type="full"):
+def fit_hmm(
+    X: np.ndarray,
+    fret: np.ndarray,
+    lengths: List[int],
+    covar_type: str,
+    n_components: int,
+):
     """
-    Parameters
-    ----------
-    X:
-        Timeseries of shape (-1, n_features), e.g. DD/DA
-    y:
-        Observed y, e.g. FRET
-    n_components:
-        Number of components to predict
-
-    Returns
-    -------
-    Hidden y
+    Fits a Hidden Markov Model to traces. The traces are row-stacked, to provide
+    a (t, c) matrix, where t is the total number of frames, and c is the
+    channels
     """
-    mixture_model, bic = fit_gaussian_mixture(
-        X, covariance_type=covariance_type,
-    )
-
-    hmm_model = hmmlearn.hmm.GaussianHMM(
-        n_components=mixture_model.n_components,
-        init_params="st",
-        covariance_type=covariance_type,
-        algorithm="viterbi",
-    )
-    hmm_model.means_ = mixture_model.means_
-    hmm_model.covars_ = mixture_model.covariances_
-    hmm_model.fit(X)
-
-    hf = pd.DataFrame()
-    hf["state"] = hmm_model.predict(X)
-    hf["y_obs"] = y
-    hf["y_fit"] = hf.groupby(["state"], as_index=False)["y_obs"].transform(
-        "median"
-    )
-    hf["time"] = hf["y_fit"].index + 1
-
-    # Calculate lifetimes now, by making a copy to work on
-    lf = hf.copy()
-
-    # # Find y_after from y_before
-    lf["y_after"] = np.roll(lf["y_fit"], -1)
-
-    # Find out when there's a change in state, depending on the minimum
-    # transition size set
-    lf["state_jump"] = lf["y_fit"].transform(
-        lambda group: (abs(group.diff()) > 0).cumsum()
-    )
-
-    # Drop duplicates
-    lf.drop_duplicates(subset="state_jump", keep="last", inplace=True)
-
-    # Find the difference for every time
-    lf["lifetime"] = np.append(np.nan, np.diff(lf["time"]))
-
-    lf.rename(columns={"y_fit": "y_before"}, inplace=True)
-    lf = lf[["y_before", "y_after", "lifetime"]]
-    lf = lf[:-1]
-
-    idealized = hf["y_fit"].values
-    idealized_idx = hf["time"].values
-    lifetimes = lf
-
-    return idealized, idealized_idx, lifetimes
-
-
-def fit_hmm_all(X, fret, lengths, covar_type, n_components):
-
     hmm_model = hmmlearn.hmm.GaussianHMM(
         n_components=n_components,
         covariance_type=covar_type,
@@ -342,7 +290,10 @@ def fit_hmm_all(X, fret, lengths, covar_type, n_components):
     return states, transmat, state_means, state_sigs
 
 
-def assign_state(states, fret):
+def find_transitions(states, fret):
+    """
+    Finds transitions and their lifetimes, given states and FRET signal
+    """
     hf = pd.DataFrame()
     hf["state"] = states
     hf["y_obs"] = fret
@@ -378,69 +329,6 @@ def assign_state(states, fret):
     idealized_idx = hf["time"].values
     transitions = lf
     return idealized, idealized_idx, transitions
-
-
-# def fit_1d_gaussian_mixture(arr, k_states):
-#     """
-#     Fits k gaussians to a set of data.
-#
-#     Parameters
-#     ----------
-#     arr:
-#         Input data (wil be unravelled to single-sample shape)
-#     k_states:
-#         Maximum number of states to test for:
-#
-#     Returns
-#     -------
-#     Parameters zipped as (means, sigmas, weights), BICs and best k if found by
-#     BIC method, returned as a dictionary to avoid unpacking the wrong things
-#     when having few parameters
-#
-#     Examples
-#     --------
-#     # For plotting the returned parameters:
-#     for i, params in enumerate(gaussfit_params):
-#         m, s, w = params
-#
-#         ax.plot(xpts, w * scipy.stats.norm.pdf(xpts, m, s))
-#         sum.append(np.array(w * stats.norm.pdf(xpts, m, s)))
-#
-#     joint = np.sum(sum, axis = 0)
-#     ax.plot(xpts, joint, color = "black", alpha = 0.05)
-#
-#     """
-#     if len(arr) < 2:
-#         return None, None
-#
-#     arr = arr.reshape(-1, 1)
-#
-#     bics_ = []
-#     gs_ = []
-#     best_k = None
-#     if type(k_states) == range:
-#         for k in k_states:
-#             g = sklearn.mixture.GaussianMixture(n_components=k, n_init=100)
-#             g.fit(arr)
-#             bic = g.bic(arr)
-#             gs_.append(g)
-#             bics_.append(bic)
-#
-#         best_k = np.argmin(bics_).astype(int) + 1
-#         g = sklearn.mixture.GaussianMixture(n_components=best_k, n_init=100)
-#     else:
-#         g = sklearn.mixture.GaussianMixture(n_components=k_states)
-#
-#     g.fit(arr)
-#
-#     weights = g.weights_.ravel()
-#     means = g.means_.ravel()
-#     sigs = np.sqrt(g.covariances_.ravel())
-#
-#     params = [(m, s, w) for m, s, w in zip(means, sigs, weights)]
-#     params = sorted(params, key=lambda tup: tup[0])
-#
-#     return params
 
 
 def sample_max_normalize_3d(X):
@@ -549,7 +437,7 @@ def count_adjacent_values(arr):
     starts = []
     lengths = []
     for v, l in same:
-        _len = len(arr[n: n + l])
+        _len = len(arr[n : n + l])
         _idx = n
         n += l
         lengths.append(_len)
@@ -580,15 +468,15 @@ def min_real(ls) -> Union[Union[int, float], None]:
 
 
 def contour_2d(
-        xdata,
-        ydata,
-        bandwidth=0.1,
-        n_colors=2,
-        kernel="gaussian",
-        extend_grid=1,
-        shade_lowest=False,
-        resolution=100,
-        cbins="auto",
+    xdata,
+    ydata,
+    bandwidth=0.1,
+    n_colors=2,
+    kernel="gaussian",
+    extend_grid=1,
+    shade_lowest=False,
+    resolution=100,
+    cbins="auto",
 ):
     """
     Calculates the 2D kernel density estimate for a dataset.
@@ -624,9 +512,9 @@ def contour_2d(
 
     # Create a grid for KDE
     x, y = np.mgrid[
-           min(xdata) - meanx: max(xdata) + meanx: complex(resolution),
-           min(ydata) - meany: max(ydata) + meany: complex(resolution),
-           ]
+        min(xdata) - meanx : max(xdata) + meanx : complex(resolution),
+        min(ydata) - meany : max(ydata) + meany : complex(resolution),
+    ]
 
     positions = np.vstack([x.ravel(), y.ravel()])
     values = np.vstack([xdata, ydata])
@@ -679,7 +567,7 @@ def estimate_bw(n, d, factor):
 
 
 def histpoints_w_err(
-        data, bins, density, remove_empty_bins=False, least_count=5
+    data, bins, density, remove_empty_bins=False, least_count=1
 ):
     """
     Converts unbinned data to x,y-curvefitable points with Poisson errors.
@@ -723,7 +611,8 @@ def histpoints_w_err(
         x, y, sy = bin_centers, counts, bin_err
 
     norm_const = np.sum(unnorm_counts * (bin_edges[1] - bin_edges[0]))
-
+    if density:
+        sy = 1 / norm_const * sy
     return x, y, sy, norm_const
 
 
@@ -732,6 +621,6 @@ def estimate_binwidth(x):
     return 2 * scipy.stats.iqr(x) / np.size(x) ** (1 / 3)
 
 
-def exp_function(x, N, l):
-    e = scipy.special.expit
-    return N * (l * e(-l * x))
+def exp_function(x, N, lam):
+    e = np.exp
+    return N * (lam * e(-lam * x))

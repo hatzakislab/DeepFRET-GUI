@@ -350,10 +350,10 @@ class BaseWindow(QMainWindow):
         self.ui.actionSelect_Bleach_Green_Channel.triggered.connect(
             partial(self.triggerBleach, "green")
         )
-        self.ui.actionFit_Hmm_Current.triggered.connect(
-            partial(self.fitSingleTraceHiddenMarkovModel, True)
-        )
-        self.ui.actionFit_Hmm_All.triggered.connect(
+        # self.ui.actionFit_Hmm_Current.triggered.connect(
+        #     partial(self.fitSingleTraceHiddenMarkovModel, True)
+        # )
+        self.ui.actionFit_Hmm_Selected.triggered.connect(
             self.fitCheckedTracesHiddenMarkovModel
         )
         self.ui.actionPredict_Selected_Traces.triggered.connect(
@@ -428,8 +428,7 @@ class BaseWindow(QMainWindow):
             self.ui.actionClear_Correction_Factors,
             self.ui.actionSelect_Bleach_Red_Channel,
             self.ui.actionSelect_Bleach_Green_Channel,
-            self.ui.actionFit_Hmm_Current,
-            self.ui.actionFit_Hmm_All,
+            self.ui.actionFit_Hmm_Selected,
             self.ui.actionPredict_Selected_Traces,
             self.ui.actionPredict_All_traces,
             self.ui.actionClear_All_Predictions,
@@ -1106,9 +1105,9 @@ class BaseWindow(QMainWindow):
         """Override in subclass."""
         pass
 
-    def fitSingleTraceHiddenMarkovModel(self, refresh):
-        """Override in subclass."""
-        pass
+    # def fitSingleTraceHiddenMarkovModel(self, refresh):
+    #     """Override in subclass."""
+    #     pass
 
     def fitCheckedTracesHiddenMarkovModel(self):
         """Override in subclass."""
@@ -1916,45 +1915,6 @@ class TraceWindow(BaseWindow):
 
                     self.refreshPlot()
 
-    def fitSingleTraceHiddenMarkovModel(self, refresh=True):
-        """
-        Fits the selected trace with a Hidden Markov Model (HMM). Any trace with
-        only a single transition will count towards the number of samples
-        included, but will not show up in the transition density plot,
-        as it's not possible to associate a lifetime of the transition
-        without observing the endpoints.
-        """
-        alpha = self.getConfig(gvars.key_alphaFactor)
-        delta = self.getConfig(gvars.key_deltaFactor)
-
-        if self.currName is not None and len(self.data.traces) > 0:
-            trace = self.currentTrace()
-
-            F_DA, I_DD, I_DA, I_AA = lib.math.correct_DA(
-                trace.get_intensities(), alpha=alpha, delta=delta
-            )
-            fret = lib.math.calc_E(trace.get_intensities(), alpha, delta)
-            X = np.column_stack((I_DD, F_DA))
-            X /= X.max()
-
-            # Count states, if any
-            try:
-                idealized, time, transitions = lib.math.fit_hmm_single(
-                    X=X[: trace.first_bleach], y=fret[: trace.first_bleach],
-                )
-                trace.hmm = idealized
-                trace.hmm_idx = time
-                trace.transitions = transitions
-            except Exception as e:
-                print("Couldn't fit HMM trace for some reason")
-                return
-
-        # Only refresh immediately for single fits
-        if refresh:
-            self.refreshPlot()
-            if TransitionDensityWindow_.isVisible():
-                TransitionDensityWindow_.refreshPlot()
-
     def fitCheckedTracesHiddenMarkovModel(self):
         """
         Fits all selected traces with a Hidden Markov Model (HMM)
@@ -1992,7 +1952,7 @@ class TraceWindow(BaseWindow):
             E_dist, min_n_components=1, max_n_components=6
         )
 
-        states, transmat, state_means, state_sigs = lib.math.fit_hmm_all(
+        states, transmat, state_means, state_sigs = lib.math.fit_hmm(
             X=X,
             fret=E_trace,
             lengths=lengths,
@@ -2010,7 +1970,7 @@ class TraceWindow(BaseWindow):
             si = states[pos : pos + l]
             pos += l
 
-            idealized, time, transitions = lib.math.assign_state(
+            idealized, time, transitions = lib.math.find_transitions(
                 states=si, fret=trace.fret
             )
             trace.hmm = idealized

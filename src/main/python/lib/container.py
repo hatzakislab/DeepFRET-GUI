@@ -293,8 +293,7 @@ class TraceContainer:
         """
         Loading from .dat files, as supplied in the kinSoft challenge
         """
-        with open(self.filename) as f:
-            arr = np.loadtxt(str(f))
+        arr = np.loadtxt(self.filename)
 
         l = len(arr)
         zeros = np.zeros(len(arr))

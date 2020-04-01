@@ -17,7 +17,7 @@ class TestTraceContainer(TestCase):
         self.assertIsInstance(trace.acc.int, np.ndarray)
         self.assertIsInstance(trace.grn.int, np.ndarray)
         self.assertIsInstance(trace.red.int, np.ndarray)
-        self.assertEqual((57, 57, 57), trace.get_bleaches()) # expect bleach to propagate all channels
+        self.assertEqual((57, 57, 57), trace.get_bleaches())  # expect bleach to propagate all channels
 
     def test_load_trace_from_ascii_specified_bleach(self):
         filename = '../resources/traces/fiddler_3dim_0_reduced.txt'
@@ -26,8 +26,7 @@ class TestTraceContainer(TestCase):
         self.assertIsInstance(trace.acc.int, np.ndarray)
         self.assertIsInstance(trace.grn.int, np.ndarray)
         self.assertIsInstance(trace.red.int, np.ndarray)
-        self.assertEqual((57, None, 57), trace.get_bleaches()) # expect bleach to propagate all channels
-
+        self.assertEqual((57, None, 57), trace.get_bleaches())  # expect bleach to propagate all channels
 
     def test_load_trace_from_dat(self):
         filename = '../resources/traces/kinsoftSampleTrace.dat'
@@ -38,6 +37,18 @@ class TestTraceContainer(TestCase):
         self.assertIsInstance(trace.red.int, np.ndarray)
         self.assertTrue(np.isnan(trace.red.int[0]))
 
+    def test_save_and_load_trace_dat(self):
+        self.addCleanup(os.remove, self.file_path)
+        filename = '../resources/traces/kinsoftSampleTrace.dat'
+        trace = TraceContainer(filename)
+        trace.tracename = self.file_path
+        trace.export_trace_to_txt()
+        trace2 = TraceContainer(self.file_path)
+        np.testing.assert_allclose(trace.grn.int, trace2.grn.int, rtol=1e-06)
+        np.testing.assert_allclose(trace.acc.int, trace2.acc.int, rtol=1e-06)
+        np.testing.assert_allclose(trace.red.int, trace2.red.int, rtol=1e-06)
+        self.assertEqual(trace.first_bleach, trace2.first_bleach)
+        self.assertEqual(trace.n, trace2.n)
 
     def test_save_and_load_trace(self):
         self.addCleanup(os.remove, self.file_path)
@@ -85,4 +96,3 @@ class TestTraceContainer(TestCase):
         df2 = trace2.get_export_df()
 
         np.testing.assert_array_almost_equal(df['E'], df2['E'])
-

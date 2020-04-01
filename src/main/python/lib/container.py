@@ -139,7 +139,7 @@ class TraceContainer:
             name if name is not None else os.path.basename(filename)
         )  # type: str
         self.movie = movie  # type: str
-        self.n = n  # type: str
+        self.n = n  # type: Union[None, int]
 
         self.tracename = None  # type: Union[None, str]
         self.savename = None  # type: Union[None, str]

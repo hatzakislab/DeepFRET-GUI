@@ -237,6 +237,30 @@ class TraceContainer:
         except (ValueError, AttributeError):
             pass
 
+        # bleach finder
+        try:
+            da_bleach_line = lib.misc.seek_line(
+                path=self.filename, line_starts="Donor bleaches"
+            )
+            bleach_line = lib.misc.seek_line(
+                path=self.filename, line_starts="Bleaches at"
+            )
+
+            if da_bleach_line is not None:
+                bleach_d = da_bleach_line.split('-')[0]
+                self.grn.bleach = int("".join(_ for _ in bleach_d if _ in "1234567890"))
+                bleach_a = da_bleach_line.split('-')[0]
+                self.red.bleach = int("".join(_ for _ in bleach_a if _ in "1234567890"))
+            elif bleach_line is not None:
+                bleach = "".join(_ for _ in bleach_line if _ in "1234567890")
+                self.grn.bleach = int(bleach)
+                self.red.bleach = int(bleach)
+                self.acc.bleach = int(bleach)
+            else:
+                raise ValueError
+        except (ValueError, AttributeError):
+            pass
+
         self.load_successful = True
 
         # Add flag to see if incomplete trace

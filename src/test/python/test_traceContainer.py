@@ -59,14 +59,16 @@ class TestTraceContainer(TestCase):
         trace.tracename = self.file_path
         trace.export_trace_to_txt()
         trace2 = TraceContainer(self.file_path)
+
         self.assertEqual(trace.first_bleach, trace2.first_bleach)
-        assert np.allclose(trace.grn.int, trace2.grn.int)
-        assert np.allclose(trace.grn.bg, trace2.grn.bg)
-        assert np.allclose(trace.acc.int, trace2.acc.int)
-        assert np.allclose(trace.acc.bg, trace2.acc.bg)
-        np.testing.assert_array_almost_equal(trace.red.int, trace2.red.int)
-        np.testing.assert_array_almost_equal(trace.red.bg, trace2.red.bg)
-        np.testing.assert_array_almost_equal(trace.stoi, trace2.stoi)
+
+        np.testing.assert_allclose(trace.grn.int, trace2.grn.int)
+        np.testing.assert_allclose(trace.grn.bg, trace2.grn.bg)
+        np.testing.assert_allclose(trace.acc.int, trace2.acc.int)
+        np.testing.assert_allclose(trace.acc.bg, trace2.acc.bg)
+        np.testing.assert_allclose(trace.red.int, trace2.red.int)
+        np.testing.assert_allclose(trace.red.bg, trace2.red.bg)
+        np.testing.assert_allclose(trace.stoi, trace2.stoi)
 
     def test_reducing_trace_calculating_fret(self):
         self.addCleanup(os.remove, self.file_path)

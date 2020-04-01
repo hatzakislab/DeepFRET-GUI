@@ -1,9 +1,6 @@
 import os
 
 from lib.container import TraceContainer
-from src.main.python.main import TraceWindow
-from io import StringIO
-
 
 
 def load_and_reduce_trace(filename: str) -> TraceContainer:
@@ -13,8 +10,6 @@ def load_and_reduce_trace(filename: str) -> TraceContainer:
     trace.red.bg[:] = None
     trace.stoi[:] = None
     return trace
-
-
 
 
 if __name__ == '__main__':

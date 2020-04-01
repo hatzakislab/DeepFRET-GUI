@@ -44,17 +44,8 @@ class GlobalVariables:
         key_contrastBoxHiRedVal,
     )
 
-    key_alphaFactor = "alpha_factor"
-    key_deltaFactor = "delta_factor"
-    key_gammaFactor = "gammaFactor"
-    key_betaFactor = "betaFactor"
-
-    keys_correctionFactors = (
-        key_alphaFactor,
-        key_deltaFactor,
-        key_betaFactor,
-        key_gammaFactor,
-    )
+    key_alphaFactor = "alphaFactor"
+    key_deltaFactor = "deltaFactor"
 
     key_colocTolerance = "colocTolerance"
     key_autoDetectPairs = "autoDetectPairs"

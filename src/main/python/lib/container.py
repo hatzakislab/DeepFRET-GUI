@@ -118,7 +118,7 @@ class TraceChannel:
 
 class TraceContainer:
     """
-    Class for storing individual newTrace information.
+    Class for storing individual trace information.
     """
 
     ml_column_names = [
@@ -172,6 +172,7 @@ class TraceContainer:
         self.framerate = None  # type: Union[None, float]
 
         self.channels = self.grn, self.red, self.acc
+
         # file loading
         # TODO make compatible w pathlib
         try:

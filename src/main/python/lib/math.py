@@ -230,7 +230,7 @@ def fit_gaussian_mixture(
     for cv_type in cv_types:
         for n_components in n_components_range:
             gmm = sklearn.mixture.GaussianMixture(
-                n_components=n_components, covariance_type=cv_type
+                n_components=n_components, covariance_type=cv_type,
             )
             gmm.fit(X)
             models.append(gmm)
@@ -269,13 +269,18 @@ def fit_hmm(
     a (t, c) matrix, where t is the total number of frames, and c is the
     channels
     """
+    X = X - np.mean(X)
+    X = X / np.std(X)
+
     hmm_model = hmmlearn.hmm.GaussianHMM(
         n_components=n_components,
-        covariance_type=covar_type,
+        covariance_type="full",
+        min_covar = 100,
         init_params="stmc",  # auto init all params
         algorithm="viterbi",
     )
     hmm_model.fit(X, lengths)
+    print("covariances are: ", hmm_model.covars_)
 
     states = hmm_model.predict(X, lengths)
     transmat = hmm_model.transmat_

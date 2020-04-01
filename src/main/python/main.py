@@ -5,7 +5,7 @@ multiprocessing.freeze_support()
 import os
 import sys
 from functools import partial
-from typing import Dict
+from typing import Dict, List
 
 import matplotlib
 from PyQt5.QtCore import *
@@ -76,7 +76,7 @@ class PreferencesWindow(QDialog):
         self.setModal(True)
         self.ui = Ui_Preferences()
         self.ui.setupUi(self)
-        self.readConfigFromFile()
+        # self.readConfigFromFile()
         self.restartDialog = RestartDialog(self)
 
         QShortcut(QKeySequence("Ctrl+W"), self, self.close)
@@ -105,7 +105,7 @@ class PreferencesWindow(QDialog):
         """
         Shortcut for reading config from file and returning key
         """
-        self.readConfigFromFile()
+        # self.readConfigFromFile()
         value = self.config.get(key)
 
         if value is None:
@@ -132,11 +132,11 @@ class PreferencesWindow(QDialog):
         self.config[key] = new_value
         self.writeConfigToFile()
 
-    def readConfigFromFile(self):
-        """
-        Read getConfig.ini file.
-        """
-        self.config = ctxt.config
+    # def readConfigFromFile(self):
+    #     """
+    #     Read getConfig.ini file.
+    #     """
+    #     self.config = ctxt.config
 
     def writeConfigToFile(self):
         """
@@ -472,7 +472,8 @@ class BaseWindow(QMainWindow):
         if isinstance(self, MainWindow):
             self.ui.actionOpen.setEnabled(False)
 
-    def bringToFront(self, window):
+    @staticmethod
+    def bringToFront(window):
         """
         Focuses selected window and brings it to front.
         """
@@ -1105,10 +1106,6 @@ class BaseWindow(QMainWindow):
         """Override in subclass."""
         pass
 
-    # def fitSingleTraceHiddenMarkovModel(self, refresh):
-    #     """Override in subclass."""
-    #     pass
-
     def fitCheckedTracesHiddenMarkovModel(self):
         """Override in subclass."""
         pass
@@ -1196,6 +1193,7 @@ class MainWindow(BaseWindow):
 
         # Initialize DataHolder class
         self.data = MovieData()
+        TraceWindow.data = self.data
 
         self.show()
 
@@ -1807,7 +1805,8 @@ class TraceWindow(BaseWindow):
         self.setupPlot()
         self.setupSplitter(layout=self.ui.layoutBox)
 
-        self.data = MainWindow_.data
+
+        # self.data = MainWindow_.data
 
         # Canvas event handler
         self.cid = self.canvas.mpl_connect(
@@ -1939,9 +1938,9 @@ class TraceWindow(BaseWindow):
         E_trace = np.concatenate(E).reshape(-1, 1)
 
         if lib.math.contains_nan(AA):
-            X = np.column_stack((DD, DA))
+            X = np.column_stack((DD, DA, E_trace))
         else:
-            X = np.column_stack((DD, DA, AA))
+            X = np.column_stack((DD, DA, AA, E_trace))
 
         if HistogramWindow_.E is not None:
             E_dist = HistogramWindow_.E
@@ -1949,7 +1948,7 @@ class TraceWindow(BaseWindow):
             E_dist = HistogramWindow_.E_un
 
         best_mixture_model, params = lib.math.fit_gaussian_mixture(
-            E_dist, min_n_components=1, max_n_components=6
+            E_dist, min_n_components=3, max_n_components=3
         )
 
         states, transmat, state_means, state_sigs = lib.math.fit_hmm(
@@ -1979,39 +1978,145 @@ class TraceWindow(BaseWindow):
 
         transitions = pd.concat([trace.transitions for trace in traces])
 
-        # TODO: visualize this
+        # TODO: whole section copy-pasted from Fretti
+        def _func_double_exp(_x: np.ndarray, _lambda_1: float, _lambda_2: float, _k: float):
+            if _k > 1.0:
+                raise ValueError(f"_k of value {_k:.2f} is larger than 1!")
+            if _k < 0:
+                raise ValueError(f"_k of value {_k:.2f} is smaller than 1!")
+            _exp1 = _lambda_1 * np.exp(-1 * _lambda_1 * _x)
+            _exp2 = _lambda_2 * np.exp(-1 * _lambda_2 * _x)
+
+            return _k * _exp1 + (1 - _k) * _exp2
+
+
+        def _func_exp(_x: np.ndarray, _lambda, ):
+            return _lambda * np.exp(- _lambda * _x)
+
+
+        def loglik_single(x: np.ndarray, _lambda):
+            """
+            Returns Negative Loglikelihood for a single exponential with given param and given observations
+            """
+            return -1 * np.sum(np.log(_func_exp(x, _lambda)))
+
+
+        def loglik_double(x: np.ndarray, _lambda_1: float, _lambda_2: float, _k: float):
+            """
+            Returns Negative Loglikelihood for a double exponential with given params and given observations
+            """
+            return -1 * np.sum(np.log(_func_double_exp(x, _lambda_1, _lambda_2, _k)))
+
+        def _nice_string_output(names: List[str], values: List[str], extra_spacing: int = 0, ):
+            max_values = len(max(values, key=len))
+            max_names = len(max(names, key=len))
+            string = ""
+            for name, value in zip(names, values):
+                string += "{0:s} {1:>{spacing}} \n".format(name, value,
+                                                           spacing=extra_spacing + max_values + max_names - len(name))
+            return string[:-2]
+
+        def fit_and_compare_exp_funcs(arr, x0=None, verbose=0, meth="l-bfgs-b"):
+            # def lh_single(l):
+            #     loglik_single(arr, l)
+            if x0 is None:
+                x0 = (1 / arr.mean(), 1 / (arr.mean() + 1), 0.55)
+
+            lh_single = lambda l: loglik_single(arr, l)
+
+            def lh_double(x):
+                return loglik_double(arr, *x)
+
+            res1 = scipy.optimize.minimize(lh_single, x0=np.array(1. / arr.mean()), method=meth,
+                                           options={"disp": False},
+                                           bounds=[(0., None)])
+            llh_1 = - res1.fun
+            bic_1 = 2 * np.log(len(arr)) * 1 - 2 * llh_1
+
+            if verbose:
+                print("Params for single exp:")
+                print(res1.x)
+                print(f"BIC : {bic_1:.6f}")
+
+            res2 = scipy.optimize.minimize(lh_double, x0=np.array(x0), method=meth,
+                                           options={"disp": False},
+                                           bounds=[(0., None), (0., None), (0.1, .9)])
+
+            llh_2 = - res2.fun
+            bic_2 = np.log(len(arr)) * 3 * 2 - 2 * llh_2
+            if verbose:
+                print("Params for double exp:")
+                print(res2.x)
+                print(f"BIC : {bic_2:.6f}")
+
+            out = {}
+            if bic_1 < bic_2:
+                out["BEST"] = "SINGLE"
+            else:
+                out["BEST"] = "DOUBLE"
+
+            out["SINGLE_LLH"] = llh_1
+            out["SINGLE_BIC"] = bic_1
+            out["SINGLE_PARAM"] = res1.x
+
+            out["DOUBLE_LLH"] = llh_2
+            out["DOUBLE_BIC"] = bic_2
+            out["DOUBLE_PARAM"] = res2.x
+
+            return out
+
+
+
+        transition_dict = {}
         for _, t in transitions.groupby(["state", "state+1"]):
             s_before = t["state"].values[0]
             s_after = t["state+1"].values[0]
 
             if transmat[s_before, s_after] == 0:
                 continue
-
-            print(
-                "{} -> {}".format(t["state"].values[0], t["state+1"].values[0])
-            )
+            transition_name = "{} -> {}".format(t["state"].values[0], t["state+1"].values[0])
+            print(transition_name)
             print("number of datapoints: ", len(t["lifetime"]))
 
             try:
                 max_lifetime = np.max(t["lifetime"])
-                bins = np.arange(0, max_lifetime, 1)
 
-                hx, hy, *_ = lib.math.histpoints_w_err(
-                    data=t["lifetime"], bins=bins, density=False, least_count=1,
-                )
-                popt, pcov = scipy.optimize.curve_fit(
-                    lib.math.exp_function, xdata=hx, ydata=hy
-                )
-                perr = np.sqrt(np.diag(pcov))
+                data = t["lifetime"]
 
-                rate = popt[1]
-                rate_err = perr[1]
+                lifetime_dict = fit_and_compare_exp_funcs(data)
+                _b = lifetime_dict["BEST"]
+                names = ["LLH", "BIC", "PARAM"]
+                values = []
+                for name in names:
+                    key = _b + "_" + name
 
-                print(round(rate, 4), "+/-", round(rate_err, 4))
+                    val = lifetime_dict[key]
+                    try:
+                        val_str = '{:.4f}'.format(val)
+                        values.append(val_str)
+                    except TypeError:
+                        for v in val:
+                            v_str = '{:.4f}'.format(v)
+                            values.append(v_str)
+
+                if len(values) > len(names):
+                    names.remove("PARAM")
+                    names.extend("PARAM_{}".format(i) for i in range(1, 4))
+
+                print("The best fit ({} exp) returned these params: ".format(lifetime_dict["BEST"]))
+                print(_nice_string_output(names, values, 2))
+                if _b == "DOUBLE":
+                    print("This is a degenerate state!")
+                    transition_dict[transition_name] = True
+                else:
+                    transition_dict[transition_name] = False
+                print('\n')
+
             except RuntimeError:
                 print("Couldn't fit. Skipping")
                 continue
-            print()
+
+        print(transition_dict)
 
         self.refreshPlot()
 
@@ -2441,9 +2546,9 @@ class TraceWindow(BaseWindow):
         Refreshes plot for TraceWindow.
         """
         self.canvas.fig.legends = []
+        trace = self.currentTrace()
 
-        if self.currName is not None and len(self.data.traces) > 0:
-            trace = self.currentTrace()
+        if trace is not None and len(self.data.traces) > 0:
             alpha = self.getConfig(gvars.key_alphaFactor)
             delta = self.getConfig(gvars.key_deltaFactor)
             factors = alpha, delta
@@ -2457,7 +2562,11 @@ class TraceWindow(BaseWindow):
                 ax.tick_params(
                     axis="both", colors=gvars.color_gui_text, width=0.5
                 )
-                ax.set_xlim(1, trace.frames_max)
+                if len(trace.xdata) == 2:
+                    xmin, xmax = sorted(trace.xdata)
+                    ax.set_xlim(xmin, xmax)
+                else:
+                    ax.set_xlim(1, trace.frames_max)
 
             # Canvas setup
             if self.canvas.ax_setup in (
@@ -2555,7 +2664,6 @@ class TraceWindow(BaseWindow):
                     )
                     ax.set_ylabel(label)
 
-                ax_E.set_ylim(-0.1, 1.1)
                 if trace.hmm is not None:
                     ax_E.plot(
                         trace.hmm_idx,
@@ -2564,24 +2672,25 @@ class TraceWindow(BaseWindow):
                         zorder=3,
                     )
 
+                ax_E.set_ylim(-0.1, 1.1)
                 ax_S.set_ylim(0, 1)
                 ax_S.set_yticks([0.5])
                 ax_S.axhline(
                     0.5, color="black", alpha=0.3, lw=0.5, ls="--", zorder=2
                 )
 
-                # If clicking on the newTrace
+                # If clicking on the trace
                 if len(trace.xdata) == 1:
                     self.canvas.ax_grn.axvline(
-                        trace.xdata[0], ls="-", alpha=0.2, zorder=10
+                        trace.xdata[0], ls="-", alpha=0.2, zorder=10, color = gvars.color_red
                     )
                     self.canvas.ax_alx.axvline(
-                        trace.xdata[0], ls="-", alpha=0.2, zorder=10
+                        trace.xdata[0], ls="-", alpha=0.2, zorder=10, color = gvars.color_red
                     )
                 elif len(trace.xdata) == 2:
                     xmin, xmax = sorted(trace.xdata)
-                    self.canvas.ax_grn.axvspan(xmin, xmax, alpha=0.2, zorder=10)
-                    self.canvas.ax_alx.axvspan(xmin, xmax, alpha=0.2, zorder=10)
+                    self.canvas.ax_grn.axvline(xmin, color = gvars.color_red, zorder = 10, lw = 30, alpha = 0.2)
+                    self.canvas.ax_grn.axvline(xmax, color = gvars.color_red, zorder = 10, lw = 30, alpha = 0.2)
 
             if hasattr(self.canvas, "ax_ml") and trace.y_pred is not None:
                 lib.plotting.plot_predictions(
@@ -2630,23 +2739,23 @@ class HistogramWindow(BaseWindow):
         self.data = MainWindow_.data
 
         [
-            self.ui.gaussianAutoButton.clicked.connect(x)
-            for x in (
+            self.ui.gaussianAutoButton.clicked.connect(f)
+            for f in (
                 partial(self.fitGaussians, "auto"),
                 partial(self.refreshPlot, True),
             )
         ]
         [
-            self.ui.gaussianSpinBox.valueChanged.connect(x)
-            for x in (self.fitGaussians, self.refreshPlot)
+            self.ui.gaussianSpinBox.valueChanged.connect(f)
+            for f in (self.fitGaussians, self.refreshPlot)
         ]
         [
-            self.ui.applyCorrectionsCheckBox.clicked.connect(x)
-            for x in (self.fitGaussians, self.refreshPlot)
+            self.ui.applyCorrectionsCheckBox.clicked.connect(f)
+            for f in (self.fitGaussians, self.refreshPlot)
         ]
         [
-            self.ui.framesSpinBox.valueChanged.connect(x)
-            for x in (self.fitGaussians, self.refreshPlot)
+            self.ui.framesSpinBox.valueChanged.connect(f)
+            for f in (self.fitGaussians, self.refreshPlot)
         ]
 
     def savePlot(self):
@@ -3506,6 +3615,8 @@ class AppContext(ApplicationContext):
             self.get_resource("FRET_3C_experimental.h5")
         )
         self.config = ConfigObj(self.get_resource("config.ini"))
+
+        PreferencesWindow.config = self.config
 
     def run(self):
         """

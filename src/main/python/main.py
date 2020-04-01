@@ -76,36 +76,77 @@ class PreferencesWindow(QDialog):
         self.setModal(True)
         self.ui = Ui_Preferences()
         self.ui.setupUi(self)
-        # self.readConfigFromFile()
+        self.config.reload()
         self.restartDialog = RestartDialog(self)
+        self.connectUi()
 
         QShortcut(QKeySequence("Ctrl+W"), self, self.close)
 
+        self.boolMaps = {"True": 1, "1": 1, "False": 0, "0": 0}
+        self.imgModes = "dual", "2-color", "2-color-inv"
+
+        # Make sure widgets have the correct number of keys in gvars
+        assert len(self.globalCheckBoxes) == len(gvars.keys_globalCheckBoxes)
+
+    def checkImgRadioButtons(self):
+        for imgMode, radioButton in zip(
+            self.imgModes, self.imgModeRadioButtons
+        ):
+            if radioButton.isChecked():
+                self.setConfig(key=gvars.key_imgMode, value =imgMode)
+
+    def connectUi(self):
+        """Connect responsive elements of the UI"""
+        # All checkboxes
         self.globalCheckBoxes = (
             self.ui.checkBox_batchLoadingMode,
             self.ui.checkBox_unColocRed,
             self.ui.checkBox_illuCorrect,
             self.ui.checkBox_fitSpots,
-            # self.ui.checkBox_twoChannelsNoALEX,
         )
 
+        for configKey, checkBox in zip(
+            gvars.keys_globalCheckBoxes, self.globalCheckBoxes
+        ):
+            checkBox.clicked.connect(
+                lambda: self.setConfig(
+                    key=configKey, value =checkBox.isChecked()
+                )
+            )
+
+        # Imaging type radio buttons
+        # Note that this calls an additional function to check which one of the
+        # (exclusive) radio buttons is checked, for the config
         self.imgModeRadioButtons = (
             self.ui.radioButton_dual,
             self.ui.radioButton_2_col,
             self.ui.radioButton_2_col_inv,
         )
+        for radioButton in self.imgModeRadioButtons:
+            radioButton.clicked.connect(self.checkImgRadioButtons)
 
-        self.imgModes = "dual", "2-color", "2-color-inv"
-        self.boolMaps = {"True": 1, "1": 1, "False": 0, "0": 0}
+        # ROI detection tolerance
+        self.ui.toleranceComboBox.currentTextChanged.connect(
+            lambda: self.setConfig(
+                key=gvars.key_colocTolerance,
+                value =self.ui.toleranceComboBox.currentText().lower(),
+            )
+        )
 
-        assert len(self.globalCheckBoxes) == len(gvars.keys_globalCheckBoxes)
-        assert len(self.imgModeRadioButtons) == len(self.imgModes)
+        # Number of pairs to autodetect
+        self.ui.spinBox_autoDetect.valueChanged.connect(
+            lambda: self.setConfig(
+                key=gvars.key_autoDetectPairs,
+                value =self.ui.spinBox_autoDetect.value(),
+            )
+        )
 
     def getConfig(self, key):
         """
         Shortcut for reading config from file and returning key
         """
-        # self.readConfigFromFile()
+        self.config.reload()
+
         value = self.config.get(key)
 
         if value is None:
@@ -125,31 +166,19 @@ class PreferencesWindow(QDialog):
                 value = str(value)
         return value
 
-    def setConfig(self, key, new_value):
+    def setConfig(self, key, value):
         """
         Shortcut for writing config to file.
         """
-        self.config[key] = new_value
-        self.writeConfigToFile()
-
-    # def readConfigFromFile(self):
-    #     """
-    #     Read getConfig.ini file.
-    #     """
-    #     self.config = ctxt.config
-
-    def writeConfigToFile(self):
-        """
-        Renamed to fit nomenclature.
-        """
+        self.config[key] = value
         self.config.write()
 
-    def applyConfigToGUI(self):
+    def loadConfigToGUI(self):
         """
         Read settings from the config file every time window is opened,
-        and adjust UI accordingly.
+        and adjust UI elements accordingly.
         """
-        self.readConfigFromFile()
+        self.config.reload()
 
         for configKey, checkBox in zip(
             gvars.keys_globalCheckBoxes, self.globalCheckBoxes
@@ -170,50 +199,11 @@ class PreferencesWindow(QDialog):
         )
         self.currentImgMode = self.getConfig(gvars.key_imgMode)
 
-    def setConfigFromGUI(self):
-        """
-        Write getConfig from the GUI when the preference window is closed.
-        """
-        for configKey, checkBox in zip(
-            gvars.keys_globalCheckBoxes, self.globalCheckBoxes
-        ):
-            self.setConfig(configKey, checkBox.isChecked())
-
-        # Imaging Modes
-        newImgMode = None
-        for radioButton, imgMode in zip(
-            self.imgModeRadioButtons, self.imgModes
-        ):
-            if radioButton.isChecked():
-                newImgMode = imgMode
-
-        if newImgMode != self.getConfig(gvars.key_imgMode):
-            self.restartDialog.exec()
-            if self.restartDialog.status == "Restart":
-                self.setConfig(gvars.key_imgMode, newImgMode)
-                ctxt.app.exit()
-
-        self.setConfig(
-            gvars.key_colocTolerance,
-            self.ui.toleranceComboBox.currentText().lower(),
-        )
-        self.setConfig(
-            gvars.key_autoDetectPairs, self.ui.spinBox_autoDetect.value()
-        )
-
-        self.writeConfigToFile()
-
     def showEvent(self, QShowEvent):
         """
         Read settings on show.
         """
-        self.applyConfigToGUI()
-
-    def closeEvent(self, QCloseEvent):
-        """
-        Write settings on close.
-        """
-        self.setConfigFromGUI()
+        self.loadConfigToGUI()
 
     def reject(self):
         """
@@ -1380,9 +1370,9 @@ class MainWindow(BaseWindow):
         Find and colocalize spots for a single currentMovie (not displayed).
         """
         mov = self.currentMovie()
-        tolerance = gvars.roi_coloc_tolerances.get(
-            self.getConfig(gvars.key_colocTolerance)
-        )
+        tolerance_type = self.getConfig(gvars.key_colocTolerance)
+        tolerance_value = gvars.roi_coloc_tolerances[tolerance_type]
+
         if channel == "green":
             channel = mov.grn
             spinBox = self.ui.spotsGrnSpinBox
@@ -1449,7 +1439,7 @@ class MainWindow(BaseWindow):
                     c2.spots,
                     color1=coloc.color1,
                     color2=coloc.color2,
-                    tolerance=tolerance,
+                    tolerance=tolerance_value,
                 )
                 coloc.n_spots = len(coloc.spots)
 
@@ -1804,7 +1794,6 @@ class TraceWindow(BaseWindow):
         )
         self.setupPlot()
         self.setupSplitter(layout=self.ui.layoutBox)
-
 
         # self.data = MainWindow_.data
 

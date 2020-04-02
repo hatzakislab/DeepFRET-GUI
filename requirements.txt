@@ -1,6 +1,7 @@
 absl-py==0.7.1
 altgraph==0.16.1
 astor==0.7.1
+black==19.10b0
 boto3==1.9.145
 botocore==1.12.145
 cachetools==4.0.0
@@ -49,6 +50,7 @@ pyparsing==2.4.0
 PyQt5==5.14.1
 PyQt5-sip==12.7.1
 pyqtgraph==0.10.0
+pre-commit==2.2.0
 python-dateutil==2.8.0
 pytz==2019.1
 PyWavelets==1.0.3

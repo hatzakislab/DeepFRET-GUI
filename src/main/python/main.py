@@ -1,19 +1,20 @@
 import multiprocessing
 
+from ui._AboutWindow import Ui_About
+
 multiprocessing.freeze_support()
 
 import os
 import sys
 from functools import partial
-from typing import Dict, List
-
+from typing import Dict, List, Union
+from lib.misc import timeit
 import matplotlib
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from configobj import ConfigObj
-
-from about_window import AboutWindow
+from matplotlib.gridspec import GridSpec
 
 import lib.imgdata
 import lib.math
@@ -45,6 +46,7 @@ from ui._TransitionDensityWindow import Ui_TransitionDensityWindow
 from ui._CorrectionFactorInspector import Ui_CorrectionFactorInspector
 from ui._DensityWindowInspector import Ui_DensityWindowInspector
 from ui._TraceWindowInspector import Ui_TraceWindowInspector
+from ui._SimulatorWindow import Ui_SimulatorWindow
 
 from ui.misc import (
     ProgressBar,
@@ -65,6 +67,23 @@ from mpl_layout import PlotWidget
 from fbs_runtime.application_context.PyQt5 import ApplicationContext
 
 
+class AboutWindow(QDialog):
+    """
+    'About this application' window with version numbering.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.ui = Ui_About()
+        self.ui.setupUi(self)
+        self.setWindowTitle("")
+
+        self.ui.label_APPNAME.setText(gvars.APPNAME)
+        self.ui.label_APPVER.setText("version {}".format(gvars.APPVERSION))
+        self.ui.label_AUTHORS.setText(gvars.AUTHORS)
+        self.ui.label_LICENSE.setText(gvars.LICENSE)
+
+
 class PreferencesWindow(QDialog):
     """
     Editable preferences. If preferences shouldn't be editable (e.g. global
@@ -73,55 +92,63 @@ class PreferencesWindow(QDialog):
 
     def __init__(self):
         super().__init__()
+        self.config.reload()
         self.setModal(True)
         self.ui = Ui_Preferences()
         self.ui.setupUi(self)
-        self.config.reload()
         self.restartDialog = RestartDialog(self)
-        self.connectUi()
-
-        QShortcut(QKeySequence("Ctrl+W"), self, self.close)
 
         self.boolMaps = {"True": 1, "1": 1, "False": 0, "0": 0}
         self.imgModes = "dual", "2-color", "2-color-inv"
 
-        # Make sure widgets have the correct number of keys in gvars
-        assert len(self.globalCheckBoxes) == len(gvars.keys_globalCheckBoxes)
-
-    def checkImgRadioButtons(self):
-        for imgMode, radioButton in zip(
-            self.imgModes, self.imgModeRadioButtons
-        ):
-            if radioButton.isChecked():
-                self.setConfig(key=gvars.key_imgMode, value =imgMode)
-
-    def connectUi(self):
-        """Connect responsive elements of the UI"""
-        # All checkboxes
         self.globalCheckBoxes = (
             self.ui.checkBox_batchLoadingMode,
             self.ui.checkBox_unColocRed,
             self.ui.checkBox_illuCorrect,
             self.ui.checkBox_fitSpots,
         )
+        self.imgModeRadioButtons = (
+            self.ui.radioButton_dual,
+            self.ui.radioButton_2_col,
+            self.ui.radioButton_2_col_inv,
+        )
 
+        if len(self.globalCheckBoxes) != len(gvars.keys_globalCheckBoxes):
+            raise ValueError(
+                "Make sure widgets have the correct number of keys in gvars"
+            )
+
+        self.connectUi()
+
+    def checkImgRadioButtons(self):
+        """
+        Qt makes the radio buttons exclusive so only one can be checked, but
+        Python doesn't know that, so need to check all of them to find the one
+        that is checked
+        """
+        for imgMode, radioButton in zip(
+            self.imgModes, self.imgModeRadioButtons
+        ):
+            if radioButton.isChecked():
+                self.setConfig(key=gvars.key_imgMode, value=imgMode)
+
+    def connectUi(self):
+        """
+        Connect widgets to config write functions
+        """
+        # All checkboxes
         for configKey, checkBox in zip(
             gvars.keys_globalCheckBoxes, self.globalCheckBoxes
         ):
             checkBox.clicked.connect(
                 lambda: self.setConfig(
-                    key=configKey, value =checkBox.isChecked()
+                    key=configKey, value=checkBox.isChecked()
                 )
             )
 
         # Imaging type radio buttons
         # Note that this calls an additional function to check which one of the
         # (exclusive) radio buttons is checked, for the config
-        self.imgModeRadioButtons = (
-            self.ui.radioButton_dual,
-            self.ui.radioButton_2_col,
-            self.ui.radioButton_2_col_inv,
-        )
         for radioButton in self.imgModeRadioButtons:
             radioButton.clicked.connect(self.checkImgRadioButtons)
 
@@ -129,7 +156,7 @@ class PreferencesWindow(QDialog):
         self.ui.toleranceComboBox.currentTextChanged.connect(
             lambda: self.setConfig(
                 key=gvars.key_colocTolerance,
-                value =self.ui.toleranceComboBox.currentText().lower(),
+                value=self.ui.toleranceComboBox.currentText().lower(),
             )
         )
 
@@ -137,11 +164,14 @@ class PreferencesWindow(QDialog):
         self.ui.spinBox_autoDetect.valueChanged.connect(
             lambda: self.setConfig(
                 key=gvars.key_autoDetectPairs,
-                value =self.ui.spinBox_autoDetect.value(),
+                value=self.ui.spinBox_autoDetect.value(),
             )
         )
 
-    def getConfig(self, key):
+        # Close modal window with Ctrl+W
+        QShortcut(QKeySequence("Ctrl+W"), self, self.close)
+
+    def getConfig(self, key: str) -> Union[bool, str, float]:
         """
         Shortcut for reading config from file and returning key
         """
@@ -197,7 +227,6 @@ class PreferencesWindow(QDialog):
         self.ui.spinBox_autoDetect.setValue(
             self.getConfig(gvars.key_autoDetectPairs)
         )
-        self.currentImgMode = self.getConfig(gvars.key_imgMode)
 
     def showEvent(self, QShowEvent):
         """
@@ -371,6 +400,9 @@ class BaseWindow(QMainWindow):
         self.ui.actionTransitionDensityWindow.triggered.connect(
             partial(self.bringToFront, "TransitionDensityWindow")
         )
+        self.ui.actionTraceSimulatorWindow.triggered.connect(
+            partial(self.bringToFront, "SimulatorWindow")
+        )
 
         # Help
         # Open URL in help menu
@@ -443,6 +475,9 @@ class BaseWindow(QMainWindow):
             enableMenus_HistogramWindow,
         )
 
+        if len(instances) != len(menus):
+            raise ValueError("Make sure each window has an enableMenu list")
+
         # enable menus set above
         for instance, menulist in zip(instances, menus):
             if isinstance(self, instance):
@@ -463,40 +498,39 @@ class BaseWindow(QMainWindow):
             self.ui.actionOpen.setEnabled(False)
 
     @staticmethod
-    def bringToFront(window):
+    def focusWindow(window):
         """
         Focuses selected window and brings it to front.
         """
+        window.show()
+        window.setWindowState(
+            window.windowState() & ~Qt.WindowMinimized | Qt.WindowActive
+        )
+        window.raise_()
+        window.activateWindow()
 
-        def _focusWindow(window):
-            window.show()
-            window.setWindowState(
-                window.windowState() & ~Qt.WindowMinimized | Qt.WindowActive
-            )
-            window.raise_()
-            window.activateWindow()
-
+    def bringToFront(self, window):
+        """
+        Select which windows to focus and bring to front
+        """
         if window == "MainWindow":
-            _focusWindow(MainWindow_)
+            self.focusWindow(MainWindow_)
 
         elif window == "TraceWindow":
             TraceWindow_.refreshPlot()
-            _focusWindow(TraceWindow_)
+            self.focusWindow(TraceWindow_)
 
         elif window == "HistogramWindow":
             HistogramWindow_.refreshPlot()
-            _focusWindow(HistogramWindow_)
+            self.focusWindow(HistogramWindow_)
 
         elif window == "TransitionDensityWindow":
-            hmm = [
-                trace.hmm
-                for trace in MainWindow_.data.traces.values()
-                if trace.is_checked
-            ]
-            if len(hmm) > 0 and lib.misc.all_nonetype(hmm):
-                TraceWindow_.fitCheckedTracesHiddenMarkovModel()
             TransitionDensityWindow_.refreshPlot()
-            _focusWindow(TransitionDensityWindow_)
+            self.focusWindow(TransitionDensityWindow_)
+
+        elif window == "SimulatorWindow":
+            SimulatorWindow_.refreshPlot()
+            self.focusWindow(SimulatorWindow_)
 
         else:
             raise ValueError("Window doesn't exist")
@@ -514,7 +548,12 @@ class BaseWindow(QMainWindow):
         Sets up some global matplotlib savefig rcParams. See individual
         savePlot() methods for further customization.
         """
-        matplotlib.rcParams["savefig.directory"] = self.currDir
+        try:
+            current_dir = self.currDir
+        except AttributeError:
+            current_dir = self.getConfig(gvars.key_lastOpenedDir)
+
+        matplotlib.rcParams["savefig.directory"] = current_dir
         matplotlib.rcParams["savefig.facecolor"] = "white"
         matplotlib.rcParams["savefig.edgecolor"] = gvars.color_hud_black
         matplotlib.rcParams["savefig.transparent"] = True
@@ -744,7 +783,7 @@ class BaseWindow(QMainWindow):
 
         if use_layoutbox:
             try:
-                self.ui.mpl_LayoutBox.addWidget(self.plotWidget)
+                self.ui.mpl_LayoutBox.addWidget(self.canvas)
             except AttributeError:
                 qWarning(
                     "Canvas must be placed in a Q-Layout named 'mpl_LayoutBox', "
@@ -1968,7 +2007,9 @@ class TraceWindow(BaseWindow):
         transitions = pd.concat([trace.transitions for trace in traces])
 
         # TODO: whole section copy-pasted from Fretti
-        def _func_double_exp(_x: np.ndarray, _lambda_1: float, _lambda_2: float, _k: float):
+        def _func_double_exp(
+            _x: np.ndarray, _lambda_1: float, _lambda_2: float, _k: float
+        ):
             if _k > 1.0:
                 raise ValueError(f"_k of value {_k:.2f} is larger than 1!")
             if _k < 0:
@@ -1978,10 +2019,10 @@ class TraceWindow(BaseWindow):
 
             return _k * _exp1 + (1 - _k) * _exp2
 
-
-        def _func_exp(_x: np.ndarray, _lambda, ):
-            return _lambda * np.exp(- _lambda * _x)
-
+        def _func_exp(
+            _x: np.ndarray, _lambda,
+        ):
+            return _lambda * np.exp(-_lambda * _x)
 
         def loglik_single(x: np.ndarray, _lambda):
             """
@@ -1989,20 +2030,28 @@ class TraceWindow(BaseWindow):
             """
             return -1 * np.sum(np.log(_func_exp(x, _lambda)))
 
-
-        def loglik_double(x: np.ndarray, _lambda_1: float, _lambda_2: float, _k: float):
+        def loglik_double(
+            x: np.ndarray, _lambda_1: float, _lambda_2: float, _k: float
+        ):
             """
             Returns Negative Loglikelihood for a double exponential with given params and given observations
             """
-            return -1 * np.sum(np.log(_func_double_exp(x, _lambda_1, _lambda_2, _k)))
+            return -1 * np.sum(
+                np.log(_func_double_exp(x, _lambda_1, _lambda_2, _k))
+            )
 
-        def _nice_string_output(names: List[str], values: List[str], extra_spacing: int = 0, ):
+        def _nice_string_output(
+            names: List[str], values: List[str], extra_spacing: int = 0,
+        ):
             max_values = len(max(values, key=len))
             max_names = len(max(names, key=len))
             string = ""
             for name, value in zip(names, values):
-                string += "{0:s} {1:>{spacing}} \n".format(name, value,
-                                                           spacing=extra_spacing + max_values + max_names - len(name))
+                string += "{0:s} {1:>{spacing}} \n".format(
+                    name,
+                    value,
+                    spacing=extra_spacing + max_values + max_names - len(name),
+                )
             return string[:-2]
 
         def fit_and_compare_exp_funcs(arr, x0=None, verbose=0, meth="l-bfgs-b"):
@@ -2016,10 +2065,14 @@ class TraceWindow(BaseWindow):
             def lh_double(x):
                 return loglik_double(arr, *x)
 
-            res1 = scipy.optimize.minimize(lh_single, x0=np.array(1. / arr.mean()), method=meth,
-                                           options={"disp": False},
-                                           bounds=[(0., None)])
-            llh_1 = - res1.fun
+            res1 = scipy.optimize.minimize(
+                lh_single,
+                x0=np.array(1.0 / arr.mean()),
+                method=meth,
+                options={"disp": False},
+                bounds=[(0.0, None)],
+            )
+            llh_1 = -res1.fun
             bic_1 = 2 * np.log(len(arr)) * 1 - 2 * llh_1
 
             if verbose:
@@ -2027,11 +2080,15 @@ class TraceWindow(BaseWindow):
                 print(res1.x)
                 print(f"BIC : {bic_1:.6f}")
 
-            res2 = scipy.optimize.minimize(lh_double, x0=np.array(x0), method=meth,
-                                           options={"disp": False},
-                                           bounds=[(0., None), (0., None), (0.1, .9)])
+            res2 = scipy.optimize.minimize(
+                lh_double,
+                x0=np.array(x0),
+                method=meth,
+                options={"disp": False},
+                bounds=[(0.0, None), (0.0, None), (0.1, 0.9)],
+            )
 
-            llh_2 = - res2.fun
+            llh_2 = -res2.fun
             bic_2 = np.log(len(arr)) * 3 * 2 - 2 * llh_2
             if verbose:
                 print("Params for double exp:")
@@ -2054,8 +2111,6 @@ class TraceWindow(BaseWindow):
 
             return out
 
-
-
         transition_dict = {}
         for _, t in transitions.groupby(["state", "state+1"]):
             s_before = t["state"].values[0]
@@ -2063,7 +2118,9 @@ class TraceWindow(BaseWindow):
 
             if transmat[s_before, s_after] == 0:
                 continue
-            transition_name = "{} -> {}".format(t["state"].values[0], t["state+1"].values[0])
+            transition_name = "{} -> {}".format(
+                t["state"].values[0], t["state+1"].values[0]
+            )
             print(transition_name)
             print("number of datapoints: ", len(t["lifetime"]))
 
@@ -2081,25 +2138,29 @@ class TraceWindow(BaseWindow):
 
                     val = lifetime_dict[key]
                     try:
-                        val_str = '{:.4f}'.format(val)
+                        val_str = "{:.4f}".format(val)
                         values.append(val_str)
                     except TypeError:
                         for v in val:
-                            v_str = '{:.4f}'.format(v)
+                            v_str = "{:.4f}".format(v)
                             values.append(v_str)
 
                 if len(values) > len(names):
                     names.remove("PARAM")
                     names.extend("PARAM_{}".format(i) for i in range(1, 4))
 
-                print("The best fit ({} exp) returned these params: ".format(lifetime_dict["BEST"]))
+                print(
+                    "The best fit ({} exp) returned these params: ".format(
+                        lifetime_dict["BEST"]
+                    )
+                )
                 print(_nice_string_output(names, values, 2))
                 if _b == "DOUBLE":
                     print("This is a degenerate state!")
                     transition_dict[transition_name] = True
                 else:
                     transition_dict[transition_name] = False
-                print('\n')
+                print("\n")
 
             except RuntimeError:
                 print("Couldn't fit. Skipping")
@@ -2671,15 +2732,27 @@ class TraceWindow(BaseWindow):
                 # If clicking on the trace
                 if len(trace.xdata) == 1:
                     self.canvas.ax_grn.axvline(
-                        trace.xdata[0], ls="-", alpha=0.2, zorder=10, color = gvars.color_red
+                        trace.xdata[0],
+                        ls="-",
+                        alpha=0.2,
+                        zorder=10,
+                        color=gvars.color_red,
                     )
                     self.canvas.ax_alx.axvline(
-                        trace.xdata[0], ls="-", alpha=0.2, zorder=10, color = gvars.color_red
+                        trace.xdata[0],
+                        ls="-",
+                        alpha=0.2,
+                        zorder=10,
+                        color=gvars.color_red,
                     )
                 elif len(trace.xdata) == 2:
                     xmin, xmax = sorted(trace.xdata)
-                    self.canvas.ax_grn.axvline(xmin, color = gvars.color_red, zorder = 10, lw = 30, alpha = 0.2)
-                    self.canvas.ax_grn.axvline(xmax, color = gvars.color_red, zorder = 10, lw = 30, alpha = 0.2)
+                    self.canvas.ax_grn.axvline(
+                        xmin, color=gvars.color_red, zorder=10, lw=30, alpha=0.2
+                    )
+                    self.canvas.ax_grn.axvline(
+                        xmax, color=gvars.color_red, zorder=10, lw=30, alpha=0.2
+                    )
 
             if hasattr(self.canvas, "ax_ml") and trace.y_pred is not None:
                 lib.plotting.plot_predictions(
@@ -2724,9 +2797,11 @@ class HistogramWindow(BaseWindow):
             ax_setup="plot", ax_window="jointgrid", width=2, height=2
         )
         self.setupPlot()
+        self.connectUi()
 
         self.data = MainWindow_.data
 
+    def connectUi(self):
         [
             self.ui.gaussianAutoButton.clicked.connect(f)
             for f in (
@@ -3580,6 +3655,350 @@ class TraceWindowInspector(SheetInspector):
         )
 
 
+class SimulatorWindow(BaseWindow):
+    """
+    smFRET trace simulator window
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.ui = Ui_SimulatorWindow()
+        self.ui.setupUi(self)
+
+        self.setupFigureCanvas(
+            ax_setup="plot", ax_window="single", use_layoutbox=True
+        )
+        self.connectUi()
+
+    def connectUi(self):
+        """Connect interface"""
+        # Find and connect all checkboxes dynamically
+        [
+            getattr(self.ui, c).clicked.connect(self.refreshUi)
+            for c in dir(self.ui)
+            if c.startswith("checkBox")
+        ]
+        self.ui.pushButtonRefresh.clicked.connect(self.refreshPlot)
+        self.ui.examplesComboBox.currentTextChanged.connect(self.refreshPlot)
+        self.ui.pushButtonExport.clicked.connect(self.exportTracesToAscii)
+
+    def savePlot(self):
+        """
+        Saves plot for simulated traces
+        """
+        self.setSavefigrcParams()
+        self.canvas.defaultImageName = "Simulated Traces"
+        self.canvas.toolbar.save_figure()
+        self.refreshPlot()
+
+    def refreshUi(self):
+        """Refreshes UI to e.g. disable some input boxes"""
+        for inputBox, checkBox in (
+            (self.ui.inputDonorMeanLifetime, self.ui.checkBoxDlifetime),
+            (self.ui.inputAcceptorMeanLifetime, self.ui.checkBoxALifetime),
+            (
+                self.ui.inputTransitionProbabilityHi,
+                self.ui.checkBoxTransitionProbability,
+            ),
+            (self.ui.inputFretStateMeans, self.ui.checkBoxRandomState),
+            (self.ui.inputNoiseHi, self.ui.checkBoxNoise),
+            (self.ui.inputMismatchHi, self.ui.checkBoxMismatch),
+            (self.ui.inputScalerHi, self.ui.checkBoxScaler),
+            (self.ui.inputBleedthroughHi, self.ui.checkBoxBleedthrough),
+        ):
+            inputBox.setDisabled(checkBox.isChecked())
+
+        self.ui.inputMaxRandomStates.setEnabled(
+            self.ui.checkBoxRandomState.isChecked()
+        )
+
+    def valuesFromGUI(self):
+        """
+        Fetch values from GUI
+        """
+        # Number of traces to export
+        # Number of examples
+        self.n_examples = (
+            int(self.ui.examplesComboBox.currentText().split("x")[0]) ** 2
+        )
+
+        self.n_traces = int(self.ui.inputNumberOfTraces.value())
+
+        # Trace length
+        self.trace_len = int(self.ui.inputTraceLength.value())
+
+        # Scramble probability
+        self.scramble_prob = float(self.ui.inputScrambleProbability.value())
+
+        # Aggregation probability
+        self.aggregate_prob = float(self.ui.inputAggregateProbability.value())
+
+        # Max aggregate size
+        self.max_aggregate_size = int(self.ui.inputMaxAggregateSize.value())
+
+        # FRET state means
+        if self.ui.checkBoxRandomState.isChecked():
+            self.fret_means = "random"
+        else:
+            self.fret_means = lib.misc.numstring_to_ls(
+                self.ui.inputFretStateMeans.text()
+            )
+
+        # Max number of random states
+        self.max_random_states = int(self.ui.inputMaxRandomStates.value())
+
+        # Donor mean lifetime
+        if self.ui.checkBoxDlifetime.isChecked():
+            self.donor_lifetime = None
+        else:
+            self.donor_lifetime = int(self.ui.inputDonorMeanLifetime.value())
+
+        # Acceptor mean lifetime
+        if self.ui.checkBoxALifetime.isChecked():
+            self.acceptor_lifetime = None
+        else:
+            self.acceptor_lifetime = int(
+                self.ui.inputAcceptorMeanLifetime.value()
+            )
+
+        # Blinking probability
+        self.blinking_prob = float(self.ui.inputBlinkingProbability.value())
+
+        # Transition Probability
+        if self.ui.checkBoxTransitionProbability.isChecked():
+            self.transition_prob = float(
+                self.ui.inputTransitionProbabilityLo.value()
+            )
+        else:
+            self.transition_prob = (
+                float(self.ui.inputTransitionProbabilityLo.value()),
+                float(self.ui.inputTransitionProbabilityHi.value()),
+            )
+
+        # Noise
+        if self.ui.checkBoxNoise.isChecked():
+            self.noise = float(self.ui.inputNoiseLo.value())
+        else:
+            self.noise = (
+                float(self.ui.inputNoiseLo.value()),
+                float(self.ui.inputNoiseHi.value()),
+            )
+
+        # Acceptor-only mismatch
+        if self.ui.checkBoxMismatch.isChecked():
+            self.aa_mismatch = float(self.ui.inputMismatchLo.value())
+        else:
+            self.aa_mismatch = (
+                float(self.ui.inputMismatchLo.value()),
+                float(self.ui.inputMismatchHi.value()),
+            )
+
+        # Donor Bleedthrough
+        if self.ui.checkBoxBleedthrough.isChecked():
+            self.bleed_through = float(self.ui.inputBleedthroughLo.value())
+        else:
+            self.bleed_through = (
+                float(self.ui.inputBleedthroughLo.value()),
+                float(self.ui.inputBleedthroughHi.value()),
+            )
+
+        # Scaler
+        if self.ui.checkBoxScaler.isChecked():
+            self.scaling_factor = float(self.ui.inputScalerLo.value())
+        else:
+            self.scaling_factor = (
+                float(self.ui.inputScalerLo.value()),
+                float(self.ui.inputScalerHi.value()),
+            )
+
+    def generateTraces(self, n_traces):
+        """Generate traces to show in the GUI or export"""
+        print("generate")
+
+        if n_traces > 50:
+            update_every_nth = len(n_traces) // 20
+            progressbar = ProgressBar(
+                parent=self, loop_len=n_traces / update_every_nth
+            )
+        else:
+            update_every_nth = None
+            progressbar = None
+
+        self.traces = lib.math.generate_traces(
+            n_traces=n_traces,
+            aa_mismatch=self.aa_mismatch,
+            state_means=self.fret_means,
+            random_k_states_max=self.max_random_states,
+            max_aggregate_size=self.max_aggregate_size,
+            aggregation_prob=self.aggregate_prob,
+            scramble_prob=self.scramble_prob,
+            trace_length=self.trace_len,
+            trans_prob=self.transition_prob,
+            blink_prob=self.blinking_prob,
+            bleed_through=self.bleed_through,
+            noise=self.noise,
+            D_lifetime=self.donor_lifetime,
+            A_lifetime=self.acceptor_lifetime,
+            au_scaling_factor=self.scaling_factor,
+            discard_unbleached=False,
+            null_fret_value=-1,
+            min_state_diff=0.1,
+            acceptable_noise=0.25,
+            progressbar_callback=progressbar,
+            callback_every=update_every_nth,
+        )
+
+        if progressbar is not None:
+            progressbar.close()
+
+    def refreshPlot(self):
+        """Refreshes preview plots"""
+        self.canvas.flush_events()
+        self.canvas.fig.clear()
+
+        self.valuesFromGUI()
+
+        # generate at least enough traces to show required number of examples
+        if self.n_traces < self.n_examples:
+            self.n_traces = self.n_examples
+
+        self.generateTraces(self.n_examples)
+
+        n_subplots = self.n_examples
+        nrows = int(self.n_examples ** (1 / 2))
+        ncols = nrows
+        outer_grid = matplotlib.gridspec.GridSpec(
+            nrows, ncols, wspace=0.1, hspace=0.1
+        )  # 2x2 grid
+
+        for i in range(n_subplots):
+            trace = self.traces[self.traces["name"] == i]
+            inner_subplot = matplotlib.gridspec.GridSpecFromSubplotSpec(
+                nrows=5,
+                ncols=1,
+                subplot_spec=outer_grid[i],
+                wspace=0,
+                hspace=0,
+                height_ratios=[3, 3, 3, 3, 1],
+            )
+            axes = [
+                plt.Subplot(self.canvas.fig, inner_subplot[n]) for n in range(5)
+            ]
+            ax_g_r, ax_red, ax_frt, ax_sto, ax_lbl = axes
+            bleach = trace["_bleaches_at"].values[0]
+            tmax = trace["frame"].max()
+            fret_states = np.unique(trace["E_true"])
+            fret_states = fret_states[fret_states != -1]
+
+            ax_g_r.plot(trace["DD"], color="seagreen")
+            ax_g_r.plot(trace["DA"], color="salmon")
+            ax_red.plot(trace["AA"], color="red")
+            ax_frt.plot(trace["E"], color="orange")
+            ax_frt.plot(trace["E_true"], color="black", ls="-", alpha=0.3)
+
+            for state in fret_states:
+                ax_frt.plot([0, bleach], [state, state], color="red", alpha=0.2)
+
+            ax_sto.plot(trace["S"], color="purple")
+
+            lib.plotting.plot_simulation_category(
+                y=trace["label"],
+                ax=ax_lbl,
+                alpha=0.4,
+                fontsize=max(10, 36 // self.n_examples),
+            )
+
+            for ax in ax_frt, ax_sto:
+                ax.set_ylim(-0.15, 1.15)
+
+            for ax, s in zip((ax_g_r, ax_red), (trace["DD"], trace["AA"])):
+                ax.set_ylim(s.max() * -0.15)
+                ax.plot([0] * len(s), color="black", ls="--", alpha=0.5)
+
+            for ax in axes:
+                for spine in ax.spines.values():
+                    spine.set_edgecolor("darkgrey")
+
+                if bleach is not None:
+                    ax.axvspan(bleach, tmax, color="black", alpha=0.1)
+
+                ax.set_xticks(())
+                ax.set_yticks(())
+                ax.set_xlim(0, tmax)
+                self.canvas.fig.add_subplot(ax)
+
+        self.canvas.draw()
+
+    # TODO: consolidate this with the general trace exporter to cut down duplicate?
+    def exportTracesToAscii(self):
+        """
+        Opens a folder dialog to save traces to ASCII .txt files
+        """
+        self.generateTraces(n_traces=int(self.ui.inputNumberOfTraces.value()))
+        df = self.traces
+
+        diag = ExportDialog(init_dir="~/Desktop/", accept_label="Export")
+
+        outdir = diag.selectedFiles()[0] if diag.exec() else None
+        df.index = np.arange(0, len(df), 1) // int(
+            self.ui.inputTraceLength.value()
+        )
+
+        if outdir is not None:
+            update_every_nth = len(self.n_traces) // 20
+            progressbar = ProgressBar(
+                parent=self, loop_len=self.n_traces / update_every_nth
+            )
+
+            for n, (idx, trace) in enumerate(df.groupby(df.index)):
+                bg = np.zeros(len(trace))
+                path = os.path.join(
+                    outdir,
+                    "trace_{}_{}.txt".format(idx, time.strftime("%Y%m%d_%H%M")),
+                )
+
+                df = pd.DataFrame(
+                    {
+                        "D-Dexc-bg": bg,
+                        "A-Dexc-bg": bg,
+                        "A-Aexc-bg": bg,
+                        "D-Dexc-rw": trace["DD"],
+                        "A-Dexc-rw": trace["DA"],
+                        "A-Aexc-rw": trace["AA"],
+                        "S": trace["S"],
+                        "E": trace["E"],
+                    }
+                ).round(4)
+
+                date_txt = "Date: {}".format(time.strftime("%Y-%m-%d, %H:%M"))
+                mov_txt = "Movie filename: {}".format(None)
+                id_txt = "FRET pair #{}".format(idx)
+                bl_txt = "Bleaches at {}".format(
+                    trace["_bleaches_at"].values[0]
+                )
+
+                with open(path, "w") as f:
+                    exp_txt = "Simulated trace exported by DeepFRET"
+                    f.write(
+                        "{0}\n"
+                        "{1}\n"
+                        "{2}\n"
+                        "{3}\n"
+                        "{4}\n\n"
+                        "{5}".format(
+                            exp_txt,
+                            date_txt,
+                            mov_txt,
+                            id_txt,
+                            bl_txt,
+                            df.to_csv(index=False, sep="\t"),
+                        )
+                    )
+
+                if n % update_every_nth == 0:
+                    progressbar.increment()
+
+
 class AppContext(ApplicationContext):
     """
     Entry point for running the application. Only loads resources and holds
@@ -3591,6 +4010,7 @@ class AppContext(ApplicationContext):
         self.keras_2c_model = None
         self.keras_3c_model = None
         self.config = None
+        self.load_resources()
 
     def load_resources(self):
         """
@@ -3627,6 +4047,7 @@ if __name__ == "__main__":
     TraceWindow_ = TraceWindow()
     HistogramWindow_ = HistogramWindow()
     TransitionDensityWindow_ = TransitionDensityWindow()
+    SimulatorWindow_ = SimulatorWindow()
 
     # Inspector sheets
     HistogramInspector_ = DensityWindowInspector(HistogramWindow_)

@@ -1,5 +1,6 @@
 import os
 import glob
+from os.path import join, dirname, basename
 
 
 def generatePyFromUi(verbose=True):
@@ -9,11 +10,15 @@ def generatePyFromUi(verbose=True):
 
     for filename in ui_files:
         if os.path.exists(filename):
+            out_name = (
+                join(dirname(filename), "_" + basename(filename)).rstrip(".ui")
+            )
+
             if verbose:
                 print("{} was converted".format(filename))
             os.system(
-                "exec python3 -m PyQt5.uic.pyuic {0}.ui -o {0}.py -x".format(
-                    filename.rstrip(".ui")
+                "exec python3 -m PyQt5.uic.pyuic {0} -o {1}.py -x".format(
+                    filename, out_name
                 )
             )
 

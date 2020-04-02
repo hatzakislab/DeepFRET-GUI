@@ -19,14 +19,12 @@ class GlobalVariables:
     key_unColocRed = "unColocRed"  # Uncolocalized red
     key_illuCorrect = "illuCorrect"  # Illumination profile correction
     key_fitSpots = "fitSpots"  # Whether to use LoG-based spot detection
-    # key_twoChannelsNoALEX = "twoChannelsNoALEX"  # Whether the Video is Non-ALEX
 
     keys_globalCheckBoxes = (
         key_batchLoadingMode,
         key_unColocRed,
         key_illuCorrect,
         key_fitSpots,
-        # key_twoChannelsNoALEX,
     )
 
     key_spotDetection = "spotDetection"  # Spot detection speed
@@ -113,6 +111,7 @@ class GlobalVariables:
     roi_coloc_overlap_factor = (
         2  # Degree of overlap before it counts (this is roughly 90%)
     )
+
 
     roi_coloc_tolerances = {"loose": 2, "moderate": 5, "strict": 20}
 

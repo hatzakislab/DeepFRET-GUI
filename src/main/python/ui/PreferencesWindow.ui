@@ -162,10 +162,10 @@
       <property name="topMargin">
        <number>12</number>
       </property>
-      <item row="2" column="0">
-       <widget class="QRadioButton" name="radioButton_2_col_inv">
+      <item row="0" column="0">
+       <widget class="QRadioButton" name="radioButton_dual">
         <property name="text">
-         <string>Quad View (inverted 2-channel)</string>
+         <string>Dual Cam (interleaved videos)</string>
         </property>
        </widget>
       </item>
@@ -176,10 +176,10 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="0">
-       <widget class="QRadioButton" name="radioButton_dual">
+      <item row="2" column="0">
+       <widget class="QRadioButton" name="radioButton_2_col_inv">
         <property name="text">
-         <string>Dual Cam (interleaved videos)</string>
+         <string>Quad View (inverted 2-channel)</string>
         </property>
        </widget>
       </item>

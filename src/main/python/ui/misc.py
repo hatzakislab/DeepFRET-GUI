@@ -71,10 +71,7 @@ class RestartDialog(QMessageBox, SheetInspector):
         self.buttonClicked.connect(self.returnButton)
 
     def returnButton(self, i):
-        if i.text() == "Restart":
-            self.status = "Restart"
-        else:
-            self.status = "Cancel"
+        self.status = 'Restart' if i.text() == 'Restart' else 'Cancel'
 
 
 class ExportDialog(QFileDialog):

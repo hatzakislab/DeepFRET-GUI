@@ -7,15 +7,12 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import (
     NavigationToolbar2QT as NavigationToolbar,
 )
-from matplotlib.widgets import PolygonSelector
-from matplotlib.path import Path
 from matplotlib.figure import Figure
 from PyQt5.QtWidgets import *
-import numpy as np
-import pandas as pd
-from lib.misc import timeit
 from matplotlib.gridspec import GridSpec
 
+# TODO: subplots_adjust should be part of the init to clean up and make it
+#  easier to control when creating the window
 
 class MatplotlibCanvas(FigureCanvas):
     """
@@ -33,13 +30,17 @@ class MatplotlibCanvas(FigureCanvas):
         height=2,
         dpi=100,
     ):
-        self.fig = Figure(figsize=(width, height), dpi=dpi, tight_layout=False)
-        super(MatplotlibCanvas, self).__init__(self.fig)
-        # FigureCanvas.__init__(self, self.fig)
-
+        self.fig = Figure(
+            figsize=(width, height), dpi=dpi,
+        )
+        self.fig.set_facecolor(gvars.color_gui_bg)
+        FigureCanvas.__init__(self, self.fig)
         self.setParent(parent)
         self.defaultImageName = "Blank"  # Set default image name
-        self.get_window_title()
+        FigureCanvas.setSizePolicy(
+            self, QSizePolicy.Expanding, QSizePolicy.Expanding
+        )
+        FigureCanvas.updateGeometry(self)
 
         self.ax_setup = ax_setup
         self.ax_window = ax_window
@@ -147,9 +148,8 @@ class MatplotlibCanvas(FigureCanvas):
         Setup for a single panel plot.
         """
         self.ax = self.fig.add_subplot(111, aspect="equal")
-        self.fig.subplots_adjust(
-            left=0.08, right=0.92, top=1.00, bottom=0.08
-        )  # Increase to add space between plot and GUI
+        m = 0.02
+        self.fig.subplots_adjust(left=m, right=1-m, top=1-m, bottom=m)
 
     def setupDoubleAxesPlotLayout(self):
         """
@@ -229,52 +229,17 @@ class PlotWidget(QWidget):
     """
     Creates a wrapper around the canvas to add the matplotlib toolbar.
     The toolbar is hidden by default, and is only used for the save dialog.
+
+    Some windows (like MainWindow and TraceWindow) dynamically create
+    the layoutbox, so as to add customized listviews. In these cases the canvas
+    needs to be added manually
     """
-
-    def __init__(self, **kwargs):
+    def __init__(self, use_layoutbox = False, **kwargs):
         QWidget.__init__(self)
-        self.setLayout(QVBoxLayout())
         self.canvas = MatplotlibCanvas(parent=self, **kwargs)
-
-        # Visible set to False. Only using this to use the save file dialog
-        # from MPL
         self.toolbar = NavigationToolbar(self.canvas, self, coordinates=True)
         self.toolbar.setVisible(False)
 
-        self.layout().addWidget(self.toolbar)
-        self.layout().addWidget(self.canvas)
-
-
-class PolygonSelection:
-    """
-    Creates a selection tool for plotted points
-    """
-
-    def __init__(self, ax, collection, z, parent):
-        self.parent = parent
-        self.canvas = ax.figure.canvas
-        self.collection = collection
-        self.xy = collection.get_offsets()
-        self.z = z
-        self.idx = []
-
-        self.poly = PolygonSelector(
-            ax=ax,
-            onselect=self.onselect,
-            lineprops=dict(color="lightblue", linestyle="--"),
-            markerprops=dict(alpha=0, markersize=4),
-            useblit=True,
-        )
-
-    def onselect(self, vertices):
-        path = Path(vertices)
-        self.idx = np.nonzero(path.contains_points(self.xy))[0]
-
-        x = self.xy[self.idx][:, 0]
-        y = self.xy[self.idx][:, 1]
-        z = self.z[self.idx]
-
-        self.parent.selected_data = pd.DataFrame(dict(x=x, y=y, z=z))
-
-        self.poly.disconnect_events()
-        self.parent.refreshPlot()
+        if not use_layoutbox:
+            self.setLayout(QVBoxLayout())
+            self.layout().addWidget(self.canvas)

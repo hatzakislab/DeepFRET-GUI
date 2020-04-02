@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'ui/_MenuBar.ui'
+# Form implementation generated from reading ui file 'ui/MenuBar.ui'
 #
 # Created by: PyQt5 UI code generator 5.14.1
 #
@@ -211,6 +211,8 @@ class Ui_MenuBar(object):
         self.actionClear_All_Predictions = QtWidgets.QAction(MenuBar)
         self.actionClear_All_Predictions.setEnabled(False)
         self.actionClear_All_Predictions.setObjectName("actionClear_All_Predictions")
+        self.actionTraceSimulatorWindow = QtWidgets.QAction(MenuBar)
+        self.actionTraceSimulatorWindow.setObjectName("actionTraceSimulatorWindow")
         self.menuExport.addAction(self.actionExport_Correction_Factors)
         self.menuExport.addAction(self.actionExport_Colocalization)
         self.menuExport.addAction(self.actionExport_Selected_Traces)
@@ -258,6 +260,7 @@ class Ui_MenuBar(object):
         self.menuWindow.addAction(self.actionTraceWindow)
         self.menuWindow.addAction(self.actionHistogramWindow)
         self.menuWindow.addAction(self.actionTransitionDensityWindow)
+        self.menuWindow.addAction(self.actionTraceSimulatorWindow)
         self.menuHelp.addAction(self.actionGet_Help_Online)
         self.menuHelp.addSeparator()
         self.menuHelp.addAction(self.actionPreferences)
@@ -377,6 +380,8 @@ class Ui_MenuBar(object):
         self.actionPredict_All_traces.setShortcut(_translate("MenuBar", "Ctrl+Alt+P"))
         self.actionClear_All_Predictions.setText(_translate("MenuBar", "Clear All Predictions"))
         self.actionClear_All_Predictions.setShortcut(_translate("MenuBar", "Meta+Ctrl+P"))
+        self.actionTraceSimulatorWindow.setText(_translate("MenuBar", "Trace Simulator"))
+        self.actionTraceSimulatorWindow.setShortcut(_translate("MenuBar", "Ctrl+5"))
 
 
 if __name__ == "__main__":

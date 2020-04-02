@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'ui/_CorrectionFactorInspector.ui'
+# Form implementation generated from reading ui file 'ui/CorrectionFactorInspector.ui'
 #
 # Created by: PyQt5 UI code generator 5.14.1
 #

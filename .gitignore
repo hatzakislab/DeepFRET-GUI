@@ -130,3 +130,5 @@ static
 /playground
 temp.txt
 test.py
+
+.DS_Store

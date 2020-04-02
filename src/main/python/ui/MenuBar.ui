@@ -168,6 +168,7 @@
     <addaction name="actionTraceWindow"/>
     <addaction name="actionHistogramWindow"/>
     <addaction name="actionTransitionDensityWindow"/>
+    <addaction name="actionTraceSimulatorWindow"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -654,6 +655,14 @@
    </property>
    <property name="shortcut">
     <string>Meta+Ctrl+P</string>
+   </property>
+  </action>
+  <action name="actionTraceSimulatorWindow">
+   <property name="text">
+    <string>Trace Simulator</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+5</string>
    </property>
   </action>
  </widget>

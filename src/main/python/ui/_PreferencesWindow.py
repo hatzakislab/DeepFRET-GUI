@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'ui/_PreferencesWindow.ui'
+# Form implementation generated from reading ui file 'ui/PreferencesWindow.ui'
 #
 # Created by: PyQt5 UI code generator 5.14.1
 #
@@ -87,15 +87,15 @@ class Ui_Preferences(object):
         self.gridLayout.setSizeConstraint(QtWidgets.QLayout.SetDefaultConstraint)
         self.gridLayout.setContentsMargins(-1, 12, -1, -1)
         self.gridLayout.setObjectName("gridLayout")
-        self.radioButton_2_col_inv = QtWidgets.QRadioButton(self.imagingGroup)
-        self.radioButton_2_col_inv.setObjectName("radioButton_2_col_inv")
-        self.gridLayout.addWidget(self.radioButton_2_col_inv, 2, 0, 1, 1)
-        self.radioButton_2_col = QtWidgets.QRadioButton(self.imagingGroup)
-        self.radioButton_2_col.setObjectName("radioButton_2_col")
-        self.gridLayout.addWidget(self.radioButton_2_col, 1, 0, 1, 1)
         self.radioButton_dual = QtWidgets.QRadioButton(self.imagingGroup)
         self.radioButton_dual.setObjectName("radioButton_dual")
         self.gridLayout.addWidget(self.radioButton_dual, 0, 0, 1, 1)
+        self.radioButton_2_col = QtWidgets.QRadioButton(self.imagingGroup)
+        self.radioButton_2_col.setObjectName("radioButton_2_col")
+        self.gridLayout.addWidget(self.radioButton_2_col, 1, 0, 1, 1)
+        self.radioButton_2_col_inv = QtWidgets.QRadioButton(self.imagingGroup)
+        self.radioButton_2_col_inv.setObjectName("radioButton_2_col_inv")
+        self.gridLayout.addWidget(self.radioButton_2_col_inv, 2, 0, 1, 1)
         self.verticalLayout.addWidget(self.imagingGroup)
         self.groupBox = QtWidgets.QGroupBox(Preferences)
         self.groupBox.setFlat(True)
@@ -149,9 +149,9 @@ class Ui_Preferences(object):
         self.checkBox_fitSpots.setText(_translate("Preferences", "Detect spots using Laplacian of Gaussian fitting"))
         self.checkBox_illuCorrect.setText(_translate("Preferences", "Correct for illumination background"))
         self.imagingGroup.setTitle(_translate("Preferences", "Imaging Setup (restart required!)"))
-        self.radioButton_2_col_inv.setText(_translate("Preferences", "Quad View (inverted 2-channel)"))
-        self.radioButton_2_col.setText(_translate("Preferences", "Quad Viw (2-channel)"))
         self.radioButton_dual.setText(_translate("Preferences", "Dual Cam (interleaved videos)"))
+        self.radioButton_2_col.setText(_translate("Preferences", "Quad Viw (2-channel)"))
+        self.radioButton_2_col_inv.setText(_translate("Preferences", "Quad View (inverted 2-channel)"))
         self.groupBox.setTitle(_translate("Preferences", "Colocalization Tolerance"))
         self.toleranceComboBox.setItemText(0, _translate("Preferences", "Loose"))
         self.toleranceComboBox.setItemText(1, _translate("Preferences", "Moderate"))

@@ -188,7 +188,7 @@ def plot_shaded_category(y, ax, alpha, colors=None):
     if len(colors) < len(set(y_)):
         raise ValueError("Must have at least a color for each class")
 
-    adjs, lns = lib.math.count_adjacent_values(y_)
+    adjs, lns = lib.misc.count_adjacent_values(y_)
     position = range(len(y_))
     for idx, ln in zip(adjs, lns):
         label = y_[idx]
@@ -198,6 +198,59 @@ def plot_shaded_category(y, ax, alpha, colors=None):
             alpha=alpha,
             facecolor=colors[label],
         )
+
+def plot_simulation_category(y, ax, alpha=0.2, fontsize = 6):
+    """
+    Plots a color for every class segment in a timeseries
+
+    Parameters
+    ----------
+    y_:
+        One-hot coded or categorical labels
+    ax:
+        Ax for plotting
+    colors:
+        Colors to cycle through
+    """
+    cls = {
+        0: "bleached",
+        1: "aggregate",
+        2: "noisy",
+        3: "scramble",
+        4: "1-state",
+        5: "2-state",
+        6: "3-state",
+        7: "4-state",
+        8: "5-state",
+    }
+
+    colors = {0: "darkgrey",
+              1: "red",
+              2: "blue",
+              3: "purple",
+              4: "orange",
+              5: "lightgreen",
+              6: "green",
+              7: "mediumseagreen",
+              8: "darkolivegreen"}
+
+    y_ = y.argmax(axis=1) if len(y.shape) != 1 else y
+    y_ = y_.astype(int)  # type conversion to avoid float type labels
+    if len(colors) < len(set(y_)):
+        raise ValueError("Must have at least a color for each class")
+
+    adjs, lns = lib.misc.count_adjacent_values(y_)
+    position = range(len(y_))
+    for idx, ln in zip(adjs, lns):
+        label = y_[idx]
+        ax.axvspan(
+            xmin=position[idx],
+            xmax=position[idx] + ln,
+            alpha=alpha,
+            facecolor=colors[label],
+        )
+    ax.plot([], label = cls[y_[0]], color = colors[y_[0]])
+    ax.legend(loc = "lower right", prop = {"size":fontsize})
 
 
 def plot_predictions(yi_pred, fig, ax):

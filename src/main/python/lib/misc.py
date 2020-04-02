@@ -1,10 +1,13 @@
+import itertools
 import multiprocessing
+import re
 
 multiprocessing.freeze_support()
 
 import time
 import os
 import pandas as pd
+import numpy as np
 from typing import Union, Tuple
 
 
@@ -135,3 +138,114 @@ def generate_unique_name(full_filename, array):
             return unique_name
     else:
         return name
+
+
+def labels_to_binary(y, one_hot, to_ones):
+    """Converts group labels to binary labels, given desired targets"""
+    if one_hot:
+        y = y.argmax(axis=2)
+    y[~np.isin(y, to_ones)] = -1
+    y[y != -1] = 1
+    y[y != 1] = 0
+    return y
+
+
+def sim_to_ascii(df, trace_len, outdir):
+    """
+    Saves simulated traces to ASCII .txt files
+    """
+    df.index = np.arange(0, len(df), 1) // trace_len
+
+    y = []
+    exp_txt = "Simulated trace"
+    for idx, trace in df.groupby(df.index):
+        l = trace["label"].values
+        l = l[l != 0]
+        l = 0 if l.size == 0 else l[0]
+        y.append(int(l))
+
+        bg = np.zeros(len(trace))
+        path = os.path.join(
+            outdir, "trace_{}_{}.txt".format(idx, time.strftime("%Y%m%d_%H%M"))
+        )
+
+        df = pd.DataFrame(
+            {
+                "D-Dexc-bg": bg,
+                "A-Dexc-bg": bg,
+                "A-Aexc-bg": bg,
+                "D-Dexc-rw": trace["DD"],
+                "A-Dexc-rw": trace["DA"],
+                "A-Aexc-rw": trace["AA"],
+                "S": trace["S"],
+                "E": trace["E"],
+            }
+        ).round(4)
+
+        date_txt = "Date: {}".format(time.strftime("%Y-%m-%d, %H:%M"))
+        mov_txt = "Movie filename: {}".format(None)
+        id_txt = "FRET pair #{}".format(idx)
+        bl_txt = "Bleaches at {}".format(trace["fb"].values[0])
+
+        with open(path, "w") as f:
+            f.write(
+                "{0}\n"
+                "{1}\n"
+                "{2}\n"
+                "{3}\n"
+                "{4}\n\n"
+                "{5}".format(
+                    exp_txt,
+                    date_txt,
+                    mov_txt,
+                    id_txt,
+                    bl_txt,
+                    df.to_csv(index=False, sep="\t"),
+                )
+            )
+    y = pd.Series(y)
+    y = labels_to_binary(y, one_hot=False, to_ones=(2, 3))
+    y.to_csv(os.path.join(outdir, "y.txt"), sep="\t")
+
+
+def numstring_to_ls(s):
+    """Transforms any string of numbers into a list of floats, regardless of separators"""
+    num_s = re.findall(r'\d+(\.\d+)?\s*', s)
+    return [float(s) for s in num_s]
+
+def random_seed_mp(verbose=False):
+    """Initializes a pseudo-random seed for multiprocessing use"""
+    seed_val = int.from_bytes(os.urandom(4), byteorder="little")
+    np.random.seed(seed_val)
+    if verbose:
+        print("Random seed value: {}".format(seed_val))
+
+
+def count_adjacent_values(arr):
+    """
+    Returns start index and length of segments of equal values.
+
+    Example for plotting several axvspans:
+    --------------------------------------
+    adjs, lns = lib.count_adjacent_true(score)
+    t = np.arange(1, len(score) + 1)
+
+    for ax in axes:
+        for starts, ln in zip(adjs, lns):
+            alpha = (1 - np.mean(score[starts:starts + ln])) * 0.15
+            ax.axvspan(xmin = t[starts], xmax = t[starts] + (ln - 1),
+            alpha = alpha, color = "red", zorder = -1)
+    """
+    arr = arr.ravel()
+
+    n = 0
+    same = [(g, len(list(l))) for g, l in itertools.groupby(arr)]
+    starts = []
+    lengths = []
+    for v, l in same:
+        _len = len(arr[n : n + l])
+        _idx = n
+        n += l
+        lengths.append(_len)
+        starts.append(_idx)
+    return starts, lengths

@@ -3817,7 +3817,7 @@ class SimulatorWindow(BaseWindow):
         print("generate")
 
         if n_traces > 50:
-            update_every_nth = len(n_traces) // 20
+            update_every_nth = n_traces // 20
             progressbar = ProgressBar(
                 parent=self, loop_len=n_traces / update_every_nth
             )
@@ -3946,7 +3946,7 @@ class SimulatorWindow(BaseWindow):
         )
 
         if outdir is not None:
-            update_every_nth = len(self.n_traces) // 20
+            update_every_nth = self.n_traces // 20
             progressbar = ProgressBar(
                 parent=self, loop_len=self.n_traces / update_every_nth
             )

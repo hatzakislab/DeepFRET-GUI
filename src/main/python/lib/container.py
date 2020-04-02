@@ -139,7 +139,7 @@ class TraceContainer:
             name if name is not None else os.path.basename(filename)
         )  # type: str
         self.movie = movie  # type: str
-        self.n = n  # type: str
+        self.n = n  # type: Union[None, int]
 
         self.tracename = None  # type: Union[None, str]
         self.savename = None  # type: Union[None, str]
@@ -234,6 +234,30 @@ class TraceContainer:
             )
             self.movie = movie.split(": ")[-1]
 
+        except (ValueError, AttributeError):
+            pass
+
+        # bleach finder
+        try:
+            da_bleach_line = lib.misc.seek_line(
+                path=self.filename, line_starts="Donor bleaches"
+            )
+            bleach_line = lib.misc.seek_line(
+                path=self.filename, line_starts="Bleaches at"
+            )
+
+            if da_bleach_line is not None:
+                bleach_d = da_bleach_line.split('-')[0]
+                self.grn.bleach = int("".join(_ for _ in bleach_d if _ in "1234567890"))
+                bleach_a = da_bleach_line.split('-')[0]
+                self.red.bleach = int("".join(_ for _ in bleach_a if _ in "1234567890"))
+            elif bleach_line is not None:
+                bleach = "".join(_ for _ in bleach_line if _ in "1234567890")
+                self.grn.bleach = int(bleach)
+                self.red.bleach = int(bleach)
+                self.acc.bleach = int(bleach)
+            else:
+                raise ValueError
         except (ValueError, AttributeError):
             pass
 

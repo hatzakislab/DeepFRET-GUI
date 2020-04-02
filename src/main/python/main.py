@@ -1,7 +1,5 @@
 import multiprocessing
 
-from ui._AboutWindow import Ui_About
-
 multiprocessing.freeze_support()
 
 import os
@@ -37,6 +35,7 @@ import scipy.special
 import sklearn.preprocessing
 from tensorflow_core.python.keras.models import load_model
 
+from ui._AboutWindow import Ui_About
 from ui._MenuBar import Ui_MenuBar
 from ui._MainWindow import Ui_MainWindow
 from ui._TraceWindow import Ui_TraceWindow
@@ -79,7 +78,6 @@ class AboutWindow(QDialog):
         self.setWindowTitle("")
 
         self.ui.label_APPNAME.setText(gvars.APPNAME)
-        self.ui.label_APPVER.setText("version {}".format(gvars.APPVERSION))
         self.ui.label_AUTHORS.setText(gvars.AUTHORS)
         self.ui.label_LICENSE.setText(gvars.LICENSE)
 
@@ -258,11 +256,14 @@ class BaseWindow(QMainWindow):
         self.setupMenuBarActions()
         self.enablePerWindow()
 
-        self.AboutWindow_ = AboutWindow()
         self.PreferencesWindow_ = PreferencesWindow()
-
         self.getConfig = self.PreferencesWindow_.getConfig
         self.setConfig = self.PreferencesWindow_.setConfig
+
+        self.AboutWindow_ = AboutWindow()
+        self.AboutWindow_.ui.label_APPVER.setText(
+            "version: {}".format(self.getConfig("appVersion"))
+        )
 
     def setupMenuBarActions(self):
         """

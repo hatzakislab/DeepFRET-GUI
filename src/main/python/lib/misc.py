@@ -8,10 +8,12 @@ import time
 import os
 import pandas as pd
 import numpy as np
-from typing import Union, Tuple
+from typing import Union, Tuple, List
+
 
 def git_app_version():
     return str(os.popen("git rev-list --count HEAD ").read())
+
 
 def pairwise(array):
     """Unpacks elements of an array (1,2,3,4...) into pairs,
@@ -85,9 +87,7 @@ def m_append(objects: tuple, to: tuple, method="append"):
         raise ValueError("Method must be 'append' or 'extend'")
 
 
-def seek_line(
-    line_starts: Union[str, Tuple[str, str]], path: str, timeout: int = 10
-):
+def seek_line(line_starts: Union[str, Tuple[str, str]], path: str, timeout: int = 10):
     """Seeks the file until specified line start is encountered in the start of
      the line."""
     with open(path, encoding="utf-8") as f:
@@ -212,8 +212,9 @@ def sim_to_ascii(df, trace_len, outdir):
 
 def numstring_to_ls(s):
     """Transforms any string of numbers into a list of floats, regardless of separators"""
-    num_s = re.findall(r'\d+(\.\d+)?\s*', s)
+    num_s = re.findall(r"\d+(\.\d+)?\s*", s)
     return [float(s) for s in num_s]
+
 
 def random_seed_mp(verbose=False):
     """Initializes a pseudo-random seed for multiprocessing use"""
@@ -251,3 +252,16 @@ def count_adjacent_values(arr):
         lengths.append(_len)
         starts.append(_idx)
     return starts, lengths
+
+
+def nice_string_output(
+    names: List[str], values: List[str], extra_spacing: int = 0,
+):
+    max_values = len(max(values, key=len))
+    max_names = len(max(names, key=len))
+    string = ""
+    for name, value in zip(names, values):
+        string += "{0:s} {1:>{spacing}} \n".format(
+            name, value, spacing=extra_spacing + max_values + max_names - len(name),
+        )
+    return string[:-2]

@@ -124,9 +124,7 @@ class PreferencesWindow(QDialog):
         Python doesn't know that, so need to check all of them to find the one
         that is checked
         """
-        for imgMode, radioButton in zip(
-            self.imgModes, self.imgModeRadioButtons
-        ):
+        for imgMode, radioButton in zip(self.imgModes, self.imgModeRadioButtons):
             if radioButton.isChecked():
                 self.setConfig(key=gvars.key_imgMode, value=imgMode)
 
@@ -139,9 +137,7 @@ class PreferencesWindow(QDialog):
             gvars.keys_globalCheckBoxes, self.globalCheckBoxes
         ):
             checkBox.clicked.connect(
-                lambda: self.setConfig(
-                    key=configKey, value=checkBox.isChecked()
-                )
+                lambda: self.setConfig(key=configKey, value=checkBox.isChecked())
             )
 
         # Imaging type radio buttons
@@ -161,8 +157,7 @@ class PreferencesWindow(QDialog):
         # Number of pairs to autodetect
         self.ui.spinBox_autoDetect.valueChanged.connect(
             lambda: self.setConfig(
-                key=gvars.key_autoDetectPairs,
-                value=self.ui.spinBox_autoDetect.value(),
+                key=gvars.key_autoDetectPairs, value=self.ui.spinBox_autoDetect.value(),
             )
         )
 
@@ -213,18 +208,14 @@ class PreferencesWindow(QDialog):
         ):
             checkBox.setChecked(bool(self.getConfig(configKey)))
 
-        for radioButton, imgMode in zip(
-            self.imgModeRadioButtons, self.imgModes
-        ):
+        for radioButton, imgMode in zip(self.imgModeRadioButtons, self.imgModes):
             if self.getConfig(gvars.key_imgMode) == imgMode:
                 radioButton.setChecked(True)
 
         self.ui.toleranceComboBox.setCurrentText(
             self.getConfig(gvars.key_colocTolerance)
         )
-        self.ui.spinBox_autoDetect.setValue(
-            self.getConfig(gvars.key_autoDetectPairs)
-        )
+        self.ui.spinBox_autoDetect.setValue(self.getConfig(gvars.key_autoDetectPairs))
 
     def showEvent(self, QShowEvent):
         """
@@ -295,9 +286,7 @@ class BaseWindow(QMainWindow):
             partial(self.exportTraces, False)
         )
         # Exports colocalized spots
-        self.ui.actionExport_Colocalization.triggered.connect(
-            self.exportColocalization
-        )
+        self.ui.actionExport_Colocalization.triggered.connect(self.exportColocalization)
         self.ui.actionExport_Correction_Factors.triggered.connect(
             self.exportCorrectionFactors
         )
@@ -311,9 +300,7 @@ class BaseWindow(QMainWindow):
         # Edit
         # Delete from listView
         self.ui.actionRemove_File.triggered.connect(self.deleteSingleListObject)
-        self.ui.actionRemove_All_Files.triggered.connect(
-            self.deleteAllListObjects
-        )
+        self.ui.actionRemove_All_Files.triggered.connect(self.deleteAllListObjects)
         self.ui.actionSelect_All.triggered.connect(self.checkAll)
         self.ui.actionDeselect_All.triggered.connect(self.unCheckAll)
 
@@ -321,9 +308,7 @@ class BaseWindow(QMainWindow):
         self.ui.actionFormat_Plot.triggered.connect(self.formatPlotInspector)
         # ---
         self.ui.actionAdvanced_Sort.triggered.connect(self.configInspector)
-        self.ui.actionSort_by_Ascending.triggered.connect(
-            self.sortListAscending
-        )
+        self.ui.actionSort_by_Ascending.triggered.connect(self.sortListAscending)
         self.ui.actionSort_by_Red_Bleach.triggered.connect(
             partial(self.sortListByCondition, "red")
         )
@@ -337,9 +322,7 @@ class BaseWindow(QMainWindow):
         # Analyze
 
         # Colocalize all spots with current settings
-        self.ui.actionColocalize_All.triggered.connect(
-            self.colocalizeSpotsAllMovies
-        )
+        self.ui.actionColocalize_All.triggered.connect(self.colocalizeSpotsAllMovies)
         self.ui.actionClear_Traces.triggered.connect(self.clearTraces)
         self.ui.actionFind_Show_Traces.triggered.connect(self.findTracesAndShow)
 
@@ -348,9 +331,7 @@ class BaseWindow(QMainWindow):
         self.ui.actionColor_Yellow.triggered.connect(self.colorListObjectYellow)
         self.ui.actionColor_Green.triggered.connect(self.colorListObjectGreen)
         self.ui.actionClear_Color.triggered.connect(self.resetListObjectColor)
-        self.ui.actionClear_All_Colors.triggered.connect(
-            self.resetListObjectColorAll
-        )
+        self.ui.actionClear_All_Colors.triggered.connect(self.resetListObjectColorAll)
         # ---
         self.ui.actionCorrectionFactorsWindow.triggered.connect(
             self.correctionFactorInspector
@@ -596,9 +577,7 @@ class BaseWindow(QMainWindow):
         # singleselect here)
         self.listViewSelectionModel = self.listView.selectionModel()
         # to connect it to the selection
-        self.listViewSelectionModel.currentChanged.connect(
-            self.getCurrentListObject
-        )
+        self.listViewSelectionModel.currentChanged.connect(self.getCurrentListObject)
         # Don't connect listview twice!
         self.listView.clicked.connect(self.getCurrentListObject)
 
@@ -771,15 +750,11 @@ class BaseWindow(QMainWindow):
         if TransitionDensityWindow_.isVisible():
             TransitionDensityWindow_.refreshPlot()
 
-    def setupFigureCanvas(
-        self, ax_setup, ax_window, use_layoutbox=True, **kwargs
-    ):
+    def setupFigureCanvas(self, ax_setup, ax_window, use_layoutbox=True, **kwargs):
         """
         Creates a canvas with a given ax layout.
         """
-        self.plotWidget = PlotWidget(
-            ax_setup=ax_setup, ax_window=ax_window, **kwargs
-        )
+        self.plotWidget = PlotWidget(ax_setup=ax_setup, ax_window=ax_window, **kwargs)
         self.canvas = self.plotWidget.canvas
 
         if use_layoutbox:
@@ -892,9 +867,7 @@ class BaseWindow(QMainWindow):
         """
         exp_txt, date_txt = self.returnInfoHeader()
 
-        directory = (
-            self.getConfig(gvars.key_lastOpenedDir) + "/Colocalization.txt"
-        )
+        directory = self.getConfig(gvars.key_lastOpenedDir) + "/Colocalization.txt"
         path, _ = QFileDialog.getSaveFileName(
             self, directory=directory
         )  # type: str, str
@@ -940,16 +913,12 @@ class BaseWindow(QMainWindow):
         """
         if checked_only:
             traces = [
-                trace
-                for trace in MainWindow_.data.traces.values()
-                if trace.is_checked
+                trace for trace in MainWindow_.data.traces.values() if trace.is_checked
             ]
         else:
             traces = [trace for trace in MainWindow_.data.traces.values()]
 
-        diag = ExportDialog(
-            init_dir=gvars.key_lastOpenedDir, accept_label="Export"
-        )
+        diag = ExportDialog(init_dir=gvars.key_lastOpenedDir, accept_label="Export")
 
         if diag.exec():
             path = diag.selectedFiles()[0]
@@ -965,9 +934,7 @@ class BaseWindow(QMainWindow):
 
         exp_txt, date_txt = self.returnInfoHeader()
 
-        directory = (
-            self.getConfig(gvars.key_lastOpenedDir) + "/CorrectionFactors.txt"
-        )
+        directory = self.getConfig(gvars.key_lastOpenedDir) + "/CorrectionFactors.txt"
         path, _ = QFileDialog.getSaveFileName(
             self, directory=directory
         )  # type: str, str
@@ -995,9 +962,7 @@ class BaseWindow(QMainWindow):
         """
         exp_txt, date_txt = self.returnInfoHeader()
 
-        directory = (
-            self.getConfig(gvars.key_lastOpenedDir) + "/E_S_Histogram.txt"
-        )
+        directory = self.getConfig(gvars.key_lastOpenedDir) + "/E_S_Histogram.txt"
         path, _ = QFileDialog.getSaveFileName(
             self, directory=directory
         )  # type: str, str
@@ -1037,8 +1002,7 @@ class BaseWindow(QMainWindow):
         exp_txt, date_txt = self.returnInfoHeader()
 
         directory = (
-            self.getConfig(gvars.key_lastOpenedDir)
-            + "/Transition_Densities.txt"
+            self.getConfig(gvars.key_lastOpenedDir) + "/Transition_Densities.txt"
         )
         path, _ = QFileDialog.getSaveFileName(
             self, directory=directory
@@ -1217,9 +1181,7 @@ class MainWindow(BaseWindow):
         self.ui.contrastBoxHiGreen.setValue(
             self.getConfig(gvars.key_contrastBoxHiGrnVal)
         )
-        self.ui.contrastBoxHiRed.setValue(
-            self.getConfig(gvars.key_contrastBoxHiRedVal)
-        )
+        self.ui.contrastBoxHiRed.setValue(self.getConfig(gvars.key_contrastBoxHiRedVal))
 
         # Initialize DataHolder class
         self.data = MovieData()
@@ -1285,8 +1247,7 @@ class MainWindow(BaseWindow):
 
                     # Make sure name is unique
                     uniqueName = lib.misc.generate_unique_name(
-                        full_filename=full_filename,
-                        array=self.data.movies.keys(),
+                        full_filename=full_filename, array=self.data.movies.keys(),
                     )
 
                     self.data.load_img(
@@ -1326,9 +1287,7 @@ class MainWindow(BaseWindow):
         movie from memory afterwards"""
         # TraceWindow_.traces.clear()
         if self.getConfig(gvars.key_lastOpenedDir) == "None":
-            directory = os.path.join(
-                os.path.join(os.path.expanduser("~")), "Desktop"
-            )
+            directory = os.path.join(os.path.join(os.path.expanduser("~")), "Desktop")
         else:
             directory = self.getConfig(gvars.key_lastOpenedDir)
 
@@ -1341,9 +1300,7 @@ class MainWindow(BaseWindow):
 
         if len(filenames) > 0:
             ctxt.app.processEvents()
-            progressbar = ProgressBar(
-                loop_len=len(filenames), parent=MainWindow_
-            )
+            progressbar = ProgressBar(loop_len=len(filenames), parent=MainWindow_)
             for i, full_filename in enumerate(filenames):
                 if progressbar.wasCanceled():
                     break
@@ -1364,18 +1321,14 @@ class MainWindow(BaseWindow):
                 channels = ("green", "red")
                 for c in channels:
                     if self.currentMovie().acc.exists:
-                        self.colocalizeSpotsSingleMovie(
-                            channel=c, find_npairs="auto"
-                        )
+                        self.colocalizeSpotsSingleMovie(channel=c, find_npairs="auto")
                     else:
                         self.colocalizeSpotsSingleMovie(
                             channel=c, find_npairs="spinbox"
                         )
                 self.getTracesSingleMovie()
                 self.currentMovie().img = None
-                for c in self.currentMovie().channels + (
-                    self.currentMovie().acc,
-                ):
+                for c in self.currentMovie().channels + (self.currentMovie().acc,):
                     c.raw = None
 
                 self.listModel.appendRow(QStandardItem(self.currName))
@@ -1460,9 +1413,7 @@ class MainWindow(BaseWindow):
         else:
             if find_npairs > 0:
                 channel.spots = lib.imgdata.find_spots(
-                    channel.mean_nobg,
-                    value=find_npairs,
-                    method="peak_local_max",
+                    channel.mean_nobg, value=find_npairs, method="peak_local_max",
                 )
                 channel.n_spots = len(channel.spots)
 
@@ -1538,10 +1489,7 @@ class MainWindow(BaseWindow):
                     masks_grn = lib.imgdata.circle_mask(
                         yx=yx_grn, indices=mov.indices, **gvars.cmask_p
                     )
-                    (
-                        trace.grn.int,
-                        trace.grn.bg,
-                    ) = lib.imgdata.tiff_stack_intensity(
+                    (trace.grn.int, trace.grn.bg,) = lib.imgdata.tiff_stack_intensity(
                         mov.grn.raw, *masks_grn, raw=True
                     )
 
@@ -1555,10 +1503,7 @@ class MainWindow(BaseWindow):
 
                 # Acceptor (if FRET)
                 if mov.acc.exists:
-                    (
-                        trace.acc.int,
-                        trace.acc.bg,
-                    ) = lib.imgdata.tiff_stack_intensity(
+                    (trace.acc.int, trace.acc.bg,) = lib.imgdata.tiff_stack_intensity(
                         mov.acc.raw, *masks_red, raw=True
                     )
                     trace.fret = lib.math.calc_E(trace.get_intensities())
@@ -1650,9 +1595,7 @@ class MainWindow(BaseWindow):
             ):  # type: ImageChannel, QDoubleSpinBox, QDoubleSpinBox
                 clip_lo = float(lo.value() / sensitivity)
                 clip_hi = float(hi.value() / sensitivity)
-                c.rgba = lib.imgdata.rescale_intensity(
-                    c.mean, range=(clip_lo, clip_hi)
-                )
+                c.rgba = lib.imgdata.rescale_intensity(c.mean, range=(clip_lo, clip_hi))
 
             # Save contrast settings
             for hi, cfg in zip(contrast_hi, keys):
@@ -1822,6 +1765,10 @@ class TraceWindow(BaseWindow):
         self.currChk = None
         self.loadCount = 0
 
+        # Initialize HMM type
+        self.hmm_config = "E"  # or "DA" # TODO: integrate in UI
+        self.hmmModel = None
+
         # Initialize interface
         # Instantiate but do not show
         self.ui = Ui_TraceWindow()
@@ -1871,9 +1818,7 @@ class TraceWindow(BaseWindow):
         Loads ASCII files directly into the TraceWindow.
         """
         if self.getConfig(gvars.key_lastOpenedDir) == "None":
-            directory = os.path.join(
-                os.path.join(os.path.expanduser("~")), "Desktop"
-            )
+            directory = os.path.join(os.path.join(os.path.expanduser("~")), "Desktop")
         else:
             directory = self.getConfig(gvars.key_lastOpenedDir)
 
@@ -1948,9 +1893,7 @@ class TraceWindow(BaseWindow):
         Fits all selected traces with a Hidden Markov Model (HMM)
         """
         ctxt.app.processEvents()
-        traces = [
-            trace for trace in self.data.traces.values() if trace.is_checked
-        ]
+        traces = [trace for trace in self.data.traces.values() if trace.is_checked]
 
         DD, DA, AA, E, lengths = [], [], [], [], []
         for trace in traces:
@@ -1964,210 +1907,77 @@ class TraceWindow(BaseWindow):
         DD = np.concatenate(DD)
         DA = np.concatenate(DA)
         AA = np.concatenate(AA)
+        E = np.array(E)
         E_trace = np.concatenate(E).reshape(-1, 1)
-
-        if lib.math.contains_nan(AA):
-            X = np.column_stack((DD, DA, E_trace))
-        else:
-            X = np.column_stack((DD, DA, AA, E_trace))
-
-        if HistogramWindow_.E is not None:
-            E_dist = HistogramWindow_.E
-        else:
-            E_dist = HistogramWindow_.E_un
+        if self.hmm_config == "DA":
+            if lib.math.contains_nan(AA):
+                X = np.column_stack((DD, DA, E_trace))
+            else:
+                X = np.column_stack((DD, DA, AA, E_trace))
+            raise NotImplementedError
+        else:  # Use E_FRET
+            X = E.copy()
 
         best_mixture_model, params = lib.math.fit_gaussian_mixture(
-            E_dist, min_n_components=3, max_n_components=3
+            E_trace, min_n_components=1, max_n_components=6, strict_bic=False,
         )
+        n_components = best_mixture_model.n_components
+        self.hmmModel = lib.math.get_hmm_model(X, n_components=n_components)
 
-        states, transmat, state_means, state_sigs = lib.math.fit_hmm(
-            X=X,
-            fret=E_trace,
-            lengths=lengths,
-            n_components=best_mixture_model.n_components,
-            covar_type=best_mixture_model.covariance_type,
-        )
+        log_transmat = self.hmmModel.dense_transition_matrix()
+        n_states = self.hmmModel.node_count() - 2  # minus virtual start and end state
+        transmat = log_transmat[:n_states, :n_states]
 
-        print("States: ", np.unique(states))
-        print("Transition matrix:\n", np.round(transmat, 2))
-        print("State means:\n", state_means)
-        print("State sigmas:\n", state_sigs)
-
-        pos = 0
-        for l, trace in zip(lengths, traces):
-            si = states[pos : pos + l]
-            pos += l
-
-            idealized, time, transitions = lib.math.find_transitions(
-                states=si, fret=trace.fret
-            )
-            trace.hmm = idealized
-            trace.hmm_idx = time
-            trace.transitions = transitions
-
-        transitions = pd.concat([trace.transitions for trace in traces])
-
-        # TODO: whole section copy-pasted from Fretti
-        def _func_double_exp(
-            _x: np.ndarray, _lambda_1: float, _lambda_2: float, _k: float
-        ):
-            if _k > 1.0:
-                raise ValueError(f"_k of value {_k:.2f} is larger than 1!")
-            if _k < 0:
-                raise ValueError(f"_k of value {_k:.2f} is smaller than 1!")
-            _exp1 = _lambda_1 * np.exp(-1 * _lambda_1 * _x)
-            _exp2 = _lambda_2 * np.exp(-1 * _lambda_2 * _x)
-
-            return _k * _exp1 + (1 - _k) * _exp2
-
-        def _func_exp(
-            _x: np.ndarray, _lambda,
-        ):
-            return _lambda * np.exp(-_lambda * _x)
-
-        def loglik_single(x: np.ndarray, _lambda):
-            """
-            Returns Negative Loglikelihood for a single exponential with given param and given observations
-            """
-            return -1 * np.sum(np.log(_func_exp(x, _lambda)))
-
-        def loglik_double(
-            x: np.ndarray, _lambda_1: float, _lambda_2: float, _k: float
-        ):
-            """
-            Returns Negative Loglikelihood for a double exponential with given params and given observations
-            """
-            return -1 * np.sum(
-                np.log(_func_double_exp(x, _lambda_1, _lambda_2, _k))
-            )
-
-        def _nice_string_output(
-            names: List[str], values: List[str], extra_spacing: int = 0,
-        ):
-            max_values = len(max(values, key=len))
-            max_names = len(max(names, key=len))
-            string = ""
-            for name, value in zip(names, values):
-                string += "{0:s} {1:>{spacing}} \n".format(
-                    name,
-                    value,
-                    spacing=extra_spacing + max_values + max_names - len(name),
-                )
-            return string[:-2]
-
-        def fit_and_compare_exp_funcs(arr, x0=None, verbose=0, meth="l-bfgs-b"):
-            # def lh_single(l):
-            #     loglik_single(arr, l)
-            if x0 is None:
-                x0 = (1 / arr.mean(), 1 / (arr.mean() + 1), 0.55)
-
-            lh_single = lambda l: loglik_single(arr, l)
-
-            def lh_double(x):
-                return loglik_double(arr, *x)
-
-            res1 = scipy.optimize.minimize(
-                lh_single,
-                x0=np.array(1.0 / arr.mean()),
-                method=meth,
-                options={"disp": False},
-                bounds=[(0.0, None)],
-            )
-            llh_1 = -res1.fun
-            bic_1 = 2 * np.log(len(arr)) * 1 - 2 * llh_1
-
-            if verbose:
-                print("Params for single exp:")
-                print(res1.x)
-                print(f"BIC : {bic_1:.6f}")
-
-            res2 = scipy.optimize.minimize(
-                lh_double,
-                x0=np.array(x0),
-                method=meth,
-                options={"disp": False},
-                bounds=[(0.0, None), (0.0, None), (0.1, 0.9)],
-            )
-
-            llh_2 = -res2.fun
-            bic_2 = np.log(len(arr)) * 3 * 2 - 2 * llh_2
-            if verbose:
-                print("Params for double exp:")
-                print(res2.x)
-                print(f"BIC : {bic_2:.6f}")
-
-            out = {}
-            if bic_1 < bic_2:
-                out["BEST"] = "SINGLE"
-            else:
-                out["BEST"] = "DOUBLE"
-
-            out["SINGLE_LLH"] = llh_1
-            out["SINGLE_BIC"] = bic_1
-            out["SINGLE_PARAM"] = res1.x
-
-            out["DOUBLE_LLH"] = llh_2
-            out["DOUBLE_BIC"] = bic_2
-            out["DOUBLE_PARAM"] = res2.x
-
-            return out
-
-        transition_dict = {}
-        for _, t in transitions.groupby(["state", "state+1"]):
-            s_before = t["state"].values[0]
-            s_after = t["state+1"].values[0]
-
-            if transmat[s_before, s_after] == 0:
-                continue
-            transition_name = "{} -> {}".format(
-                t["state"].values[0], t["state+1"].values[0]
-            )
-            print(transition_name)
-            print("number of datapoints: ", len(t["lifetime"]))
-
+        state_dict = {}
+        for i, state in enumerate(self.hmmModel.states):
             try:
-                max_lifetime = np.max(t["lifetime"])
-
-                data = t["lifetime"]
-
-                lifetime_dict = fit_and_compare_exp_funcs(data)
-                _b = lifetime_dict["BEST"]
-                names = ["LLH", "BIC", "PARAM"]
-                values = []
-                for name in names:
-                    key = _b + "_" + name
-
-                    val = lifetime_dict[key]
-                    try:
-                        val_str = "{:.4f}".format(val)
-                        values.append(val_str)
-                    except TypeError:
-                        for v in val:
-                            v_str = "{:.4f}".format(v)
-                            values.append(v_str)
-
-                if len(values) > len(names):
-                    names.remove("PARAM")
-                    names.extend("PARAM_{}".format(i) for i in range(1, 4))
-
-                print(
-                    "The best fit ({} exp) returned these params: ".format(
-                        lifetime_dict["BEST"]
-                    )
-                )
-                print(_nice_string_output(names, values, 2))
-                if _b == "DOUBLE":
-                    print("This is a degenerate state!")
-                    transition_dict[transition_name] = True
-                else:
-                    transition_dict[transition_name] = False
-                print("\n")
-
-            except RuntimeError:
-                print("Couldn't fit. Skipping")
+                state_dict[
+                    f"{state.name}".replace("s", "")
+                ] = state.distribution.parameters
+            except AttributeError:
                 continue
+        means = np.array([v[0] for v in state_dict.values()])
+        sigs = np.array([v[1] for v in state_dict.values()])
 
-        print(transition_dict)
+        # states, transmat, state_means, state_sigs = lib.math.fit_hmm(
+        #     X=X,
+        #     fret=E_trace,
+        #     lengths=lengths,
+        #     n_components=best_mixture_model.n_components,
+        #     covar_type=best_mixture_model.covariance_type,
+        # )
+
+        print("Transition matrix:\n", np.round(transmat, 2))
+        print("State means:\n", means)
+        print("State sigmas:\n", sigs)
+
+        for trace in traces:  # type: TraceContainer
+            _X = trace.fret[
+                : trace.first_bleach
+            ]  # TODO This needs to change to choose DA vs E
+            tf = pd.DataFrame()
+            tf["e_obs"] = trace.fret[: trace.first_bleach]
+            tf["state"] = np.array(self.hmmModel.predict(_X)).astype(int)
+            tf["e_pred_global"] = (
+                tf["state"]
+                .astype(str)
+                .replace(
+                    {k: v[0] for (k, v) in zip(state_dict.keys(), state_dict.values())},
+                    inplace=False,
+                )
+            )
+            tf["e_pred_local"] = tf.groupby(["state"], as_index=False)[
+                "e_obs"
+            ].transform("mean")
+
+            tf["time"] = tf["e_pred_local"].index + 1
+
+            trace.hmm_state = tf["state"].values
+            trace.hmm_local_fret = tf["e_pred_local"].values
+            trace.hmm_global_fret = tf["e_pred_global"].values
+            trace.hmm_idx = tf["time"].values
+
+            trace.calculate_transitions()
 
         self.refreshPlot()
 
@@ -2178,9 +1988,7 @@ class TraceWindow(BaseWindow):
     def setClassifications(trace, yi_pred):
         """Assign predicted trace classifications to trace"""
         trace.y_pred = yi_pred
-        trace.y_class, trace.confidence = lib.math.seq_probabilities(
-            trace.y_pred
-        )
+        trace.y_class, trace.confidence = lib.math.seq_probabilities(trace.y_pred)
         trace.first_bleach = lib.math.find_bleach(
             p_bleach=trace.y_pred[:, 0], threshold=0.5, window=7
         )
@@ -2202,9 +2010,7 @@ class TraceWindow(BaseWindow):
                 traces.clear()
 
         elif checked_only:
-            traces = [
-                trace for trace in self.data.traces.values() if trace.is_checked
-            ]
+            traces = [trace for trace in self.data.traces.values() if trace.is_checked]
 
         else:
             traces = [trace for trace in self.data.traces.values()]
@@ -2252,17 +2058,10 @@ class TraceWindow(BaseWindow):
                 if len(X.shape) == 2:
                     X = X[np.newaxis, :, :]
 
-                model = (
-                    ctxt.keras_2c_model
-                    if X.shape[-1] == 2
-                    else ctxt.keras_3c_model
-                )
+                model = ctxt.keras_2c_model if X.shape[-1] == 2 else ctxt.keras_3c_model
 
                 Y = lib.math.predict_batch(
-                    X=X,
-                    model=model,
-                    progressbar=progressbar,
-                    batch_size=batch_size,
+                    X=X, model=model, progressbar=progressbar, batch_size=batch_size,
                 )
             else:
                 Y = []
@@ -2428,11 +2227,7 @@ class TraceWindow(BaseWindow):
                         cond5 = trace.y_class >= dynamics
                         conditions += [cond5]
 
-                cond6 = (
-                    False
-                    if bleached_only and trace.first_bleach is None
-                    else True
-                )
+                cond6 = False if bleached_only and trace.first_bleach is None else True
 
                 conditions += [cond6]
 
@@ -2476,9 +2271,7 @@ class TraceWindow(BaseWindow):
         if trace.movie is None:
             name = "Trace_pair{}.txt".format(trace.n)
         else:
-            name = "Trace_{}_pair{}.txt".format(
-                trace.movie.replace(".", "_"), trace.n
-            )
+            name = "Trace_{}_pair{}.txt".format(trace.movie.replace(".", "_"), trace.n)
 
         # Scrub mysterious \n if they appear due to filenames
         name = "".join(name.splitlines(keepends=False))
@@ -2610,9 +2403,7 @@ class TraceWindow(BaseWindow):
 
             for ax in self.canvas.axes:
                 ax.clear()
-                ax.tick_params(
-                    axis="both", colors=gvars.color_gui_text, width=0.5
-                )
+                ax.tick_params(axis="both", colors=gvars.color_gui_text, width=0.5)
                 if len(trace.xdata) == 2:
                     xmin, xmax = sorted(trace.xdata)
                     ax.set_xlim(xmin, xmax)
@@ -2620,12 +2411,7 @@ class TraceWindow(BaseWindow):
                     ax.set_xlim(1, trace.frames_max)
 
             # Canvas setup
-            if self.canvas.ax_setup in (
-                "dual",
-                "2-color",
-                "2-color-inv",
-                "3-color",
-            ):
+            if self.canvas.ax_setup in ("dual", "2-color", "2-color-inv", "3-color",):
                 channels = [trace.grn, trace.acc, trace.red]
                 colors = [gvars.color_green, gvars.color_red, gvars.color_red]
 
@@ -2687,9 +2473,7 @@ class TraceWindow(BaseWindow):
                 except ValueError:
                     ax.set_ylim(0, 1.1)
                 ax.yaxis.label.set_color(gvars.color_gui_text)
-                lib.plotting.set_axis_exp_ylabel(
-                    ax=ax, label=label, values=int_
-                )
+                lib.plotting.set_axis_exp_ylabel(ax=ax, label=label, values=int_)
 
             # Continue drawing FRET specifics
             if self.canvas.ax_setup != "bypass":
@@ -2717,18 +2501,13 @@ class TraceWindow(BaseWindow):
 
                 if trace.hmm is not None:
                     ax_E.plot(
-                        trace.hmm_idx,
-                        trace.hmm,
-                        color=gvars.color_blue,
-                        zorder=3,
+                        trace.hmm_idx, trace.hmm, color=gvars.color_blue, zorder=3,
                     )
 
                 ax_E.set_ylim(-0.1, 1.1)
                 ax_S.set_ylim(0, 1)
                 ax_S.set_yticks([0.5])
-                ax_S.axhline(
-                    0.5, color="black", alpha=0.3, lw=0.5, ls="--", zorder=2
-                )
+                ax_S.axhline(0.5, color="black", alpha=0.3, lw=0.5, ls="--", zorder=2)
 
                 # If clicking on the trace
                 if len(trace.xdata) == 1:
@@ -2757,9 +2536,7 @@ class TraceWindow(BaseWindow):
 
             if hasattr(self.canvas, "ax_ml") and trace.y_pred is not None:
                 lib.plotting.plot_predictions(
-                    yi_pred=trace.y_pred,
-                    fig=self.canvas.fig,
-                    ax=self.canvas.ax_ml,
+                    yi_pred=trace.y_pred, fig=self.canvas.fig, ax=self.canvas.ax_ml,
                 )
 
         else:
@@ -2996,12 +2773,7 @@ class HistogramWindow(BaseWindow):
             joint_dist = np.sum(joint_dist, axis=0)
 
             self.canvas.ax_top.plot(
-                xpts,
-                joint_dist,
-                color=gvars.color_grey,
-                alpha=1,
-                zorder=10,
-                ls="--",
+                xpts, joint_dist, color=gvars.color_grey, alpha=1, zorder=10, ls="--",
             )
         self.canvas.ax_top.set_xlim(-0.1, 1.1)
 
@@ -3038,13 +2810,9 @@ class HistogramWindow(BaseWindow):
 
         n_equals_txt = "N = {}\n".format(self.n_samples)
         if not np.isnan(self.trace_median_len):
-            n_equals_txt += "(median length {:.0f})".format(
-                self.trace_median_len
-            )
+            n_equals_txt += "(median length {:.0f})".format(self.trace_median_len)
 
-        self.canvas.ax_ctr.text(
-            x=0, y=0.9, s=n_equals_txt, color=gvars.color_gui_text
-        )
+        self.canvas.ax_ctr.text(x=0, y=0.9, s=n_equals_txt, color=gvars.color_gui_text)
 
         if self.gauss_params is not None:
             for n, gauss_params in enumerate(self.gauss_params):
@@ -3052,9 +2820,7 @@ class HistogramWindow(BaseWindow):
                 self.canvas.ax_ctr.text(
                     x=0.6,
                     y=0.15 - 0.05 * n,
-                    s=r"$\mu_{}$ = {:.2f} $\pm$ {:.2f} ({:.2f})".format(
-                        n + 1, m, s, w
-                    ),
+                    s=r"$\mu_{}$ = {:.2f} $\pm$ {:.2f} ({:.2f})".format(n + 1, m, s, w),
                     color=gvars.color_gui_text,
                     zorder=10,
                 )
@@ -3150,9 +2916,7 @@ class TransitionDensityWindow(BaseWindow):
         self.ui.setupUi(self)
         self.ui.nClustersSpinBox.valueChanged.connect(self.refreshPlot)
 
-        self.setupFigureCanvas(
-            ax_setup="plot", ax_window="dynamic", width=2, height=2
-        )
+        self.setupFigureCanvas(ax_setup="plot", ax_window="dynamic", width=2, height=2)
         self.setupPlot()
 
     def savePlot(self):
@@ -3226,14 +2990,12 @@ class TransitionDensityWindow(BaseWindow):
         self.n_samples = len(checkedTraces)
 
         try:
-            transitions = pd.concat(
-                [trace.transitions for trace in checkedTraces]
-            )
+            transitions = pd.concat([trace.transitions for trace in checkedTraces])
             transitions.reset_index(inplace=True)
 
             self.state_lifetime = transitions["lifetime"]
-            self.state_before = transitions["state"]
-            self.state_after = transitions["state+1"]
+            self.state_before = transitions["e_before"]
+            self.state_after = transitions["e_after"]
 
         except ValueError:
             self.state_lifetime = None
@@ -3247,21 +3009,21 @@ class TransitionDensityWindow(BaseWindow):
 
             tdp_df = pd.DataFrame(
                 {
-                    "state": self.state_before,
-                    "state+1": self.state_after,
+                    "e_before": self.state_before,
+                    "e_after": self.state_after,
                     "lifetime": self.state_lifetime,
                 }
             )
 
             tdp_df.dropna(inplace=True)
 
-            up_diag = tdp_df[tdp_df["state"] < tdp_df["state+1"]]  # 0
-            lw_diag = tdp_df[tdp_df["state"] > tdp_df["state+1"]]  # 1
+            up_diag = tdp_df[tdp_df["e_before"] < tdp_df["e_after"]]  # 0
+            lw_diag = tdp_df[tdp_df["e_before"] > tdp_df["e_after"]]  # 1
 
             halves = up_diag, lw_diag
             for n, half in enumerate(halves):
                 m = sklearn.cluster.KMeans(n_clusters=n_clusters)
-                m.fit(half[["state", "state+1"]])
+                m.fit(half[["e_before", "e_after"]])
                 half["label"] = m.labels_ + n_clusters * n
 
             diags = pd.concat(halves)
@@ -3292,8 +3054,7 @@ class TransitionDensityWindow(BaseWindow):
             nrows=n_rows, ncols=2, subplot_spec=self.gs[1], wspace=0, hspace=0
         )
         self.hist_axes = [
-            plt.Subplot(self.canvas.fig, hist_subplots[n])
-            for n in range(n_hists)
+            plt.Subplot(self.canvas.fig, hist_subplots[n]) for n in range(n_hists)
         ]
         self.canvas.axes = self.hist_axes + [self.tdp_ax]
 
@@ -3305,10 +3066,7 @@ class TransitionDensityWindow(BaseWindow):
         smax = max(self.state_before)
 
         self.tdp_ax.plot(
-            [-0.15, smax + 0.15],
-            [-0.15, smax + 0.15],
-            color="lightgrey",
-            ls="--",
+            [-0.15, smax + 0.15], [-0.15, smax + 0.15], color="lightgrey", ls="--",
         )
         if self.state_before is not None and len(self.state_before) > 0:
             cont = lib.math.contour_2d(
@@ -3324,20 +3082,16 @@ class TransitionDensityWindow(BaseWindow):
                 x=0,
                 y=smax - 0.1,
                 s="N = {}\n"
-                "{} transitions\n".format(
-                    self.n_samples, len(self.state_lifetime)
-                ),
+                "{} transitions\n".format(self.n_samples, len(self.state_lifetime)),
                 color=gvars.color_gui_text,
             )
 
             tdp_df_grp = self.tdp_df.groupby("label")
-            self.colors = lib.plotting.get_colors(
-                "viridis", tdp_df_grp.ngroups * 2
-            )
+            self.colors = lib.plotting.get_colors("viridis", tdp_df_grp.ngroups * 2)
 
             for i, cluster in tdp_df_grp:
-                xi = self.tdp_df["state"][self.tdp_df["label"] == i]
-                yi = self.tdp_df["state+1"][self.tdp_df["label"] == i]
+                xi = self.tdp_df["e_before"][self.tdp_df["label"] == i]
+                yi = self.tdp_df["e_after"][self.tdp_df["label"] == i]
 
                 self.tdp_ax.scatter(
                     x=xi,
@@ -3392,18 +3146,13 @@ class TransitionDensityWindow(BaseWindow):
                         color="black",
                         label="label: {}\n"
                         "$\lambda$:  ${:.2f} \pm {:.2f}$\n"
-                        "lifetime: ${:.2f}$".format(
-                            k, rate, rate_err, 1 / rate
-                        ),
+                        "lifetime: ${:.2f}$".format(k, rate, rate_err, 1 / rate),
                     )
                 except RuntimeError:  # drop fit if it doesn't converge
                     pass
 
                 histy, *_ = self.hist_axes[k].hist(
-                    cluster["lifetime"],
-                    bins=bins,
-                    color=self.colors[k],
-                    density=False,
+                    cluster["lifetime"], bins=bins, color=self.colors[k], density=False,
                 )
                 self.hist_axes[k].set_xlim(0, max(bins))
                 self.hist_axes[k].set_ylim(0, max(histy) * 1.1)
@@ -3448,12 +3197,8 @@ class TransitionDensityWindow(BaseWindow):
         but this hotfix overrides the bug
         """
         # TODO: fix the real culprit somewhere in TransitionDensityWindow
-        self.setConfig(
-            gvars.key_alphaFactor, CorrectionFactorInspector_.alphaFactor
-        )
-        self.setConfig(
-            gvars.key_deltaFactor, CorrectionFactorInspector_.deltaFactor
-        )
+        self.setConfig(gvars.key_alphaFactor, CorrectionFactorInspector_.alphaFactor)
+        self.setConfig(gvars.key_deltaFactor, CorrectionFactorInspector_.deltaFactor)
 
     def _debug(self):
         self.refreshPlot()
@@ -3504,9 +3249,7 @@ class DensityWindowInspector(SheetInspector):
                 if isinstance(parent, HistogramWindow):
                     slider.valueChanged.connect(HistogramWindow_.refreshPlot)
                 elif isinstance(parent, TransitionDensityWindow):
-                    slider.valueChanged.connect(
-                        TransitionDensityWindow_.refreshPlot
-                    )
+                    slider.valueChanged.connect(TransitionDensityWindow_.refreshPlot)
                 else:
                     raise NotImplementedError
 
@@ -3666,9 +3409,7 @@ class SimulatorWindow(BaseWindow):
         self.ui = Ui_SimulatorWindow()
         self.ui.setupUi(self)
 
-        self.setupFigureCanvas(
-            ax_setup="plot", ax_window="single", use_layoutbox=True
-        )
+        self.setupFigureCanvas(ax_setup="plot", ax_window="single", use_layoutbox=True)
         self.connectUi()
 
     def connectUi(self):
@@ -3709,9 +3450,7 @@ class SimulatorWindow(BaseWindow):
         ):
             inputBox.setDisabled(checkBox.isChecked())
 
-        self.ui.inputMaxRandomStates.setEnabled(
-            self.ui.checkBoxRandomState.isChecked()
-        )
+        self.ui.inputMaxRandomStates.setEnabled(self.ui.checkBoxRandomState.isChecked())
 
     def valuesFromGUI(self):
         """
@@ -3719,9 +3458,7 @@ class SimulatorWindow(BaseWindow):
         """
         # Number of traces to export
         # Number of examples
-        self.n_examples = (
-            int(self.ui.examplesComboBox.currentText().split("x")[0]) ** 2
-        )
+        self.n_examples = int(self.ui.examplesComboBox.currentText().split("x")[0]) ** 2
 
         self.n_traces = int(self.ui.inputNumberOfTraces.value())
 
@@ -3758,18 +3495,14 @@ class SimulatorWindow(BaseWindow):
         if self.ui.checkBoxALifetime.isChecked():
             self.acceptor_lifetime = None
         else:
-            self.acceptor_lifetime = int(
-                self.ui.inputAcceptorMeanLifetime.value()
-            )
+            self.acceptor_lifetime = int(self.ui.inputAcceptorMeanLifetime.value())
 
         # Blinking probability
         self.blinking_prob = float(self.ui.inputBlinkingProbability.value())
 
         # Transition Probability
         if self.ui.checkBoxTransitionProbability.isChecked():
-            self.transition_prob = float(
-                self.ui.inputTransitionProbabilityLo.value()
-            )
+            self.transition_prob = float(self.ui.inputTransitionProbabilityLo.value())
         else:
             self.transition_prob = (
                 float(self.ui.inputTransitionProbabilityLo.value()),
@@ -3818,9 +3551,7 @@ class SimulatorWindow(BaseWindow):
 
         if n_traces > 50:
             update_every_nth = n_traces // 20
-            progressbar = ProgressBar(
-                parent=self, loop_len=n_traces / update_every_nth
-            )
+            progressbar = ProgressBar(parent=self, loop_len=n_traces / update_every_nth)
         else:
             update_every_nth = None
             progressbar = None
@@ -3882,9 +3613,7 @@ class SimulatorWindow(BaseWindow):
                 hspace=0,
                 height_ratios=[3, 3, 3, 3, 1],
             )
-            axes = [
-                plt.Subplot(self.canvas.fig, inner_subplot[n]) for n in range(5)
-            ]
+            axes = [plt.Subplot(self.canvas.fig, inner_subplot[n]) for n in range(5)]
             ax_g_r, ax_red, ax_frt, ax_sto, ax_lbl = axes
             bleach = trace["_bleaches_at"].values[0]
             tmax = trace["frame"].max()
@@ -3941,9 +3670,7 @@ class SimulatorWindow(BaseWindow):
         diag = ExportDialog(init_dir="~/Desktop/", accept_label="Export")
 
         outdir = diag.selectedFiles()[0] if diag.exec() else None
-        df.index = np.arange(0, len(df), 1) // int(
-            self.ui.inputTraceLength.value()
-        )
+        df.index = np.arange(0, len(df), 1) // int(self.ui.inputTraceLength.value())
 
         if outdir is not None:
             update_every_nth = self.n_traces // 20
@@ -3954,8 +3681,7 @@ class SimulatorWindow(BaseWindow):
             for n, (idx, trace) in enumerate(df.groupby(df.index)):
                 bg = np.zeros(len(trace))
                 path = os.path.join(
-                    outdir,
-                    "trace_{}_{}.txt".format(idx, time.strftime("%Y%m%d_%H%M")),
+                    outdir, "trace_{}_{}.txt".format(idx, time.strftime("%Y%m%d_%H%M")),
                 )
 
                 df = pd.DataFrame(
@@ -3974,9 +3700,7 @@ class SimulatorWindow(BaseWindow):
                 date_txt = "Date: {}".format(time.strftime("%Y-%m-%d, %H:%M"))
                 mov_txt = "Movie filename: {}".format(None)
                 id_txt = "FRET pair #{}".format(idx)
-                bl_txt = "Bleaches at {}".format(
-                    trace["_bleaches_at"].values[0]
-                )
+                bl_txt = "Bleaches at {}".format(trace["_bleaches_at"].values[0])
 
                 with open(path, "w") as f:
                     exp_txt = "Simulated trace exported by DeepFRET"
@@ -4018,12 +3742,8 @@ class AppContext(ApplicationContext):
         Loads initial resources from disk to application
         """
         # model_experimental is better but undocumented
-        self.keras_2c_model = load_model(
-            self.get_resource("FRET_2C_experimental.h5")
-        )
-        self.keras_3c_model = load_model(
-            self.get_resource("FRET_3C_experimental.h5")
-        )
+        self.keras_2c_model = load_model(self.get_resource("FRET_2C_experimental.h5"))
+        self.keras_3c_model = load_model(self.get_resource("FRET_3C_experimental.h5"))
         self.config = ConfigObj(self.get_resource("config.ini"))
 
         PreferencesWindow.config = self.config
@@ -4052,9 +3772,7 @@ if __name__ == "__main__":
 
     # Inspector sheets
     HistogramInspector_ = DensityWindowInspector(HistogramWindow_)
-    TransitionDensityInspector_ = DensityWindowInspector(
-        TransitionDensityWindow_
-    )
+    TransitionDensityInspector_ = DensityWindowInspector(TransitionDensityWindow_)
     CorrectionFactorInspector_ = CorrectionFactorInspector(TraceWindow_)
     TraceWindowInspector_ = TraceWindowInspector(TraceWindow_)
 

@@ -471,6 +471,7 @@ class TraceContainer:
 
         # Find out when there's a change in state, depending on the minimum
         # transition size set
+
         lf["state_jump"] = lf["e_fit"].transform(
             lambda group: (abs(group.diff()) > 0).cumsum()
         )

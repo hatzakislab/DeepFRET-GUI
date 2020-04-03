@@ -78,6 +78,7 @@ class AboutWindow(QDialog):
         self.setWindowTitle("")
 
         self.ui.label_APPNAME.setText(gvars.APPNAME)
+        self.ui.label_APPVER.setText("version {}".format(self.app_version))
         self.ui.label_AUTHORS.setText(gvars.AUTHORS)
         self.ui.label_LICENSE.setText(gvars.LICENSE)
 
@@ -97,7 +98,6 @@ class PreferencesWindow(QDialog):
         self.restartDialog = RestartDialog(self)
 
         self.boolMaps = {"True": 1, "1": 1, "False": 0, "0": 0}
-        self.imgModes = "dual", "2-color", "2-color-inv"
 
         self.globalCheckBoxes = (
             self.ui.checkBox_batchLoadingMode,
@@ -111,10 +111,13 @@ class PreferencesWindow(QDialog):
             self.ui.radioButton_2_col_inv,
         )
 
+        MismatchError = "Make sure widgets have the correct number of keys in gvars"
+
         if len(self.globalCheckBoxes) != len(gvars.keys_globalCheckBoxes):
-            raise ValueError(
-                "Make sure widgets have the correct number of keys in gvars"
-            )
+            raise ValueError(MismatchError)
+
+        if len(self.imgModeRadioButtons) != len(gvars.keys_ImgModes):
+            raise ValueError(MismatchError)
 
         self.connectUi()
 
@@ -133,7 +136,7 @@ class PreferencesWindow(QDialog):
         # Python doesn't know that, so need to check all of them to find the one
         # that is checked
         for imgMode, radioButton in zip(
-            self.imgModes, self.imgModeRadioButtons
+            gvars.keys_ImgModes, self.imgModeRadioButtons
         ):
             if radioButton.isChecked():
                 self.setConfig(key=gvars.key_imgMode, value=imgMode)
@@ -206,7 +209,6 @@ class PreferencesWindow(QDialog):
         """
         Shortcut for writing config to file.
         """
-        print("{}:{}".format(key, value))
         self.config[key] = value
         self.config.write()
 
@@ -223,7 +225,7 @@ class PreferencesWindow(QDialog):
             checkBox.setChecked(bool(self.getConfig(configKey)))
 
         for radioButton, imgMode in zip(
-            self.imgModeRadioButtons, self.imgModes
+            self.imgModeRadioButtons, gvars.keys_ImgModes
         ):
             if self.getConfig(gvars.key_imgMode) == imgMode:
                 radioButton.setChecked(True)
@@ -239,15 +241,8 @@ class PreferencesWindow(QDialog):
         """
         Read settings on show.
         """
-        print("show event")
         self.loadConfigToGUI()
         self.show()
-
-    # def reject(self):
-    #     """
-    #     Override Esc reject as a regular closeEvent.
-    #     """
-    #     self.close()
 
 
 class BaseWindow(QMainWindow):
@@ -272,9 +267,7 @@ class BaseWindow(QMainWindow):
         self.setConfig = self.PreferencesWindow_.setConfig
 
         self.AboutWindow_ = AboutWindow()
-        self.AboutWindow_.ui.label_APPVER.setText(
-            "version: {}".format(self.getConfig("appVersion"))
-        )
+
 
     def setupMenuBarActions(self):
         """
@@ -678,7 +671,7 @@ class BaseWindow(QMainWindow):
     def returnContainerInstance(self):
         """Returns appropriate data container for implemented windows"""
         if isinstance(self, MainWindow):
-            container = MainWindow_.data.movies
+            container = self.data.movies
         elif isinstance(self, TraceWindow):
             container = MainWindow_.data.traces
         else:
@@ -1443,7 +1436,7 @@ class MainWindow(BaseWindow):
         elif find_npairs == "auto":
             find_npairs = self.getConfig(gvars.key_autoDetectPairs)
         else:
-            raise ValueError
+            raise ValueError("Select from 'spinbox' or 'auto'")
 
         if self.getConfig(gvars.key_fitSpots):
             if find_npairs > 0:
@@ -1513,7 +1506,7 @@ class MainWindow(BaseWindow):
         method instead for progress bar.
         """
         progressbar = ProgressBar(
-            loop_len=len(self.data.movies.keys()), parent=MainWindow_
+            loop_len=len(self.data.movies.keys()), parent=self
         )
         for name in self.data.movies.keys():
             self.currName = name
@@ -1814,8 +1807,7 @@ class MainWindow(BaseWindow):
 
     def _debug(self):
         """Debug for MainWindow."""
-        print(self.currName)
-        print(self.data.movies.keys())
+        pass
 
 
 class TraceWindow(BaseWindow):
@@ -4020,6 +4012,7 @@ class AppContext(ApplicationContext):
         self.keras_2c_model = None
         self.keras_3c_model = None
         self.config = None
+        self.app_version = None
         self.load_resources()
 
     def load_resources(self):
@@ -4034,8 +4027,8 @@ class AppContext(ApplicationContext):
             self.get_resource("FRET_3C_experimental.h5")
         )
         self.config = ConfigObj(self.get_resource("config.ini"))
-
         PreferencesWindow.config = self.config
+        AboutWindow.app_version = self.config["appVersion"]
 
     def run(self):
         """

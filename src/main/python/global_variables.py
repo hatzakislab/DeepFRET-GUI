@@ -31,6 +31,12 @@ class GlobalVariables:
     key_lastOpenedDir = "lastOpenedDir"  # Sets recent directory
     key_imgMode = "imgMode"  # Sets imaging mode
 
+    key_imgModeDual = "dual"
+    key_imgMode2Color = "2-color"
+    key_imgMode2ColorInv = "2-color-inv"
+
+    keys_ImgModes = key_imgModeDual, key_imgMode2Color, key_imgMode2ColorInv
+
     # MainWindow
     key_contrastBoxHiBluVal = "contrastBoxHiBluVal"
     key_contrastBoxHiGrnVal = "contrastBoxHiGrnVal"

@@ -1,8 +1,11 @@
 import sys
 from main import TraceWindow, TraceContainer, AppContext, MovieData
 
-def build():
-    mock_trace_file = '../resources/traces/fiddler_3dim_0.txt'
+def setUp(trace_file_path):
+    """
+    Set up the essentials for the window to launch
+    """
+    mock_trace_file = trace_file_path
     trace = TraceContainer(mock_trace_file)
     TraceWindow.data = MovieData()
     TraceWindow.data.traces[trace.name] = trace
@@ -15,7 +18,7 @@ if __name__ == "__main__":
     ctxt = AppContext()
     ctxt.load_resources()
 
-    TraceWindow_ = build()
+    TraceWindow_ = setUp('../resources/traces/fiddler_3dim_0.txt')
 
     TraceWindow_.refreshPlot()
     TraceWindow_.show()

@@ -59,17 +59,11 @@ class ImageChannel:
 
     def __init__(self, color):
         if color == "green":
-            cmap = LinearSegmentedColormap.from_list(
-                "", ["black", gvars.color_green]
-            )
+            cmap = LinearSegmentedColormap.from_list("", ["black", gvars.color_green])
         elif color == "red":
-            cmap = LinearSegmentedColormap.from_list(
-                "", ["black", gvars.color_red]
-            )
+            cmap = LinearSegmentedColormap.from_list("", ["black", gvars.color_red])
         else:
-            raise ValueError(
-                "Invalid color. Available options are 'green' or 'red'"
-            )
+            raise ValueError("Invalid color. Available options are 'green' or 'red'")
 
         self.exists = True  # type: bool
         self.cmap = cmap  # type: LinearSegmentedColormap
@@ -118,7 +112,7 @@ class TraceChannel:
 
 class TraceContainer:
     """
-    Class for storing individual trace information.
+    Class for storing individual newTrace information.
     """
 
     ml_column_names = [
@@ -133,13 +127,15 @@ class TraceContainer:
         "p_5-state",
     ]
 
-    def __init__(self, filename, name=None, movie=None, n=None):
+    def __init__(
+        self, filename, name=None, movie=None, n=None, hmm_idealized_config=None
+    ):
         self.filename = filename  # type: str
         self.name = (
             name if name is not None else os.path.basename(filename)
         )  # type: str
         self.movie = movie  # type: str
-        self.n = n  # type: Union[None, int]
+        self.n = n  # type: str
 
         self.tracename = None  # type: Union[None, str]
         self.savename = None  # type: Union[None, str]
@@ -158,9 +154,23 @@ class TraceContainer:
 
         self.fret = None  # type: Union[None, np.ndarray]
         self.stoi = None  # type: Union[None, np.ndarray]
+
+        # hmm configuration
+        self.hmm_idealized_config = (
+            hmm_idealized_config if hmm_idealized_config is not None else "global"
+        )  # type: Union[None, str]
+        # hmm predictions here
         self.hmm = None  # type: Union[None, np.ndarray]
         self.hmm_idx = None  # type: Union[None, np.ndarray]
+        self.hmm_state = None  # type: Union[None, np.ndarray]
+        # detailed hmm data here
+        self.hmm_local_raw = None  # type: Union[None, np.ndarray]
+        self.hmm_global_raw = None  # type: Union[None, np.ndarray]
+        self.hmm_local_fret = None  # type: Union[None, np.ndarray]
+        self.hmm_global_fret = None  # type: Union[None, np.ndarray]
         self.transitions = None  # type: Union[None, pd.DataFrame]
+
+        # deep learning data here
         self.y_pred = None  # type: Union[None, np.ndarray]
         self.y_class = None  # type: Union[None, np.ndarray]
         self.confidence = None  # type: Union[None, float]
@@ -172,7 +182,6 @@ class TraceContainer:
         self.framerate = None  # type: Union[None, float]
 
         self.channels = self.grn, self.red, self.acc
-
         # file loading
         # TODO make compatible w pathlib
         try:
@@ -181,9 +190,27 @@ class TraceContainer:
             try:
                 self.load_from_dat()
             except (TypeError, FileNotFoundError) as e:
-                warnings.warn(
-                    "Warning! No data loaded for this trace!", UserWarning
-                )
+                warnings.warn("Warning! No data loaded for this trace!", UserWarning)
+
+    @property
+    def hmm(self):
+        if self.hmm_idealized_config.lower().startswith("glo"):
+            if self.hmm_global_fret is not None:
+                return self.hmm_global_fret
+            else:
+                return self.hmm_local_fret
+        elif self.hmm_idealized_config.lower().startswith("loc"):
+            if self.hmm_local_fret is not None:
+                return self.hmm_local_fret
+            else:
+                return self.hmm_global_fret
+
+    @hmm.setter
+    def hmm(self, val):
+        if self.hmm_idealized_config.lower().startswith("glo"):
+            self.hmm_global_fret = val
+        elif self.hmm_idealized_config.lower().startswith("loc"):
+            self.hmm_local_fret = val
 
     def load_from_ascii(self):
         """
@@ -220,44 +247,14 @@ class TraceContainer:
                     df.columns = colnames
         # Else DeepFRET trace compatibility
         else:
-            df = lib.misc.csv_skip_to(
-                path=self.filename, line="D-Dexc", sep="\s+"
-            )
+            df = lib.misc.csv_skip_to(path=self.filename, line="D-Dexc", sep="\s+")
         try:
-            pair_n = lib.misc.seek_line(
-                path=self.filename, line_starts="FRET pair"
-            )
+            pair_n = lib.misc.seek_line(path=self.filename, line_starts="FRET pair")
             self.n = int(pair_n.split("#")[-1])
 
-            movie = lib.misc.seek_line(
-                path=self.filename, line_starts="Movie filename"
-            )
+            movie = lib.misc.seek_line(path=self.filename, line_starts="Movie filename")
             self.movie = movie.split(": ")[-1]
 
-        except (ValueError, AttributeError):
-            pass
-
-        # bleach finder
-        try:
-            da_bleach_line = lib.misc.seek_line(
-                path=self.filename, line_starts="Donor bleaches"
-            )
-            bleach_line = lib.misc.seek_line(
-                path=self.filename, line_starts="Bleaches at"
-            )
-
-            if da_bleach_line is not None:
-                bleach_d = da_bleach_line.split('-')[0]
-                self.grn.bleach = int("".join(_ for _ in bleach_d if _ in "1234567890"))
-                bleach_a = da_bleach_line.split('-')[0]
-                self.red.bleach = int("".join(_ for _ in bleach_a if _ in "1234567890"))
-            elif bleach_line is not None:
-                bleach = "".join(_ for _ in bleach_line if _ in "1234567890")
-                self.grn.bleach = int(bleach)
-                self.red.bleach = int(bleach)
-                self.acc.bleach = int(bleach)
-            else:
-                raise ValueError
         except (ValueError, AttributeError):
             pass
 
@@ -271,8 +268,7 @@ class TraceContainer:
 
         if "D-Dexc_F" in df.columns:
             warnings.warn(
-                "This trace is created with an older format.",
-                DeprecationWarning,
+                "This trace is created with an older format.", DeprecationWarning,
             )
             self.grn.int = df["D-Dexc_F"].values
             self.acc.int = df["A-Dexc_I"].values
@@ -287,9 +283,7 @@ class TraceContainer:
             if "p_bleached" in df.columns:
                 colnames += self.ml_column_names
                 self.y_pred = df[self.ml_column_names].values
-                self.y_class, self.confidence = lib.math.seq_probabilities(
-                    self.y_pred
-                )
+                self.y_class, self.confidence = lib.math.seq_probabilities(self.y_pred)
 
             # This strips periods if present
             df.columns = [c.strip(".") for c in df.columns]
@@ -466,6 +460,34 @@ class TraceContainer:
     def calculate_stoi(self):
         self.stoi = lib.math.calc_S(self.get_intensities())
 
+    def calculate_transitions(self):
+        lf = pd.DataFrame()
+        lf["state"] = self.hmm_state
+        lf["e_fit"] = self.hmm
+        lf["time"] = lf["e_fit"].index + 1
+
+        # Find y_after from y_before
+        lf["e_after"] = np.roll(lf["e_fit"], -1)
+
+        # Find out when there's a change in state, depending on the minimum
+        # transition size set
+
+        lf["state_jump"] = lf["e_fit"].transform(
+            lambda group: (abs(group.diff()) > 0).cumsum()
+        )
+
+        # Drop duplicates
+        lf.drop_duplicates(subset="state_jump", keep="last", inplace=True)
+
+        # Find the difference for every time
+        lf["lifetime"] = np.append(np.nan, np.diff(lf["time"]))
+
+        lf.rename(columns={"e_fit": "e_before"}, inplace=True)
+        lf = lf[["e_before", "e_after", "lifetime"]]
+        lf = lf[:-1]
+
+        self.transitions = lf
+
 
 class MovieData:
     """
@@ -528,9 +550,7 @@ class MovieData:
         self._data().height = self._data().img.shape[1]
         self._data().width = self._data().img.shape[2]
         # Scaling factor for ROI
-        self._data().roi_radius = (
-            max(self._data().height, self._data().width) / 80
-        )
+        self._data().roi_radius = max(self._data().height, self._data().width) / 80
         if self._data().height == self._data().width:  # quadratic image
             if setup == "dual":
                 c1, c2, c3, _ = lib.imgdata.image_channels(4)

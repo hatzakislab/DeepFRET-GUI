@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>532</width>
-    <height>518</height>
+    <height>682</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -172,7 +172,7 @@
       <item row="1" column="0">
        <widget class="QRadioButton" name="radioButton_2_col">
         <property name="text">
-         <string>Quad Viw (2-channel)</string>
+         <string>Quad View (2-channel)</string>
         </property>
        </widget>
       </item>
@@ -180,6 +180,88 @@
        <widget class="QRadioButton" name="radioButton_2_col_inv">
         <property name="text">
          <string>Quad View (inverted 2-channel)</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="hmmGroup">
+     <property name="title">
+      <string>HMM Settings</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_4">
+      <item row="0" column="0">
+       <widget class="QRadioButton" name="radioButton_hmm_fitE">
+        <property name="text">
+         <string>E_FRET Fitting</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QRadioButton" name="radioButton_hmm_fitDD">
+        <property name="text">
+         <string>DD/DA Fitting</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="0">
+       <widget class="QDoubleSpinBox" name="doubleSpinBox_hmm_BIC">
+        <property name="minimum">
+         <double>0.500000000000000</double>
+        </property>
+        <property name="maximum">
+         <double>5.000000000000000</double>
+        </property>
+        <property name="singleStep">
+         <double>0.500000000000000</double>
+        </property>
+        <property name="value">
+         <double>2.000000000000000</double>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="1">
+       <spacer name="horizontalSpacer_2">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item row="6" column="0">
+       <widget class="QCheckBox" name="checkBox_hmm_local">
+        <property name="text">
+         <string>Idealize HMM for each trace individually (Advanced)</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="label_hmm_bic">
+        <property name="text">
+         <string>BIC Strictness (raise this to detect fewer states)</string>
+        </property>
+       </widget>
+      </item>
+      <item row="7" column="0">
+       <widget class="QLabel" name="label_hmm_checkbox">
+        <property name="font">
+         <font>
+          <pointsize>11</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>     N.B. This compromises the statistical assumptions of the Hidden Markov Model 
+    and could lead to bad results! Try with more states instead!</string>
         </property>
        </widget>
       </item>
@@ -286,6 +368,17 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>checkBox_batchLoadingMode</tabstop>
+  <tabstop>checkBox_unColocRed</tabstop>
+  <tabstop>checkBox_illuCorrect</tabstop>
+  <tabstop>checkBox_fitSpots</tabstop>
+  <tabstop>radioButton_dual</tabstop>
+  <tabstop>radioButton_2_col</tabstop>
+  <tabstop>radioButton_2_col_inv</tabstop>
+  <tabstop>toleranceComboBox</tabstop>
+  <tabstop>spinBox_autoDetect</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

@@ -514,6 +514,9 @@
    <property name="text">
     <string>Fit Hidden Markov Model to Selected</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+M</string>
+   </property>
   </action>
   <action name="actionBatch_analyze">
    <property name="text">

@@ -1123,7 +1123,7 @@ def generate_traces(
         trace.fillna(method="pad", inplace=True)
         return trace
 
-    processes = tqdm(range(n_traces))
+    processes = range(n_traces)
     traces = []
     for i in processes:
         traces.append(

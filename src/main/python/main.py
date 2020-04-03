@@ -118,17 +118,37 @@ class PreferencesWindow(QDialog):
 
         self.connectUi()
 
-    def checkImgRadioButtons(self):
+    def writeUiToConfig(self):
         """
-        Qt makes the radio buttons exclusive so only one can be checked, but
-        Python doesn't know that, so need to check all of them to find the one
-        that is checked
+        Checks all UI elements and writes their state to config
         """
+        # All checkboxes
+        for key, checkBox in zip(
+            gvars.keys_globalCheckBoxes, self.globalCheckBoxes
+        ):
+            self.setConfig(key=key, value=checkBox.isChecked())
+
+        # Imaging type radio buttons
+        # Qt makes the radio buttons exclusive so only one can be checked, but
+        # Python doesn't know that, so need to check all of them to find the one
+        # that is checked
         for imgMode, radioButton in zip(
             self.imgModes, self.imgModeRadioButtons
         ):
             if radioButton.isChecked():
                 self.setConfig(key=gvars.key_imgMode, value=imgMode)
+
+        # ROI detection tolerance
+        self.setConfig(
+            key=gvars.key_colocTolerance,
+            value=self.ui.toleranceComboBox.currentText().lower(),
+        )
+
+        # Number of pairs to autodetect
+        self.setConfig(
+            key=gvars.key_autoDetectPairs,
+            value=self.ui.spinBox_autoDetect.value(),
+        )
 
     def connectUi(self):
         """
@@ -138,33 +158,21 @@ class PreferencesWindow(QDialog):
         for configKey, checkBox in zip(
             gvars.keys_globalCheckBoxes, self.globalCheckBoxes
         ):
-            checkBox.clicked.connect(
-                lambda: self.setConfig(
-                    key=configKey, value=checkBox.isChecked()
-                )
-            )
+            checkBox.clicked.connect(self.writeUiToConfig)
 
         # Imaging type radio buttons
         # Note that this calls an additional function to check which one of the
         # (exclusive) radio buttons is checked, for the config
         for radioButton in self.imgModeRadioButtons:
-            radioButton.clicked.connect(self.checkImgRadioButtons)
+            radioButton.clicked.connect(self.writeUiToConfig)
 
         # ROI detection tolerance
         self.ui.toleranceComboBox.currentTextChanged.connect(
-            lambda: self.setConfig(
-                key=gvars.key_colocTolerance,
-                value=self.ui.toleranceComboBox.currentText().lower(),
-            )
+            self.writeUiToConfig
         )
 
         # Number of pairs to autodetect
-        self.ui.spinBox_autoDetect.valueChanged.connect(
-            lambda: self.setConfig(
-                key=gvars.key_autoDetectPairs,
-                value=self.ui.spinBox_autoDetect.value(),
-            )
-        )
+        self.ui.spinBox_autoDetect.valueChanged.connect(self.writeUiToConfig)
 
         # Close modal window with Ctrl+W
         QShortcut(QKeySequence("Ctrl+W"), self, self.close)
@@ -198,6 +206,7 @@ class PreferencesWindow(QDialog):
         """
         Shortcut for writing config to file.
         """
+        print("{}:{}".format(key, value))
         self.config[key] = value
         self.config.write()
 
@@ -230,13 +239,15 @@ class PreferencesWindow(QDialog):
         """
         Read settings on show.
         """
+        print("show event")
         self.loadConfigToGUI()
+        self.show()
 
-    def reject(self):
-        """
-        Override Esc reject as a regular closeEvent.
-        """
-        self.close()
+    # def reject(self):
+    #     """
+    #     Override Esc reject as a regular closeEvent.
+    #     """
+    #     self.close()
 
 
 class BaseWindow(QMainWindow):
@@ -3814,8 +3825,6 @@ class SimulatorWindow(BaseWindow):
 
     def generateTraces(self, n_traces):
         """Generate traces to show in the GUI or export"""
-        print("generate")
-
         if n_traces > 50:
             update_every_nth = n_traces // 20
             progressbar = ProgressBar(

@@ -22,6 +22,7 @@ import pomegranate as pg
 from retrying import retry, RetryError
 from tqdm import tqdm
 
+
 pd.options.mode.chained_assignment = None
 
 
@@ -97,9 +98,7 @@ def calc_E(intensities, alpha=0, delta=0, clip_range=(-0.3, 1.3)):
     return E
 
 
-def calc_S(
-    intensities, alpha=0, delta=0, beta=1, gamma=1, clip_range=(-0.3, 1.3)
-):
+def calc_S(intensities, alpha=0, delta=0, beta=1, gamma=1, clip_range=(-0.3, 1.3)):
     """
     Calculates raw calc_S from donor (Dexc-Dem), acceptor (Dexc-Aem) and direct
     emission of acceptor ("ALEX", Aexc-Aem) Note that iSMS has the option of
@@ -118,9 +117,7 @@ def calc_S(
     return S
 
 
-def corrected_ES(
-    intensities, alpha, delta, beta, gamma, clip_range=(-0.3, 1.3)
-):
+def corrected_ES(intensities, alpha, delta, beta, gamma, clip_range=(-0.3, 1.3)):
     """
     Calculates the fully corrected FRET and stoichiometry, given all the
     correction factors. This is only used for the combined 2D histogram,
@@ -215,7 +212,10 @@ def trim_ES(E: list, S: list):
 
 
 def fit_gaussian_mixture(
-    X: np.ndarray, min_n_components: int = 1, max_n_components: int = 1
+    X: np.ndarray,
+    min_n_components: int = 1,
+    max_n_components: int = 1,
+    strict_bic: [bool, int, float] = False,
 ):
     """
     Fits the best univariate gaussian mixture model, based on BIC
@@ -225,7 +225,10 @@ def fit_gaussian_mixture(
     X = X.reshape(-1, 1)
 
     models, bic = [], []
-    n_components_range = range(min_n_components, max_n_components + 1)
+    n_components_range = range(
+        min(min_n_components, max_n_components),
+        max(min_n_components, max_n_components) + 1,
+    )
     cv_types = ["spherical", "tied", "diag", "full"]
 
     for cv_type in cv_types:
@@ -235,7 +238,14 @@ def fit_gaussian_mixture(
             )
             gmm.fit(X)
             models.append(gmm)
-            bic.append(gmm.bic(X))
+            if strict_bic is not False:
+                strictness = strict_bic if strict_bic is not bool else 2
+                b = -2 * gmm.score(X) * X.shape[0] + (
+                    gmm._n_parameters() ** strictness
+                ) * np.log(2 * X.shape[0])
+            else:
+                b = gmm.bic(X)
+            bic.append(b)
 
     best_gmm = models[int(np.argmin(bic))]
     print("number of components ", best_gmm.n_components)
@@ -258,7 +268,7 @@ def fit_gaussian_mixture(
     return best_gmm, params
 
 
-def fit_hmm(
+def fit_hmm_pg(
     X: np.ndarray,
     fret: np.ndarray,
     lengths: List[int],
@@ -270,13 +280,19 @@ def fit_hmm(
     a (t, c) matrix, where t is the total number of frames, and c is the
     channels
     """
-    X = X - np.mean(X)
-    X = X / np.std(X)
+    model = pg.HiddenMarkovModel.from_samples(
+        pg.NormalDistribution,
+        name=None,
+        n_components=n_components,
+        X=X,
+        n_jobs=-1,
+        # callbacks=[pgc.ModelCheckpoint(name=name)],
+    )
 
     hmm_model = hmmlearn.hmm.GaussianHMM(
         n_components=n_components,
         covariance_type="full",
-        min_covar = 100,
+        min_covar=100,
         init_params="stmc",  # auto init all params
         algorithm="viterbi",
     )
@@ -296,6 +312,56 @@ def fit_hmm(
     return states, transmat, state_means, state_sigs
 
 
+def fit_hmm(
+    X: np.ndarray,
+    fret: np.ndarray,
+    lengths: List[int],
+    covar_type: str,
+    n_components: int,
+):
+    """
+    Fits a Hidden Markov Model to traces. The traces are row-stacked, to provide
+    a (t, c) matrix, where t is the total number of frames, and c is the
+    channels
+    """
+    X = X - np.mean(X)
+    X = X / np.std(X)
+
+    hmm_model = hmmlearn.hmm.GaussianHMM(
+        n_components=n_components,
+        covariance_type="full",
+        min_covar=100,
+        init_params="stmc",  # auto init all params
+        algorithm="viterbi",
+    )
+    hmm_model.fit(X, lengths)
+    print("covariances are: ", hmm_model.covars_)
+
+    states = hmm_model.predict(X, lengths)
+    transmat = hmm_model.transmat_
+
+    state_means, state_sigs = [], []
+    for si in sorted(np.unique(states)):
+        _, params = fit_gaussian_mixture(fret[states == si])
+        for (m, s, _) in params:
+            state_means.append(m)
+            state_sigs.append(s)
+
+    return states, transmat, state_means, state_sigs
+
+
+def get_hmm_model(X, n_components=5, name=None):
+    model = pg.HiddenMarkovModel.from_samples(
+        pg.NormalDistribution,
+        name=name,
+        n_components=n_components,
+        X=X,
+        n_jobs=-1,
+        # callbacks=[pgc.ModelCheckpoint(name=name)],
+    )
+    return model
+
+
 def find_transitions(states, fret):
     """
     Finds transitions and their lifetimes, given states and FRET signal
@@ -303,9 +369,7 @@ def find_transitions(states, fret):
     hf = pd.DataFrame()
     hf["state"] = states
     hf["y_obs"] = fret
-    hf["y_fit"] = hf.groupby(["state"], as_index=False)["y_obs"].transform(
-        "median"
-    )
+    hf["y_fit"] = hf.groupby(["state"], as_index=False)["y_obs"].transform("median")
 
     hf["time"] = hf["y_fit"].index + 1
 
@@ -496,9 +560,9 @@ def contour_2d(
     values = np.vstack([xdata, ydata])
 
     # Define KDE with specified bandwidth
-    kernel_sk = sklearn.neighbors.KernelDensity(
-        kernel=kernel, bandwidth=bandwidth
-    ).fit(list(zip(*values)))
+    kernel_sk = sklearn.neighbors.KernelDensity(kernel=kernel, bandwidth=bandwidth).fit(
+        list(zip(*values))
+    )
     z = np.exp(kernel_sk.score_samples(list(zip(*positions))))
 
     z = np.reshape(z.T, x.shape)
@@ -542,9 +606,7 @@ def estimate_bw(n, d, factor):
     return ((n * (d + 2) / 4.0) ** (-1.0 / (d + 4))) * factor ** 2
 
 
-def histpoints_w_err(
-    data, bins, density, remove_empty_bins=False, least_count=1
-):
+def histpoints_w_err(data, bins, density, remove_empty_bins=False, least_count=1):
     """
     Converts unbinned data to x,y-curvefitable points with Poisson errors.
 
@@ -755,7 +817,7 @@ def generate_traces(
         else:
             dists = [pg.NormalDistribution(m, 1e-16) for m in state_means]
 
-        starts = np.random.uniform(0, 1, size = k_states)
+        starts = np.random.uniform(0, 1, size=k_states)
         starts /= starts.sum()
 
         # Generate arbitrary transition matrix
@@ -776,7 +838,7 @@ def generate_traces(
         )
         model.bake()
 
-        E_true = np.array(model.sample(n = 1, length = trace_length))
+        E_true = np.array(model.sample(n=1, length=trace_length))
         E_true = np.squeeze(E_true).round(4)
         return E_true
 
@@ -823,9 +885,7 @@ def generate_traces(
             if noise_end > trace_length:
                 noise_end = trace_length
 
-            DD[noise_start:noise_end] *= np.random.normal(
-                1, 1, noise_end - noise_start
-            )
+            DD[noise_start:noise_end] *= np.random.normal(1, 1, noise_end - noise_start)
 
         # Flip traces
         flip_trace = np.random.choice(("flipDD", "flipDA", "flipAA"))
@@ -1013,9 +1073,7 @@ def generate_traces(
         # effect otherwise)
         is_scrambled = False
         if np.random.uniform(0, 1) < scramble_prob and n_pairs <= 2:
-            DD, DA, AA, label = scramble(
-                DD=DD, DA=DA, AA=AA, cls=cls, label=label
-            )
+            DD, DA, AA, label = scramble(DD=DD, DA=DA, AA=AA, cls=cls, label=label)
             is_scrambled = True
 
         # Figure out bleached places before true signal is modified:
@@ -1078,9 +1136,7 @@ def generate_traces(
             for i in range(5):
                 k_states = i + 1
                 if len(observed_states) == k_states:
-                    label[label != cls["bleached"]] = cls[
-                        "{}-state".format(k_states)
-                    ]
+                    label[label != cls["bleached"]] = cls["{}-state".format(k_states)]
 
         # Bad traces don't contain FRET
         if any((is_noisy, is_aggregated, is_scrambled)):
@@ -1149,3 +1205,116 @@ def generate_traces(
     return traces
 
 
+def func_double_exp(_x: np.ndarray, _lambda_1: float, _lambda_2: float, _k: float):
+    if _k > 1.0:
+        raise ValueError(f"_k of value {_k:.2f} is larger than 1!")
+    if _k < 0:
+        raise ValueError(f"_k of value {_k:.2f} is smaller than 1!")
+    _exp1 = _lambda_1 * np.exp(-1 * _lambda_1 * _x)
+    _exp2 = _lambda_2 * np.exp(-1 * _lambda_2 * _x)
+
+    return _k * _exp1 + (1 - _k) * _exp2
+
+
+def func_exp(
+    _x: np.ndarray, _lambda,
+):
+    return _lambda * np.exp(-_lambda * _x)
+
+
+def loglik_single(x: np.ndarray, _lambda):
+    """
+    Returns Negative Loglikelihood for a single exponential with given param and given observations
+    """
+    return -1 * np.sum(np.log(func_exp(x, _lambda)))
+
+
+def loglik_double(x: np.ndarray, _lambda_1: float, _lambda_2: float, _k: float):
+    """
+    Returns Negative Loglikelihood for a double exponential with given params and given observations
+    """
+    return -1 * np.sum(np.log(func_double_exp(x, _lambda_1, _lambda_2, _k)))
+
+
+def fit_and_compare_exp_funcs(
+    arr,
+    x0: Union[None, Tuple[float]] = (2.0, 3.0, 0.55),
+    verbose=False,
+    meth="l-bfgs-b",
+):
+    ftol = 2.220446049250313e-09
+    arr = np.nan_to_num(arr,)
+    if x0 is None:
+        fit_loc, fit_scale = scipy.stats.expon.fit(arr, floc=0)
+        fit_lambda = 1.0 / fit_scale
+        x0 = (fit_lambda, fit_lambda, 0.55)
+
+    def lh_single(l):
+        return loglik_single(arr, l)
+
+    def lh_double(x):
+        return loglik_double(arr, *x)
+
+    res1 = scipy.optimize.minimize(
+        lh_single, x0=np.array(x0[0]), method=meth, bounds=[(0.0, None)]
+    )
+    errs1 = np.zeros(len(res1.x))
+    tmp_i = np.zeros(len(res1.x))
+    for i in range(len(res1.x)):
+        tmp_i[i] = 1.0
+        hess_inv_i = res1.hess_inv(tmp_i)[i]
+        uncertainty_i = np.sqrt(max(1, abs(res1.fun)) * ftol * hess_inv_i)
+        tmp_i[i] = 0.0
+        errs1[i] = uncertainty_i
+
+    llh_1 = -res1.fun
+    bic_1 = np.log(len(arr)) * 1 - 2 * llh_1
+    if verbose:
+        print("Params for single exp:")
+        print(res1.x)
+        print("Uncertainties: ")
+        print(errs1)
+        print(f"BIC : {bic_1:.6f}")
+
+    res2 = scipy.optimize.minimize(
+        lh_double,
+        x0=np.array(x0),
+        method=meth,
+        bounds=[(0.0, None), (0.0, None), (0.01, 0.99)],
+    )
+
+    errs2 = np.zeros(len(res2.x))
+    tmp_i = np.zeros(len(res2.x))
+    for i in range(len(res2.x)):
+        tmp_i[i] = 1.0
+        hess_inv_i = res2.hess_inv(tmp_i)[i]
+        uncertainty_i = np.sqrt(max(1, abs(res2.fun)) * ftol * hess_inv_i)
+        tmp_i[i] = 0.0
+        errs2[i] = uncertainty_i
+
+    llh_2 = -res2.fun
+    bic_2 = np.log(len(arr)) * 3 - 2 * llh_2
+    if verbose:
+        print("Params for double exp:")
+        print(res2.x)
+        print("Uncertainties: ")
+        print(errs2)
+        print(f"BIC : {bic_2:.6f}")
+
+    out = {}
+    if bic_1 < bic_2:
+        out["BEST"] = "SINGLE"
+    else:
+        out["BEST"] = "DOUBLE"
+
+    out["SINGLE_LLH"] = llh_1
+    out["SINGLE_BIC"] = bic_1
+    out["SINGLE_PARAM"] = res1.x
+    out["SINGLE_ERRS"] = errs1
+
+    out["DOUBLE_LLH"] = llh_2
+    out["DOUBLE_BIC"] = bic_2
+    out["DOUBLE_PARAM"] = res2.x
+    out["DOUBLE_ERRS"] = errs2
+
+    return out

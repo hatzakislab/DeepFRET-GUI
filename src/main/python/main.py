@@ -1,4 +1,5 @@
 import multiprocessing
+import warnings
 
 multiprocessing.freeze_support()
 
@@ -98,17 +99,24 @@ class PreferencesWindow(QDialog):
 
         self.boolMaps = {"True": 1, "1": 1, "False": 0, "0": 0}
         self.imgModes = "dual", "2-color", "2-color-inv"
+        self.hmmModes = "E", "DD"
 
         self.globalCheckBoxes = (
             self.ui.checkBox_batchLoadingMode,
             self.ui.checkBox_unColocRed,
             self.ui.checkBox_illuCorrect,
             self.ui.checkBox_fitSpots,
+            self.ui.checkBox_hmmLocal,
         )
         self.imgModeRadioButtons = (
             self.ui.radioButton_dual,
             self.ui.radioButton_2_col,
             self.ui.radioButton_2_col_inv,
+        )
+
+        self.hmmRadioButtons = (
+            self.ui.radioButton_hmm_fitE,
+            self.ui.radioButton_hmm_fitDD,
         )
 
         if len(self.globalCheckBoxes) != len(gvars.keys_globalCheckBoxes):
@@ -117,6 +125,16 @@ class PreferencesWindow(QDialog):
             )
 
         self.connectUi()
+
+    def checkHmmRadioButtons(self):
+        """
+        Qt makes the radio buttons exclusive so only one can be checked, but
+        Python doesn't know that, so need to check all of them to find the one
+        that is checked
+        """
+        for hmmMode, radioButton in zip(self.hmmModes, self.hmmRadioButtons):
+            if radioButton.isChecked():
+                self.setConfig(key=gvars.key_hmmMode, value=hmmMode)
 
     def checkImgRadioButtons(self):
         """
@@ -140,17 +158,31 @@ class PreferencesWindow(QDialog):
                 lambda: self.setConfig(key=configKey, value=checkBox.isChecked())
             )
 
+        # TODO: add that changing the hmmLocal checkbox should change the parameters for all traces
+        #  both existing and new traces
+
         # Imaging type radio buttons
         # Note that this calls an additional function to check which one of the
         # (exclusive) radio buttons is checked, for the config
         for radioButton in self.imgModeRadioButtons:
             radioButton.clicked.connect(self.checkImgRadioButtons)
 
+        for radioButton in self.hmmRadioButtons:
+            radioButton.clicked.connect(self.checkHmmRadioButtons)
+
         # ROI detection tolerance
         self.ui.toleranceComboBox.currentTextChanged.connect(
             lambda: self.setConfig(
                 key=gvars.key_colocTolerance,
                 value=self.ui.toleranceComboBox.currentText().lower(),
+            )
+        )
+
+        # BIC strictness
+        self.ui.doubleSpinBox_hmm_BIC.valueChanged.connect(
+            lambda: self.setConfig(
+                key=gvars.key_hmmBICStrictness,
+                value=self.ui.doubleSpinBox_hmm_BIC.value(),
             )
         )
 
@@ -212,10 +244,17 @@ class PreferencesWindow(QDialog):
             if self.getConfig(gvars.key_imgMode) == imgMode:
                 radioButton.setChecked(True)
 
+        for radioButton, hmmMode in zip(self.hmmRadioButtons, self.hmmModes):
+            if self.getConfig(gvars.key_imgMode) == hmmMode:
+                radioButton.setChecked(True)
+
         self.ui.toleranceComboBox.setCurrentText(
             self.getConfig(gvars.key_colocTolerance)
         )
         self.ui.spinBox_autoDetect.setValue(self.getConfig(gvars.key_autoDetectPairs))
+        self.ui.doubleSpinBox_hmm_BIC.setValue(
+            self.getConfig(gvars.key_hmmBICStrictness)
+        )
 
     def showEvent(self, QShowEvent):
         """
@@ -1766,7 +1805,6 @@ class TraceWindow(BaseWindow):
         self.loadCount = 0
 
         # Initialize HMM type
-        self.hmm_config = "E"  # or "DA" # TODO: integrate in UI
         self.hmmModel = None
 
         # Initialize interface
@@ -1841,8 +1879,13 @@ class TraceWindow(BaseWindow):
                     break
 
                 self.currDir = os.path.dirname(full_filename)
-                newTrace = TraceContainer(filename=full_filename)
-
+                try:
+                    newTrace = TraceContainer(filename=full_filename)
+                except AttributeError:  # if a non-trace file was selected
+                    warnings.warn(
+                        f"This file could not be read: \n{full_filename}", UserWarning
+                    )
+                    continue
                 if (n % update_every_n) == 0:
                     progressbar.increment()
 
@@ -1894,6 +1937,11 @@ class TraceWindow(BaseWindow):
         """
         ctxt.app.processEvents()
         traces = [trace for trace in self.data.traces.values() if trace.is_checked]
+        if traces == []:
+            warnings.warn("No traces were selected!", UserWarning)
+            pass
+
+        # if hmm_idealized_config_flag == "global":
 
         DD, DA, AA, E, lengths = [], [], [], [], []
         for trace in traces:
@@ -1903,13 +1951,15 @@ class TraceWindow(BaseWindow):
             AA.append(I_AA[: trace.first_bleach])
             E.append(trace.fret[: trace.first_bleach])
             lengths.append(len(I_DD[: trace.first_bleach]))
+            if self.getConfig(gvars.key_hmmLocal):  # set the variable here
+                trace.hmm_idealized_config = "local"
 
         DD = np.concatenate(DD)
         DA = np.concatenate(DA)
         AA = np.concatenate(AA)
         E = np.array(E)
         E_trace = np.concatenate(E).reshape(-1, 1)
-        if self.hmm_config == "DA":
+        if self.getConfig(gvars.key_hmmMode) == "DA":
             if lib.math.contains_nan(AA):
                 X = np.column_stack((DD, DA, E_trace))
             else:
@@ -1919,7 +1969,10 @@ class TraceWindow(BaseWindow):
             X = E.copy()
 
         best_mixture_model, params = lib.math.fit_gaussian_mixture(
-            E_trace, min_n_components=1, max_n_components=6, strict_bic=False,
+            E_trace,
+            min_n_components=1,
+            max_n_components=6,
+            strict_bic=self.getConfig(gvars.key_hmmBICStrictness),
         )
         n_components = best_mixture_model.n_components
         self.hmmModel = lib.math.get_hmm_model(X, n_components=n_components)
@@ -1938,14 +1991,6 @@ class TraceWindow(BaseWindow):
                 continue
         means = np.array([v[0] for v in state_dict.values()])
         sigs = np.array([v[1] for v in state_dict.values()])
-
-        # states, transmat, state_means, state_sigs = lib.math.fit_hmm(
-        #     X=X,
-        #     fret=E_trace,
-        #     lengths=lengths,
-        #     n_components=best_mixture_model.n_components,
-        #     covar_type=best_mixture_model.covariance_type,
-        # )
 
         print("Transition matrix:\n", np.round(transmat, 2))
         print("State means:\n", means)

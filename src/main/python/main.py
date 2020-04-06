@@ -2528,12 +2528,13 @@ class TraceWindow(BaseWindow):
         """
         self.canvas.fig.legends = []
         trace = self.currentTrace()
-        if self.getConfig(gvars.key_hmmLocal):
-            trace.hmm_idealized_config = "local"
-        else:
-            trace.hmm_idealized_config = "global"
 
         if trace is not None and len(self.data.traces) > 0:
+            if self.getConfig(gvars.key_hmmLocal):
+                trace.hmm_idealized_config = "local"
+            else:
+                trace.hmm_idealized_config = "global"
+
             alpha = self.getConfig(gvars.key_alphaFactor)
             delta = self.getConfig(gvars.key_deltaFactor)
             factors = alpha, delta

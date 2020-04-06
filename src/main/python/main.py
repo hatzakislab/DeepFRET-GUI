@@ -116,14 +116,14 @@ class PreferencesWindow(QDialog):
             self.ui.radioButton_hmm_fitDD,
         )
 
-        MismatchError = (
+        mismatch_error = (
             "Make sure widgets have the correct number of keys in gvars"
         )
         if len(self.globalCheckBoxes) != len(gvars.keys_globalCheckBoxes):
-            raise ValueError(MismatchError)
+            raise ValueError(mismatch_error)
 
         if len(self.imgModeRadioButtons) != len(gvars.keys_ImgModes):
-            raise ValueError(MismatchError)
+            raise ValueError(mismatch_error)
 
         self.connectUi()
 
@@ -182,11 +182,10 @@ class PreferencesWindow(QDialog):
             checkBox.clicked.connect(self.writeUiToConfig)
 
         # Imaging type radio buttons
-        # Note that this calls an additional function to check which one of the
-        # (exclusive) radio buttons is checked, for the config
         for radioButton in self.imgModeRadioButtons:
             radioButton.clicked.connect(self.writeUiToConfig)
 
+        # HMM type radio buttons
         for radioButton in self.hmmRadioButtons:
             radioButton.clicked.connect(self.writeUiToConfig)
 
@@ -220,8 +219,8 @@ class PreferencesWindow(QDialog):
             return 0
 
         # To handle 0/1/True/False as ints
-        if value in self.boolMaps:
-            value = self.boolMaps[value]
+        if value in gvars.boolMaps:
+            value = gvars.boolMaps[value]
         else:
             try:
                 value = float(value)
@@ -1527,7 +1526,7 @@ class MainWindow(BaseWindow):
         Displays colocalized spot for a single movie.
         """
         self.getCurrentListObject()
-
+        print(self.currName)
         if self.currName is not None:
             self.colocalizeSpotsSingleMovie(channel)
             self.refreshPlot()

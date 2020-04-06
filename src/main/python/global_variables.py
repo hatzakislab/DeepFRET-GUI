@@ -13,6 +13,8 @@ class GlobalVariables:
     LICENSE = "DeepFRET is free software, distributed under the terms of the MIT open source license"
     CONFIGNAME = "config.ini"
 
+
+    boolMaps = {"True": 1, "1": 1, "False": 0, "0": 0}
     # List of possible user-configurable options (i.e. available keys),
     # so they'll be available with autocomplete and refactoring
     # States are edited through the getConfig interface
@@ -44,7 +46,11 @@ class GlobalVariables:
     key_imgMode2Color = "2-color"
     key_imgMode2ColorInv = "2-color-inv"
 
+    key_HmmModeE = "E"
+    key_HmmModeDD = "DD"
+
     keys_ImgModes = key_imgModeDual, key_imgMode2Color, key_imgMode2ColorInv
+    keys_HmmModes = key_HmmModeE, key_HmmModeDD
 
     # MainWindow
     key_contrastBoxHiBluVal = "contrastBoxHiBluVal"

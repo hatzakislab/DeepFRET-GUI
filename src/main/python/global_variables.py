@@ -22,9 +22,7 @@ class GlobalVariables:
     key_unColocRed = "unColocRed"  # Uncolocalized red
     key_illuCorrect = "illuCorrect"  # Illumination profile correction
     key_fitSpots = "fitSpots"  # Whether to use LoG-based spot detection
-    key_hmmLocal = (
-        "hmmLocal"  # Whether to use global or local hmm, gets passed to traces
-    )
+    key_hmmLocal = "hmmLocal"  # Whether to use local hmm, gets passed to traces
     key_hmmBICStrictness = "hmmBICStrictness"
 
     keys_globalCheckBoxes = (
@@ -36,6 +34,10 @@ class GlobalVariables:
     )
 
     key_hmmMode = "hmmMode"
+    key_hmmModeE = "E"
+    key_hmmModeDA = "DA"
+    keys_hmmModes = key_hmmModeE, key_hmmModeDA
+
     key_spotDetection = "spotDetection"  # Spot detection speed
     key_lastOpenedDir = "lastOpenedDir"  # Sets recent directory
     key_imgMode = "imgMode"  # Sets imaging mode
@@ -118,9 +120,15 @@ class GlobalVariables:
         7  # How large circles are, visually (has no impact on colocalization)
     )
     roi_draw_linewidth = 0.9  # ROI linewidth
-    roi_inner_area = 2.3  # Inner area of ROI pixel intensity mask (adjusted to iSMS)
-    roi_outer_area = 5.6  # Outer area of ROI pixel intensity mask (adjusted to iSMS)
-    roi_gap_space = 4.4  # Gap space of ROI pixel intensity mask (adjusted to iSMS)
+    roi_inner_area = (
+        2.3  # Inner area of ROI pixel intensity mask (adjusted to iSMS)
+    )
+    roi_outer_area = (
+        5.6  # Outer area of ROI pixel intensity mask (adjusted to iSMS)
+    )
+    roi_gap_space = (
+        4.4  # Gap space of ROI pixel intensity mask (adjusted to iSMS)
+    )
     roi_coloc_overlap_factor = (
         2  # Degree of overlap before it counts (this is roughly 90%)
     )
@@ -128,7 +136,9 @@ class GlobalVariables:
     roi_coloc_tolerances = {"loose": 2, "moderate": 5, "strict": 20}
 
     # Parameters for functions
-    peak_local_max_p = {"min_distance": 5}  # Spot finder parameters for localization
+    peak_local_max_p = {
+        "min_distance": 5
+    }  # Spot finder parameters for localization
 
     bg_p = {"alpha": 0.5, "linestyle": "--"}
 

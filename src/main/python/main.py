@@ -176,9 +176,6 @@ class PreferencesWindow(QDialog):
         ):
             checkBox.clicked.connect(self.writeUiToConfig)
 
-        # TODO: add that changing the hmmLocal checkbox should change the parameters for all traces
-        #  both existing and new traces
-
         # Imaging type radio buttons
         # Note that this calls an additional function to check which one of the
         # (exclusive) radio buttons is checked, for the config
@@ -2436,6 +2433,10 @@ class TraceWindow(BaseWindow):
         """
         self.canvas.fig.legends = []
         trace = self.currentTrace()
+        if self.getConfig(gvars.key_hmmLocal):
+            trace.hmm_idealized_config = "local"
+        else:
+            trace.hmm_idealized_config = "global"
 
         if trace is not None and len(self.data.traces) > 0:
             alpha = self.getConfig(gvars.key_alphaFactor)

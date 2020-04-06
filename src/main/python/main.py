@@ -101,7 +101,7 @@ class PreferencesWindow(QDialog):
         # TODO: should be put in gvars, but resolving for this commit
         self.boolMaps = {"True": 1, "1": 1, "False": 0, "0": 0}
         self.imgModes = "dual", "2-color", "2-color-inv"
-        self.hmmModes = "E", "DD"
+        self.hmmModes = "E", "DA"
 
         self.globalCheckBoxes = (
             self.ui.checkBox_batchLoadingMode,
@@ -135,18 +135,14 @@ class PreferencesWindow(QDialog):
         Checks all UI elements and writes their state to config
         """
         # All checkboxes
-        for key, checkBox in zip(
-            gvars.keys_globalCheckBoxes, self.globalCheckBoxes
-        ):
+        for key, checkBox in zip(gvars.keys_globalCheckBoxes, self.globalCheckBoxes):
             self.setConfig(key=key, value=checkBox.isChecked())
 
         # Imaging type radio buttons
         # Qt makes the radio buttons exclusive so only one can be checked, but
         # Python doesn't know that, so need to check all of them to find the one
         # that is checked
-        for imgMode, radioButton in zip(
-            gvars.keys_ImgModes, self.imgModeRadioButtons
-        ):
+        for imgMode, radioButton in zip(gvars.keys_ImgModes, self.imgModeRadioButtons):
             if radioButton.isChecked():
                 self.setConfig(key=gvars.key_imgMode, value=imgMode)
 
@@ -162,14 +158,12 @@ class PreferencesWindow(QDialog):
 
         # Number of pairs to autodetect
         self.setConfig(
-            key=gvars.key_autoDetectPairs,
-            value=self.ui.spinBox_autoDetect.value(),
+            key=gvars.key_autoDetectPairs, value=self.ui.spinBox_autoDetect.value(),
         )
 
         # BIC Strictness
         self.setConfig(
-            key=gvars.key_hmmBICStrictness,
-            value=self.ui.doubleSpinBox_hmm_BIC.value(),
+            key=gvars.key_hmmBICStrictness, value=self.ui.doubleSpinBox_hmm_BIC.value(),
         )
 
     def connectUi(self):
@@ -182,7 +176,6 @@ class PreferencesWindow(QDialog):
         ):
             checkBox.clicked.connect(self.writeUiToConfig)
 
-
         # TODO: add that changing the hmmLocal checkbox should change the parameters for all traces
         #  both existing and new traces
 
@@ -193,12 +186,10 @@ class PreferencesWindow(QDialog):
             radioButton.clicked.connect(self.writeUiToConfig)
 
         for radioButton in self.hmmRadioButtons:
-            radioButton.clicked.connect(self.checkHmmRadioButtons)
+            radioButton.clicked.connect(self.writeUiToConfig)
 
         # ROI detection tolerance
-        self.ui.toleranceComboBox.currentTextChanged.connect(
-            self.writeUiToConfig
-        )
+        self.ui.toleranceComboBox.currentTextChanged.connect(self.writeUiToConfig)
 
         # BIC strictness
         self.ui.doubleSpinBox_hmm_BIC.valueChanged.connect(self.writeUiToConfig)
@@ -253,9 +244,7 @@ class PreferencesWindow(QDialog):
         ):
             checkBox.setChecked(bool(self.getConfig(configKey)))
 
-        for radioButton, imgMode in zip(
-            self.imgModeRadioButtons, gvars.keys_ImgModes
-        ):
+        for radioButton, imgMode in zip(self.imgModeRadioButtons, gvars.keys_ImgModes):
             if self.getConfig(gvars.key_imgMode) == imgMode:
                 radioButton.setChecked(True)
 
@@ -302,7 +291,6 @@ class BaseWindow(QMainWindow):
 
         self.AboutWindow_ = AboutWindow()
 
-
     def setupMenuBarActions(self):
         """
         Setup menubar actions to be inherited (and thus shared) between all
@@ -333,9 +321,7 @@ class BaseWindow(QMainWindow):
             partial(self.exportTraces, False)
         )
         # Exports colocalized spots
-        self.ui.actionExport_Colocalization.triggered.connect(
-            self.exportColocalization
-        )
+        self.ui.actionExport_Colocalization.triggered.connect(self.exportColocalization)
         self.ui.actionExport_Correction_Factors.triggered.connect(
             self.exportCorrectionFactors
         )
@@ -349,9 +335,7 @@ class BaseWindow(QMainWindow):
         # Edit
         # Delete from listView
         self.ui.actionRemove_File.triggered.connect(self.deleteSingleListObject)
-        self.ui.actionRemove_All_Files.triggered.connect(
-            self.deleteAllListObjects
-        )
+        self.ui.actionRemove_All_Files.triggered.connect(self.deleteAllListObjects)
         self.ui.actionSelect_All.triggered.connect(self.checkAll)
         self.ui.actionDeselect_All.triggered.connect(self.unCheckAll)
 
@@ -359,9 +343,7 @@ class BaseWindow(QMainWindow):
         self.ui.actionFormat_Plot.triggered.connect(self.formatPlotInspector)
         # ---
         self.ui.actionAdvanced_Sort.triggered.connect(self.configInspector)
-        self.ui.actionSort_by_Ascending.triggered.connect(
-            self.sortListAscending
-        )
+        self.ui.actionSort_by_Ascending.triggered.connect(self.sortListAscending)
         self.ui.actionSort_by_Red_Bleach.triggered.connect(
             partial(self.sortListByCondition, "red")
         )
@@ -375,9 +357,7 @@ class BaseWindow(QMainWindow):
         # Analyze
 
         # Colocalize all spots with current settings
-        self.ui.actionColocalize_All.triggered.connect(
-            self.colocalizeSpotsAllMovies
-        )
+        self.ui.actionColocalize_All.triggered.connect(self.colocalizeSpotsAllMovies)
         self.ui.actionClear_Traces.triggered.connect(self.clearTraces)
         self.ui.actionFind_Show_Traces.triggered.connect(self.findTracesAndShow)
 
@@ -386,9 +366,7 @@ class BaseWindow(QMainWindow):
         self.ui.actionColor_Yellow.triggered.connect(self.colorListObjectYellow)
         self.ui.actionColor_Green.triggered.connect(self.colorListObjectGreen)
         self.ui.actionClear_Color.triggered.connect(self.resetListObjectColor)
-        self.ui.actionClear_All_Colors.triggered.connect(
-            self.resetListObjectColorAll
-        )
+        self.ui.actionClear_All_Colors.triggered.connect(self.resetListObjectColorAll)
         # ---
         self.ui.actionCorrectionFactorsWindow.triggered.connect(
             self.correctionFactorInspector
@@ -634,9 +612,7 @@ class BaseWindow(QMainWindow):
         # singleselect here)
         self.listViewSelectionModel = self.listView.selectionModel()
         # to connect it to the selection
-        self.listViewSelectionModel.currentChanged.connect(
-            self.getCurrentListObject
-        )
+        self.listViewSelectionModel.currentChanged.connect(self.getCurrentListObject)
         # Don't connect listview twice!
         self.listView.clicked.connect(self.getCurrentListObject)
 
@@ -809,15 +785,11 @@ class BaseWindow(QMainWindow):
         if TransitionDensityWindow_.isVisible():
             TransitionDensityWindow_.refreshPlot()
 
-    def setupFigureCanvas(
-        self, ax_setup, ax_window, use_layoutbox=True, **kwargs
-    ):
+    def setupFigureCanvas(self, ax_setup, ax_window, use_layoutbox=True, **kwargs):
         """
         Creates a canvas with a given ax layout.
         """
-        self.plotWidget = PlotWidget(
-            ax_setup=ax_setup, ax_window=ax_window, **kwargs
-        )
+        self.plotWidget = PlotWidget(ax_setup=ax_setup, ax_window=ax_window, **kwargs)
         self.canvas = self.plotWidget.canvas
 
         if use_layoutbox:
@@ -930,9 +902,7 @@ class BaseWindow(QMainWindow):
         """
         exp_txt, date_txt = self.returnInfoHeader()
 
-        directory = (
-            self.getConfig(gvars.key_lastOpenedDir) + "/Colocalization.txt"
-        )
+        directory = self.getConfig(gvars.key_lastOpenedDir) + "/Colocalization.txt"
         path, _ = QFileDialog.getSaveFileName(
             self, directory=directory
         )  # type: str, str
@@ -1517,9 +1487,7 @@ class MainWindow(BaseWindow):
         Colocalizes spots for all movies, with the same threshold. Use this
         method instead for progress bar.
         """
-        progressbar = ProgressBar(
-            loop_len=len(self.data.movies.keys()), parent=self
-        )
+        progressbar = ProgressBar(loop_len=len(self.data.movies.keys()), parent=self)
         for name in self.data.movies.keys():
             self.currName = name
             for c in "green", "red":
@@ -1908,7 +1876,7 @@ class TraceWindow(BaseWindow):
                     newTrace = TraceContainer(filename=full_filename)
                 except AttributeError:  # if a non-trace file was selected
                     warnings.warn(
-                        f"This file could not be read: \n{full_filename}", UserWarning
+                        f"This file could not be read: \n{full_filename}", UserWarning,
                     )
                     continue
                 if (n % update_every_n) == 0:
@@ -1965,39 +1933,40 @@ class TraceWindow(BaseWindow):
         if traces == []:
             warnings.warn("No traces were selected!", UserWarning)
             pass
+        print("Fitting HMM with {} setting".format(self.getConfig(gvars.key_hmmMode)))
 
-        # if hmm_idealized_config_flag == "global":
-
-        DD, DA, AA, E, lengths = [], [], [], [], []
+        lDD, lDA, lAA, lE, llengths = [], [], [], [], []
         for trace in traces:
             _, I_DD, I_DA, I_AA = lib.math.correct_DA(trace.get_intensities())
-            DD.append(I_DD[: trace.first_bleach])
-            DA.append(I_DA[: trace.first_bleach])
-            AA.append(I_AA[: trace.first_bleach])
-            E.append(trace.fret[: trace.first_bleach])
-            lengths.append(len(I_DD[: trace.first_bleach]))
-            if self.getConfig(gvars.key_hmmLocal):  # set the variable here
-                trace.hmm_idealized_config = "local"
+            lDD.append(I_DD[: trace.first_bleach])
+            lDA.append(I_DA[: trace.first_bleach])
+            lAA.append(I_AA[: trace.first_bleach])
+            lE.append(trace.fret[: trace.first_bleach])
+            llengths.append(len(I_DD[: trace.first_bleach]))
 
-        DD = np.concatenate(DD)
-        DA = np.concatenate(DA)
-        AA = np.concatenate(AA)
-        E = np.array(E)
-        E_trace = np.concatenate(E).reshape(-1, 1)
+        E = np.array(lE)
+
         if self.getConfig(gvars.key_hmmMode) == "DA":
-            if lib.math.contains_nan(AA):
-                X = np.column_stack((DD, DA, E_trace))
-            else:
-                X = np.column_stack((DD, DA, AA, E_trace))
-            raise NotImplementedError
-        else:  # Use E_FRET
+            X = []
+            for ti in range(len(lDD)):
+                _x = np.column_stack((lDD[ti], lDA[ti], lAA[ti], lE[ti]))
+                X.append(_x)
+
+            if lib.math.contains_nan([np.sum(aa) for aa in X[:][2]]):
+                X = [np.concatenate((_x[:, :2], _x[:, 3:]), axis=1) for _x in X]
+
+            X = np.array(X)
+        else:
             X = E.copy()
 
+        E_flat = np.concatenate(E)
+
         best_mixture_model, params = lib.math.fit_gaussian_mixture(
-            E_trace,
+            E_flat,
             min_n_components=1,
             max_n_components=6,
             strict_bic=self.getConfig(gvars.key_hmmBICStrictness),
+            verbose=True,
         )
         n_components = best_mixture_model.n_components
         self.hmmModel = lib.math.get_hmm_model(X, n_components=n_components)
@@ -2008,12 +1977,20 @@ class TraceWindow(BaseWindow):
 
         state_dict = {}
         for i, state in enumerate(self.hmmModel.states):
-            try:
-                state_dict[
-                    f"{state.name}".replace("s", "")
-                ] = state.distribution.parameters
-            except AttributeError:
-                continue
+            if self.getConfig(gvars.key_hmmMode) == "DA":
+                try:
+                    state_dict[
+                        f"{state.name}".replace("s", "")
+                    ] = state.distribution.parameters[0][-1].parameters
+                except AttributeError:
+                    continue
+            else:  # this is if we use E as X
+                try:
+                    state_dict[
+                        f"{state.name}".replace("s", "")
+                    ] = state.distribution.parameters
+                except AttributeError:
+                    continue
         means = np.array([v[0] for v in state_dict.values()])
         sigs = np.array([v[1] for v in state_dict.values()])
 
@@ -2021,10 +1998,8 @@ class TraceWindow(BaseWindow):
         print("State means:\n", means)
         print("State sigmas:\n", sigs)
 
-        for trace in traces:  # type: TraceContainer
-            _X = trace.fret[
-                : trace.first_bleach
-            ]  # TODO This needs to change to choose DA vs E
+        for ti, trace in enumerate(traces):
+            _X = X[ti]
             tf = pd.DataFrame()
             tf["e_obs"] = trace.fret[: trace.first_bleach]
             tf["state"] = np.array(self.hmmModel.predict(_X)).astype(int)

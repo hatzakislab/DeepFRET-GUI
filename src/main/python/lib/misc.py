@@ -192,7 +192,7 @@ def sim_to_ascii(df, trace_len, outdir):
         ).round(4)
 
         date_txt = "Date: {}".format(time.strftime("%Y-%m-%d, %H:%M"))
-        mov_txt = "Movie filename: {}".format(None)
+        vid_txt = "Video filename: {}".format(None)
         id_txt = "FRET pair #{}".format(idx)
         bl_txt = "Bleaches at {}".format(trace["fb"].values[0])
 
@@ -206,7 +206,7 @@ def sim_to_ascii(df, trace_len, outdir):
                 "{5}".format(
                     exp_txt,
                     date_txt,
-                    mov_txt,
+                    vid_txt,
                     id_txt,
                     bl_txt,
                     df.to_csv(index=False, sep="\t"),

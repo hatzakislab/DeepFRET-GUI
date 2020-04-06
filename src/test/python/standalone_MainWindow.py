@@ -5,13 +5,18 @@ from main import MainWindow, AppContext, gvars
 class SetUp(MainWindow):
     def __init__(self):
         super(SetUp, self).__init__()
+        self.ui.spotsGrnSpinBox.setValue(100)
+        self.ui.spotsRedSpinBox.setValue(100)
 
-        self.setConfig(gvars.key_contrastBoxHiGrnVal, 100)
-        self.setConfig(gvars.key_contrastBoxHiRedVal, 100)
-
-    def setFile(self, path, imgmode):
-        self.setConfig(gvars.key_imgMode, imgmode)
-        self.data.load_img(path=path, setup=imgmode, name="")
+    def setFile(self, path, img_mode, donor_is_left, donor_is_first):
+        self.img_mode = img_mode
+        self.data.load_video_data(
+            path=path,
+            name="",
+            setup=img_mode,
+            donor_is_left=donor_is_left,
+            donor_is_first=donor_is_first,
+        )
         self.currName = self.data.currName
 
     def setupAlexQuadTIFF(self, **kwargs):
@@ -38,14 +43,18 @@ if __name__ == "__main__":
     cls = SetUp()
 
     cls.setupAlexQuadTIFF(
-        path="../resources/movies/Test_Quad_2c-mini.tif",
-        imgmode=gvars.key_imgMode2Color,
+        path="../resources/movies/Test_Quad_2c.tif",
+        img_mode=gvars.key_imgMode2Color,
+        donor_is_left=True,
+        donor_is_first=True,
     )
 
-    cls.setupAlexDualFITS(
-        path="../resources/movies/Antibody_RNAP_KG7_22degrees_667.fits",
-        imgmode=gvars.key_imgMode2Color,
-    )
+    # cls.setupAlexDualFITS(
+    #     path="../resources/movies/Antibody_RNAP_KG7_22degrees_667.fits",
+    #     img_mode=gvars.key_imgMode2Color,
+    #     donor_is_left = True,
+    #     donor_is_first = False,
+    # )
 
     exit_code = ctxt.run()
     sys.exit(exit_code)

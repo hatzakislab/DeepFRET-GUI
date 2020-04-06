@@ -6,7 +6,7 @@ multiprocessing.freeze_support()
 import os
 import sys
 from functools import partial
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Any
 from lib.misc import timeit
 import matplotlib
 from PyQt5.QtCore import *
@@ -56,11 +56,11 @@ from ui.misc import (
     ExportDialog,
 )
 from lib.container import (
-    MovieContainer,
+    VideoContainer,
     ImageChannel,
     TraceChannel,
     TraceContainer,
-    MovieData,
+    VideoData,
 )
 from mpl_layout import PlotWidget
 
@@ -103,7 +103,9 @@ class PreferencesWindow(QDialog):
             self.ui.checkBox_unColocRed,
             self.ui.checkBox_illuCorrect,
             self.ui.checkBox_fitSpots,
-            self.ui.checkBox_hmmLocal,
+            self.ui.checkBox_hmm_local,
+            self.ui.checkBox_firstFrameIsDonor,
+            self.ui.checkBox_donorLeft,
         )
         self.imgModeRadioButtons = (
             self.ui.radioButton_dual,
@@ -327,11 +329,11 @@ class BaseWindow(QMainWindow):
         self.ui.actionClose.triggered.connect(self.close)
         # Exports CHECKED traces
         self.ui.actionExport_Selected_Traces.triggered.connect(
-            partial(self.exportTraces, True)
+            partial(self.exportTracesToAscii, True)
         )
         # Exports ALL traces
         self.ui.actionExport_All_Traces.triggered.connect(
-            partial(self.exportTraces, False)
+            partial(self.exportTracesToAscii, False)
         )
         # Exports colocalized spots
         self.ui.actionExport_Colocalization.triggered.connect(
@@ -377,10 +379,11 @@ class BaseWindow(QMainWindow):
 
         # Colocalize all spots with current settings
         self.ui.actionColocalize_All.triggered.connect(
-            self.colocalizeSpotsAllMovies
+            self.colocalizeSpotsAllVideos
         )
         self.ui.actionClear_Traces.triggered.connect(self.clearTraces)
         self.ui.actionFind_Show_Traces.triggered.connect(self.findTracesAndShow)
+        self.ui.actionClear_and_Rerun.triggered.connect(self.clearTraceAndRerun)
 
         # ---
         self.ui.actionColor_Red.triggered.connect(self.colorListObjectRed)
@@ -659,13 +662,13 @@ class BaseWindow(QMainWindow):
 
     def clearTraceAndRerun(self):
         """
-        Clears everything and reruns on selected movies.
+        Clears everything and reruns on selected videos.
         """
         MainWindow_.clearTraces()
 
-        # Load all traces into their respective movies, and generate a list
+        # Load all traces into their respective videos, and generate a list
         # of traces
-        MainWindow_.getTracesAllMovies()
+        MainWindow_.getTracesAllVideos()
 
         # Iterate over all filenames and add to list
         for (name, trace) in MainWindow_.data.traces.items():
@@ -706,7 +709,7 @@ class BaseWindow(QMainWindow):
     def returnContainerInstance(self):
         """Returns appropriate data container for implemented windows"""
         if isinstance(self, MainWindow):
-            container = self.data.movies
+            container = self.data.videos
         elif isinstance(self, TraceWindow):
             container = MainWindow_.data.traces
         else:
@@ -730,7 +733,7 @@ class BaseWindow(QMainWindow):
 
     def deleteAllListObjects(self):
         """
-        Deletes all Example_Files from listview.
+        Deletes all files from listview.
         """
         self.listModel.clear()
         container = self.returnContainerInstance()
@@ -927,7 +930,7 @@ class BaseWindow(QMainWindow):
     def exportColocalization(self):
         """
         Exports colocalized ROI information for all currently colocalized
-        movies. Does not automatically trigger ColocalizeAll beforehand.
+        videos. Does not automatically trigger ColocalizeAll beforehand.
         """
         exp_txt, date_txt = self.returnInfoHeader()
 
@@ -947,12 +950,12 @@ class BaseWindow(QMainWindow):
 
             assert columns[-1] == "filename"
 
-            for name, mov in MainWindow_.movies.items():
+            for name, vid in MainWindow_.videos.items():
 
                 data = (
-                    mov.grn.n_spots,
-                    mov.red.n_spots,
-                    mov.coloc_grn_red.n_spots,
+                    vid.grn.n_spots,
+                    vid.red.n_spots,
+                    vid.coloc_grn_red.n_spots,
                     name,
                 )
 
@@ -972,9 +975,9 @@ class BaseWindow(QMainWindow):
                     )
                 )
 
-    def exportTraces(self, checked_only):
+    def exportTracesToAscii(self, checked_only):
         """
-        Exports all traces as ASCII Example_Files to selected directory.
+        Exports all traces as ASCII files to selected directory.
         Maintains compatibility with iSMS and older pySMS scripts.
         """
         if checked_only:
@@ -999,7 +1002,7 @@ class BaseWindow(QMainWindow):
 
     def exportCorrectionFactors(self):
         """
-        Exports all available correction factors for each newTraceFromMovie to table.
+        Exports all available correction factors for each trace to table.
         """
 
         exp_txt, date_txt = self.returnInfoHeader()
@@ -1142,14 +1145,14 @@ class BaseWindow(QMainWindow):
         """Override in subclass."""
         pass
 
-    def colocalizeSpotsAllMovies(self):
+    def colocalizeSpotsAllVideos(self):
         """Override in subclass."""
         pass
 
     def getTrace(self, name):
         """Override in subclass."""
 
-    def getTracesAllMovies(self):
+    def getTracesAllVideos(self):
         """Override in subclass."""
         pass
 
@@ -1215,9 +1218,13 @@ class MainWindow(BaseWindow):
         self.currRow = None
         self.currDir = None
         self.currRoiSize = gvars.roi_draw_radius
-        self.imgMode = self.getConfig(gvars.key_imgMode)
+        self.img_mode = self.getConfig(gvars.key_imgMode)
+        self.donor_first = self.getConfig(gvars.key_firstFrameIsDonor)
+        self.donor_is_left = self.getConfig(gvars.key_donorLeft)
+        self.bg_correction = self.getConfig(gvars.key_illuCorrect)
+
         self.batchLoaded = (
-            False  # If movies have been batchloaded, disable some controls
+            False  # If videos have been batchloaded, disable some controls
         )
 
         # Initialize interface
@@ -1233,7 +1240,7 @@ class MainWindow(BaseWindow):
 
         self.setupListView(use_layoutbox=False)
         self.setupFigureCanvas(
-            ax_setup=self.imgMode, ax_window="img", use_layoutbox=False
+            ax_setup=self.img_mode, ax_window="img", use_layoutbox=False
         )
         self.setupPlot()
         self.setupSplitter(layout=self.ui.LayoutBox)
@@ -1267,39 +1274,39 @@ class MainWindow(BaseWindow):
         )
 
         # Initialize DataHolder class
-        self.data = MovieData()
+        self.data = VideoData()
         TraceWindow.data = self.data
 
         self.show()
 
-    def currentMovie(self) -> MovieContainer:
+    def currentVideo(self) -> VideoContainer:
         """
         Quick interface to obtain file data (or names will be extremely long).
         Add type hinting in metadata to improve autocomplete.
         """
         return self.data.get(self.currName)
 
-    def newTraceFromMovie(self, n) -> TraceContainer:
+    def newTraceFromVideo(self, n) -> TraceContainer:
         """
         Shortcut to obtain trace, and create a new one if it doesn't exist.
         """
         tracename = self.currName + "_" + str(n)
         if tracename not in self.data.traces:
             self.data.traces[tracename] = TraceContainer(
-                filename=tracename, movie=self.currName, n=n
+                filename=tracename, video=self.currName, n=n
             )
         return self.data.traces[tracename]
 
     def trace_c(self, n, channel) -> TraceChannel:
         """
-        Shortcut to obtain trace channel. See newTraceFromMovie().
+        Shortcut to obtain trace channel. See newTraceFromVideo().
         """
         if channel == "green":
-            return self.newTraceFromMovie(n).grn
+            return self.newTraceFromVideo(n).grn
         elif channel == "red":
-            return self.newTraceFromMovie(n).red
+            return self.newTraceFromVideo(n).red
         elif channel == "acc":
-            return self.newTraceFromMovie(n).acc
+            return self.newTraceFromVideo(n).acc
         else:
             raise ValueError("Invalid channel")
 
@@ -1318,7 +1325,7 @@ class MainWindow(BaseWindow):
             filenames, selectedFilter = QFileDialog.getOpenFileNames(
                 self,
                 caption="Open File",
-                filter="Movie files (*.tif *fits)",
+                filter="Video files (*.tif *fits)",
                 directory=directory,
             )
 
@@ -1331,14 +1338,16 @@ class MainWindow(BaseWindow):
                     # Make sure name is unique
                     uniqueName = lib.misc.generate_unique_name(
                         full_filename=full_filename,
-                        array=self.data.movies.keys(),
+                        array=self.data.videos.keys(),
                     )
 
-                    self.data.load_img(
+                    self.data.load_video_data(
                         path=full_filename,
                         name=uniqueName,
-                        setup=self.imgMode,
-                        bg_correction=self.getConfig(gvars.key_illuCorrect),
+                        setup=self.img_mode,
+                        donor_is_first=self.donor_first,
+                        donor_is_left=self.donor_is_left,
+                        bg_correction=self.bg_correction,
                     )
 
                     item = QStandardItem(uniqueName)
@@ -1351,7 +1360,7 @@ class MainWindow(BaseWindow):
                     self.listView.repaint()
                     progressbar.increment()
 
-                # Select first movie if loading into an empty listView
+                # Select first video if loading into an empty listView
                 if self.currRow is None:
                     self.currRow = 0
                     self.selectListViewTopRow()
@@ -1367,8 +1376,8 @@ class MainWindow(BaseWindow):
             self.batchOpen()
 
     def batchOpen(self):
-        """Loads one movie at a time and extracts traces, then clears the
-        movie from memory afterwards"""
+        """Loads one video at a time and extracts traces, then clears the
+        video from memory afterwards"""
         # TraceWindow_.traces.clear()
         if self.getConfig(gvars.key_lastOpenedDir) == "None":
             directory = os.path.join(
@@ -1381,7 +1390,7 @@ class MainWindow(BaseWindow):
             self,
             caption="Open File",
             directory=directory,
-            filter="Movie files (*.tif *.fits)",
+            filter="Video files (*.tif *.fits)",
         )
 
         if len(filenames) > 0:
@@ -1394,30 +1403,32 @@ class MainWindow(BaseWindow):
                     progressbar.increment()
 
                 self.currName = os.path.basename(full_filename)
-                if self.currName in self.data.movies:
+                if self.currName in self.data.videos:
                     continue
 
-                self.data.load_img(
+                self.data.load_video_data(
                     path=full_filename,
                     name=os.path.basename(full_filename),
-                    setup=self.imgMode,
-                    bg_correction=self.getConfig(gvars.key_illuCorrect),
+                    setup=self.img_mode,
+                    donor_is_first=self.donor_first,
+                    donor_is_left=self.donor_is_left,
+                    bg_correction=self.bg_correction,
                 )
 
                 channels = ("green", "red")
                 for c in channels:
-                    if self.currentMovie().acc.exists:
-                        self.colocalizeSpotsSingleMovie(
+                    if self.currentVideo().acc.exists:
+                        self.colocalizeSpotsSingleVideo(
                             channel=c, find_npairs="auto"
                         )
                     else:
-                        self.colocalizeSpotsSingleMovie(
+                        self.colocalizeSpotsSingleVideo(
                             channel=c, find_npairs="spinbox"
                         )
-                self.getTracesSingleMovie()
-                self.currentMovie().mov = None
-                for c in self.currentMovie().channels + (
-                    self.currentMovie().acc,
+                self.getTracesSingleVideo()
+                self.currentVideo().vid = None
+                for c in self.currentVideo().channels + (
+                    self.currentVideo().acc,
                 ):
                     c.raw = None
 
@@ -1448,25 +1459,25 @@ class MainWindow(BaseWindow):
             self.selectListViewTopRow()
             self.refreshPlot()
 
-    def colocalizeSpotsSingleMovie(self, channel, find_npairs="spinbox"):
+    def colocalizeSpotsSingleVideo(self, channel, find_npairs="spinbox"):
         """
-        Find and colocalize spots for a single currentMovie (not displayed).
+        Find and colocalize spots for a single currentVideo (not displayed).
         """
-        mov = self.currentMovie()
+        vid = self.currentVideo()
         tolerance_type = self.getConfig(gvars.key_colocTolerance)
         tolerance_value = gvars.roi_coloc_tolerances[tolerance_type]
 
         if channel == "green":
-            channel = mov.grn
+            channel = vid.grn
             spinBox = self.ui.spotsGrnSpinBox
-            pairs = ((mov.grn, mov.red),)
-            colocs = (mov.coloc_grn_red,)
+            pairs = ((vid.grn, vid.red),)
+            colocs = (vid.coloc_grn_red,)
 
         elif channel == "red":
-            channel = mov.red
+            channel = vid.red
             spinBox = self.ui.spotsRedSpinBox
-            pairs = ((mov.grn, mov.red),)
-            colocs = (mov.coloc_grn_red,)
+            pairs = ((vid.grn, vid.red),)
+            colocs = (vid.coloc_grn_red,)
         else:
             raise ValueError("Invalid color")
 
@@ -1489,7 +1500,7 @@ class MainWindow(BaseWindow):
                 real_spots = []
                 for spot in spots:
                     masks = lib.imgdata.circle_mask(
-                        yx=spot, indices=mov.indices, **gvars.cmask_p
+                        yx=spot, indices=vid.indices, **gvars.cmask_p
                     )
                     intensity, bg = lib.imgdata.tiff_stack_intensity(
                         channel.mean_nobg, *masks, raw=True
@@ -1510,10 +1521,10 @@ class MainWindow(BaseWindow):
                 channel.n_spots = len(channel.spots)
 
         if channel == "red" and self.getConfig(gvars.key_unColocRed):
-            mov.grn.spots = mov.red.spots
-            mov.acc.spots = mov.red.spots
-            mov.grn.n_spots = mov.red.n_spots
-            mov.acc.n_spots = mov.red.n_spots
+            vid.grn.spots = vid.red.spots
+            vid.acc.spots = vid.red.spots
+            vid.grn.n_spots = vid.red.n_spots
+            vid.acc.n_spots = vid.red.n_spots
 
         for (c1, c2), coloc in zip(pairs, colocs):
             if all((c1.n_spots, c2.n_spots)) > 0:
@@ -1526,83 +1537,83 @@ class MainWindow(BaseWindow):
                 )
                 coloc.n_spots = len(coloc.spots)
 
-        mov.coloc_all.spots = mov.coloc_grn_red.spots
-        mov.coloc_all.n_spots = mov.coloc_grn_red.n_spots
+        vid.coloc_all.spots = vid.coloc_grn_red.spots
+        vid.coloc_all.n_spots = vid.coloc_grn_red.n_spots
 
     def displaySpotsSingle(self, channel):
         """
-        Displays colocalized spot for a single movie.
+        Displays colocalized spot for a single video.
         """
         self.getCurrentListObject()
 
         if self.currName is not None:
-            self.colocalizeSpotsSingleMovie(channel)
+            self.colocalizeSpotsSingleVideo(channel)
             self.refreshPlot()
 
-    def colocalizeSpotsAllMovies(self):
+    def colocalizeSpotsAllVideos(self):
         """
-        Colocalizes spots for all movies, with the same threshold. Use this
+        Colocalizes spots for all videos, with the same threshold. Use this
         method instead for progress bar.
         """
         progressbar = ProgressBar(
-            loop_len=len(self.data.movies.keys()), parent=self
+            loop_len=len(self.data.videos.keys()), parent=self
         )
-        for name in self.data.movies.keys():
+        for name in self.data.videos.keys():
             self.currName = name
             for c in "green", "red":
-                self.colocalizeSpotsSingleMovie(c)
+                self.colocalizeSpotsSingleVideo(c)
             progressbar.increment()
 
         self.resetCurrentName()
         self.refreshPlot()
 
-    def getTracesSingleMovie(self):
+    def getTracesSingleVideo(self):
         """
-        Gets traces from colocalized ROIs, for a single movie.
+        Gets traces from colocalized ROIs, for a single video.
         """
         if self.currName is None:
             return
-        mov = self.currentMovie()
+        vid = self.currentVideo()
 
         # Clear all traces previously held traces whenever this is called
-        mov.traces = {}
+        vid.traces = {}
 
-        if mov.coloc_grn_red.spots is None:
+        if vid.coloc_grn_red.spots is None:
             for c in "green", "red":
-                self.colocalizeSpotsSingleMovie(c)
+                self.colocalizeSpotsSingleVideo(c)
         else:
-            for n, *row in mov.coloc_grn_red.spots.itertuples():
+            for n, *row in vid.coloc_grn_red.spots.itertuples():
                 yx_grn, yx_red = lib.misc.pairwise(row)
 
-                trace = self.newTraceFromMovie(n)
+                trace = self.newTraceFromVideo(n)
 
                 # Green
-                if mov.grn.exists and yx_grn is not None:
+                if vid.grn.exists and yx_grn is not None:
                     masks_grn = lib.imgdata.circle_mask(
-                        yx=yx_grn, indices=mov.indices, **gvars.cmask_p
+                        yx=yx_grn, indices=vid.indices, **gvars.cmask_p
                     )
                     (
                         trace.grn.int,
                         trace.grn.bg,
                     ) = lib.imgdata.tiff_stack_intensity(
-                        mov.grn.raw, *masks_grn, raw=True
+                        vid.grn.raw, *masks_grn, raw=True
                     )
 
                 # Red
                 masks_red = lib.imgdata.circle_mask(
-                    yx=yx_red, indices=mov.indices, **gvars.cmask_p
+                    yx=yx_red, indices=vid.indices, **gvars.cmask_p
                 )
                 trace.red.int, trace.red.bg = lib.imgdata.tiff_stack_intensity(
-                    mov.red.raw, *masks_red, raw=True
+                    vid.red.raw, *masks_red, raw=True
                 )
 
                 # Acceptor (if FRET)
-                if mov.acc.exists:
+                if vid.acc.exists:
                     (
                         trace.acc.int,
                         trace.acc.bg,
                     ) = lib.imgdata.tiff_stack_intensity(
-                        mov.acc.raw, *masks_red, raw=True
+                        vid.acc.raw, *masks_red, raw=True
                     )
                     trace.fret = lib.math.calc_E(trace.get_intensities())
                     trace.stoi = lib.math.calc_S(trace.get_intensities())
@@ -1610,16 +1621,16 @@ class MainWindow(BaseWindow):
                 trace.frames = np.arange(1, len(trace.red.int) + 1)
                 trace.frames_max = max(trace.frames)
 
-    def getTracesAllMovies(self):
+    def getTracesAllVideos(self):
         """
         Gets the traces from all videos that have colocalized ROIs.
         """
-        for name in self.data.movies.keys():
+        for name in self.data.videos.keys():
             self.currName = name
             for c in "green", "red":
-                self.colocalizeSpotsSingleMovie(c)
+                self.colocalizeSpotsSingleVideo(c)
 
-            self.getTracesSingleMovie()
+            self.getTracesSingleVideo()
 
         self.resetCurrentName()
 
@@ -1669,8 +1680,8 @@ class MainWindow(BaseWindow):
             ax.clear()
 
         if self.currName is not None:
-            mov = self.currentMovie()
-            roi_radius = mov.roi_radius
+            vid = self.currentVideo()
+            roi_radius = vid.roi_radius
 
             contrast_lo = (
                 self.ui.contrastBoxLoGreen,
@@ -1686,10 +1697,10 @@ class MainWindow(BaseWindow):
             )
             # Rescale values according to UI first
             # might break image if too high
-            sensitivity = 100 if self.imgMode == "bypass" else 250
+            sensitivity = 100 if self.img_mode == "bypass" else 250
 
             for c, lo, hi in zip(
-                mov.channels, contrast_lo, contrast_hi
+                vid.channels, contrast_lo, contrast_hi
             ):  # type: ImageChannel, QDoubleSpinBox, QDoubleSpinBox
                 clip_lo = float(lo.value() / sensitivity)
                 clip_hi = float(hi.value() / sensitivity)
@@ -1702,7 +1713,7 @@ class MainWindow(BaseWindow):
                 self.setConfig(cfg, hi.value())
 
             # Single channels
-            for img, ax in zip(mov.channels, self.canvas.axes_single):
+            for img, ax in zip(vid.channels, self.canvas.axes_single):
                 if img.rgba is not None:
                     # Avoid imshow showing blank if clipped too much
                     if np.isnan(img.rgba).any():
@@ -1711,7 +1722,7 @@ class MainWindow(BaseWindow):
                 else:
                     lib.plotting.empty_imshow(ax)
 
-            c1, c2 = mov.grn, mov.red
+            c1, c2 = vid.grn, vid.red
             if c1.rgba is not None and c2.rgba is not None:
                 self.canvas.ax_grn_red.imshow(
                     lib.imgdata.light_blend(
@@ -1727,27 +1738,27 @@ class MainWindow(BaseWindow):
                 ax.set_yticks(())
 
             # Green spots
-            if mov.grn.n_spots > 0:
+            if vid.grn.n_spots > 0:
                 lib.plotting.plot_rois(
-                    mov.grn.spots,
+                    vid.grn.spots,
                     self.canvas.ax_grn,
                     color=gvars.color_white,
                     radius=roi_radius,
                 )
 
             # Red spots
-            if mov.red.n_spots > 0:
+            if vid.red.n_spots > 0:
                 lib.plotting.plot_rois(
-                    mov.red.spots,
+                    vid.red.spots,
                     self.canvas.ax_red,
                     color=gvars.color_white,
                     radius=roi_radius,
                 )
 
             # Colocalized spots
-            if mov.coloc_grn_red.spots is not None:
+            if vid.coloc_grn_red.spots is not None:
                 lib.plotting.plot_roi_coloc(
-                    mov.coloc_grn_red.spots,
+                    vid.coloc_grn_red.spots,
                     img_ax=self.canvas.ax_grn_red,
                     color1=gvars.color_green,
                     color2=gvars.color_red,
@@ -1766,20 +1777,19 @@ class MainWindow(BaseWindow):
         Repaints UI labels to match the current plot shown.
         """
         if self.currName is not None:
-            mov = self.currentMovie()
+            vid = self.currentVideo()
 
             channels = (
-                mov.coloc_grn_red,
-                mov.grn,
-                mov.red,
+                vid.coloc_grn_red,
+                vid.grn,
+                vid.red,
             )
 
             for channel, label in zip(channels, self.labels):
                 label.setText(str(channel.n_spots))
 
-            # self.ui.spotsBluSpinBox.setDisabled(not mov.blu.exists)
-            self.ui.spotsGrnSpinBox.setDisabled(not mov.grn.exists)
-            self.ui.spotsRedSpinBox.setDisabled(not mov.red.exists)
+            self.ui.spotsGrnSpinBox.setDisabled(not vid.grn.exists)
+            self.ui.spotsRedSpinBox.setDisabled(not vid.red.exists)
 
             if self.batchLoaded:
                 self.disableSpinBoxes(("green", "red",))
@@ -1798,9 +1808,9 @@ class MainWindow(BaseWindow):
         trace listView.
         """
         if len(self.data.traces) == 0:
-            # Load all traces into their respective movies, and generate a
+            # Load all traces into their respective videos, and generate a
             # list of traces
-            self.getTracesAllMovies()
+            self.getTracesAllVideos()
             currently_loaded = self.returnCurrentListviewNames()
             # Iterate over all filenames and add to list
             for (name, trace) in self.data.traces.items():
@@ -1819,17 +1829,17 @@ class MainWindow(BaseWindow):
 
     def newTraceFromContainer(self, trace, n):
         """
-        Creates an empty movie object to load traces into by transplanting a
+        Creates an empty video object to load traces into by transplanting a
         list of loaded TraceContainers
         """
         tracename = self.currName + "_" + str(n)
 
-        trace.currentMovie = self.currName
+        trace.currentVideo = self.currName
         trace.name = tracename
         trace.n = n
 
-        if tracename not in self.data.movies[self.currName].traces:
-            self.data.movies[self.currName].traces[tracename] = trace
+        if tracename not in self.data.videos[self.currName].traces:
+            self.data.videos[self.currName].traces[tracename] = trace
 
     def disableSpinBoxes(self, channel):
         """
@@ -2279,9 +2289,9 @@ class TraceWindow(BaseWindow):
         self.listModel.removeRows(0, self.listModel.rowCount())
         self.data.traces = []
 
-    def returnTracenamesAllMovies(self, names_only=True):
+    def returnTracenamesAllVideos(self, names_only=True):
         """
-        Obtains all available tracenames from movies and returns them as a list.
+        Obtains all available tracenames from videos and returns them as a list.
         """
         if names_only:
             tracenames = [trace for trace in self.data.traces.keys()]
@@ -2395,11 +2405,11 @@ class TraceWindow(BaseWindow):
         Generates a pretty, readable generatePrettyTracename.
         """
 
-        if trace.movie is None:
+        if trace.video is None:
             name = "Trace_pair{}.txt".format(trace.n)
         else:
             name = "Trace_{}_pair{}.txt".format(
-                trace.movie.replace(".", "_"), trace.n
+                trace.video.replace(".", "_"), trace.n
             )
 
         # Scrub mysterious \n if they appear due to filenames
@@ -3900,7 +3910,7 @@ class SimulatorWindow(BaseWindow):
                 ).round(4)
 
                 date_txt = "Date: {}".format(time.strftime("%Y-%m-%d, %H:%M"))
-                mov_txt = "Movie filename: {}".format(None)
+                vid_txt = "Video filename: {}".format(None)
                 id_txt = "FRET pair #{}".format(idx)
                 bl_txt = "Bleaches at {}".format(
                     trace["_bleaches_at"].values[0]
@@ -3917,7 +3927,7 @@ class SimulatorWindow(BaseWindow):
                         "{5}".format(
                             exp_txt,
                             date_txt,
-                            mov_txt,
+                            vid_txt,
                             id_txt,
                             bl_txt,
                             df.to_csv(index=False, sep="\t"),

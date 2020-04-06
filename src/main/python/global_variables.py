@@ -24,6 +24,9 @@ class GlobalVariables:
     key_hmmLocal = (
         "hmmLocal"  # Whether to use global or local hmm, gets passed to traces
     )
+    key_firstFrameIsDonor = "firstFrameIsDonor"
+    key_donorLeft = "donorLeft"
+
     key_hmmBICStrictness = "hmmBICStrictness"
 
     keys_globalCheckBoxes = (
@@ -32,6 +35,8 @@ class GlobalVariables:
         key_illuCorrect,
         key_fitSpots,
         key_hmmLocal,
+        key_firstFrameIsDonor,
+        key_donorLeft,
     )
 
     key_hmmMode = "hmmMode"

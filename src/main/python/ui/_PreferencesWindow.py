@@ -13,7 +13,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_Preferences(object):
     def setupUi(self, Preferences):
         Preferences.setObjectName("Preferences")
-        Preferences.resize(532, 682)
+        Preferences.resize(491, 748)
         sizePolicy = QtWidgets.QSizePolicy(
             QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred
         )
@@ -36,7 +36,7 @@ class Ui_Preferences(object):
         font.setBold(False)
         font.setWeight(50)
         self.generalGroup.setFont(font)
-        self.generalGroup.setFlat(True)
+        self.generalGroup.setFlat(False)
         self.generalGroup.setCheckable(False)
         self.generalGroup.setObjectName("generalGroup")
         self.gridLayout_2 = QtWidgets.QGridLayout(self.generalGroup)
@@ -87,7 +87,7 @@ class Ui_Preferences(object):
         font.setWeight(50)
         self.imagingGroup.setFont(font)
         self.imagingGroup.setAutoFillBackground(False)
-        self.imagingGroup.setFlat(True)
+        self.imagingGroup.setFlat(False)
         self.imagingGroup.setObjectName("imagingGroup")
         self.gridLayout = QtWidgets.QGridLayout(self.imagingGroup)
         self.gridLayout.setSizeConstraint(
@@ -97,13 +97,27 @@ class Ui_Preferences(object):
         self.gridLayout.setObjectName("gridLayout")
         self.radioButton_dual = QtWidgets.QRadioButton(self.imagingGroup)
         self.radioButton_dual.setObjectName("radioButton_dual")
-        self.gridLayout.addWidget(self.radioButton_dual, 0, 0, 1, 1)
+        self.gridLayout.addWidget(self.radioButton_dual, 3, 0, 1, 1)
         self.radioButton_2_col = QtWidgets.QRadioButton(self.imagingGroup)
         self.radioButton_2_col.setObjectName("radioButton_2_col")
-        self.gridLayout.addWidget(self.radioButton_2_col, 1, 0, 1, 1)
+        self.gridLayout.addWidget(self.radioButton_2_col, 4, 0, 1, 1)
+        self.label_7 = QtWidgets.QLabel(self.imagingGroup)
+        font = QtGui.QFont()
+        font.setPointSize(11)
+        self.label_7.setFont(font)
+        self.label_7.setObjectName("label_7")
+        self.gridLayout.addWidget(self.label_7, 2, 0, 1, 1)
         self.radioButton_2_col_inv = QtWidgets.QRadioButton(self.imagingGroup)
         self.radioButton_2_col_inv.setObjectName("radioButton_2_col_inv")
-        self.gridLayout.addWidget(self.radioButton_2_col_inv, 2, 0, 1, 1)
+        self.gridLayout.addWidget(self.radioButton_2_col_inv, 5, 0, 1, 1)
+        self.checkBox_donorLeft = QtWidgets.QCheckBox(self.imagingGroup)
+        self.checkBox_donorLeft.setObjectName("checkBox_donorLeft")
+        self.gridLayout.addWidget(self.checkBox_donorLeft, 1, 0, 1, 1)
+        self.checkBox_firstFrameIsDonor = QtWidgets.QCheckBox(self.imagingGroup)
+        self.checkBox_firstFrameIsDonor.setObjectName(
+            "checkBox_firstFrameIsDonor"
+        )
+        self.gridLayout.addWidget(self.checkBox_firstFrameIsDonor, 0, 0, 1, 1)
         self.verticalLayout.addWidget(self.imagingGroup)
         self.hmmGroup = QtWidgets.QGroupBox(Preferences)
         self.hmmGroup.setObjectName("hmmGroup")
@@ -130,9 +144,9 @@ class Ui_Preferences(object):
             QtWidgets.QSizePolicy.Minimum,
         )
         self.gridLayout_4.addItem(spacerItem, 5, 1, 1, 1)
-        self.checkBox_hmmLocal = QtWidgets.QCheckBox(self.hmmGroup)
-        self.checkBox_hmmLocal.setObjectName("checkBox_hmmLocal")
-        self.gridLayout_4.addWidget(self.checkBox_hmmLocal, 6, 0, 1, 1)
+        self.checkBox_hmm_local = QtWidgets.QCheckBox(self.hmmGroup)
+        self.checkBox_hmm_local.setObjectName("checkBox_hmm_local")
+        self.gridLayout_4.addWidget(self.checkBox_hmm_local, 6, 0, 1, 1)
         self.label_hmm_bic = QtWidgets.QLabel(self.hmmGroup)
         self.label_hmm_bic.setObjectName("label_hmm_bic")
         self.gridLayout_4.addWidget(self.label_hmm_bic, 4, 0, 1, 1)
@@ -207,14 +221,30 @@ class Ui_Preferences(object):
         Preferences.setTabOrder(
             self.checkBox_illuCorrect, self.checkBox_fitSpots
         )
-        Preferences.setTabOrder(self.checkBox_fitSpots, self.radioButton_dual)
+        Preferences.setTabOrder(
+            self.checkBox_fitSpots, self.checkBox_firstFrameIsDonor
+        )
+        Preferences.setTabOrder(
+            self.checkBox_firstFrameIsDonor, self.checkBox_donorLeft
+        )
+        Preferences.setTabOrder(self.checkBox_donorLeft, self.radioButton_dual)
         Preferences.setTabOrder(self.radioButton_dual, self.radioButton_2_col)
         Preferences.setTabOrder(
             self.radioButton_2_col, self.radioButton_2_col_inv
         )
         Preferences.setTabOrder(
-            self.radioButton_2_col_inv, self.toleranceComboBox
+            self.radioButton_2_col_inv, self.radioButton_hmm_fitE
         )
+        Preferences.setTabOrder(
+            self.radioButton_hmm_fitE, self.radioButton_hmm_fitDD
+        )
+        Preferences.setTabOrder(
+            self.radioButton_hmm_fitDD, self.doubleSpinBox_hmm_BIC
+        )
+        Preferences.setTabOrder(
+            self.doubleSpinBox_hmm_BIC, self.checkBox_hmm_local
+        )
+        Preferences.setTabOrder(self.checkBox_hmm_local, self.toleranceComboBox)
         Preferences.setTabOrder(self.toleranceComboBox, self.spinBox_autoDetect)
 
     def retranslateUi(self, Preferences):
@@ -261,13 +291,24 @@ class Ui_Preferences(object):
             _translate("Preferences", "Imaging Setup (restart required!)")
         )
         self.radioButton_dual.setText(
-            _translate("Preferences", "Dual Cam (interleaved videos)")
+            _translate("Preferences", "Interleaved Video")
         )
         self.radioButton_2_col.setText(
             _translate("Preferences", "Quad View (2-channel)")
         )
+        self.label_7.setText(
+            _translate(
+                "Preferences", "      Assuming left/right chip allocation"
+            )
+        )
         self.radioButton_2_col_inv.setText(
             _translate("Preferences", "Quad View (inverted 2-channel)")
+        )
+        self.checkBox_donorLeft.setText(
+            _translate("Preferences", "Donor is left side")
+        )
+        self.checkBox_firstFrameIsDonor.setText(
+            _translate("Preferences", "First frame is donor excitation")
         )
         self.hmmGroup.setTitle(_translate("Preferences", "HMM Settings"))
         self.radioButton_hmm_fitE.setText(
@@ -276,7 +317,7 @@ class Ui_Preferences(object):
         self.radioButton_hmm_fitDD.setText(
             _translate("Preferences", "DD/DA Fitting")
         )
-        self.checkBox_hmmLocal.setText(
+        self.checkBox_hmm_local.setText(
             _translate(
                 "Preferences",
                 "Idealize HMM for each trace individually (Advanced)",

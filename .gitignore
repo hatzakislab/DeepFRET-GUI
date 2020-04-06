@@ -130,5 +130,6 @@ static
 /playground
 temp.txt
 test.py
+pre-commit-hook.sh
 
 .DS_Store

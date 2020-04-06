@@ -1,30 +1,51 @@
 import sys
 from main import MainWindow, AppContext, gvars
 
-def setUp(movie_file_path, imgmode):
-    """
-    Set up the essentials for the window to launch
-    """
-    mock_movie_file = movie_file_path
-    MainWindow_ = MainWindow()
-    MainWindow_.data.load_img(mock_movie_file, name = mock_movie_file, setup = imgmode)
-    MainWindow_.currName = MainWindow_.data.currName
-    return MainWindow_
+
+class SetUp(MainWindow):
+    def __init__(self):
+        super(SetUp, self).__init__()
+
+        self.setConfig(gvars.key_contrastBoxHiGrnVal, 100)
+        self.setConfig(gvars.key_contrastBoxHiRedVal, 100)
+
+    def setFile(self, path, imgmode):
+        self.setConfig(gvars.key_imgMode, imgmode)
+        self.data.load_img(path=path, setup=imgmode, name="")
+        self.currName = self.data.currName
+
+    def setupAlexQuadTIFF(self, **kwargs):
+        """
+        Loads and tests ALEX Quad view TIFF
+        """
+        self.setFile(**kwargs)
+        self.refreshPlot()
+        self.show()
+
+    def setupAlexDualFITS(self, **kwargs):
+        """
+        Loads and tests ALEX dual view FITS
+        """
+        self.setFile(**kwargs)
+        self.refreshPlot()
+        self.show()
+
 
 if __name__ == "__main__":
     ctxt = AppContext()
     ctxt.load_resources()
 
-    # Set the config file imgmode
-    ctxt.config[gvars.key_imgMode] = gvars.key_imgMode2Color
+    cls = SetUp()
 
-    # Initialize mainwindow with the right file and imgmode
-    MainWindow_ = setUp(movie_file_path = "../resources/movies/Test_Quad_2c-mini.tif",
-                        imgmode = gvars.key_imgMode2Color)
+    cls.setupAlexQuadTIFF(
+        path="../resources/movies/Test_Quad_2c-mini.tif",
+        imgmode=gvars.key_imgMode2Color,
+    )
 
-    MainWindow_.displaySpotsSingle("green")
-    MainWindow_.displaySpotsSingle("red")
-    MainWindow_.show()
+    cls.setupAlexDualFITS(
+        path="../resources/movies/Antibody_RNAP_KG7_22degrees_667.fits",
+        imgmode=gvars.key_imgMode2Color,
+    )
 
     exit_code = ctxt.run()
     sys.exit(exit_code)

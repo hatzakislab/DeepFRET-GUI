@@ -72,6 +72,7 @@ def set_axis_exp_ylabel(ax, label, values):
     """
     m = np.max(values)
     e = np.floor(np.log10(np.abs(m)))
+
     ax.ticklabel_format(style="sci", scilimits=(0, 0), axis="both")
     ax.yaxis.get_offset_text().set_visible(False)
     ax.yaxis.major.formatter._useMathText = True
@@ -199,7 +200,8 @@ def plot_shaded_category(y, ax, alpha, colors=None):
             facecolor=colors[label],
         )
 
-def plot_simulation_category(y, ax, alpha=0.2, fontsize = 6):
+
+def plot_simulation_category(y, ax, alpha=0.2, fontsize=6):
     """
     Plots a color for every class segment in a timeseries
 
@@ -224,15 +226,17 @@ def plot_simulation_category(y, ax, alpha=0.2, fontsize = 6):
         8: "5-state",
     }
 
-    colors = {0: "darkgrey",
-              1: "red",
-              2: "blue",
-              3: "purple",
-              4: "orange",
-              5: "lightgreen",
-              6: "green",
-              7: "mediumseagreen",
-              8: "darkolivegreen"}
+    colors = {
+        0: "darkgrey",
+        1: "red",
+        2: "blue",
+        3: "purple",
+        4: "orange",
+        5: "lightgreen",
+        6: "green",
+        7: "mediumseagreen",
+        8: "darkolivegreen",
+    }
 
     y_ = y.argmax(axis=1) if len(y.shape) != 1 else y
     y_ = y_.astype(int)  # type conversion to avoid float type labels
@@ -249,23 +253,25 @@ def plot_simulation_category(y, ax, alpha=0.2, fontsize = 6):
             alpha=alpha,
             facecolor=colors[label],
         )
-    ax.plot([], label = cls[y_[0]], color = colors[y_[0]])
-    ax.legend(loc = "lower right", prop = {"size":fontsize})
+    ax.plot([], label=cls[y_[0]], color=colors[y_[0]])
+    ax.legend(loc="lower right", prop={"size": fontsize})
 
 
 def plot_predictions(yi_pred, fig, ax):
     """
     Plots Keras predictions as probabilities with shaded argmax overlays
     """
-    names = ("bleached",
-            "aggregated",
-             "noisy",
-             "scrambled",
-             "1-state",
-             "2-state",
-             "3-state",
-             "4-state",
-             "5-state",)
+    names = (
+        "bleached",
+        "aggregated",
+        "noisy",
+        "scrambled",
+        "1-state",
+        "2-state",
+        "3-state",
+        "4-state",
+        "5-state",
+    )
 
     clrs = (
         "darkgrey",
@@ -292,14 +298,12 @@ def plot_predictions(yi_pred, fig, ax):
         if p < 10:
             label = " " + label
         ax.plot(yi_pred[:, i], color=clrs[i])
-        patch = Patch(
-            color=clrs[i],
-            label=label
-        )
+        patch = Patch(color=clrs[i], label=label)
         patches.append(patch)
 
-    fig.legend(handles=patches, loc='center right', prop = {
-        "family":"monospace"})
+    fig.legend(
+        handles=patches, loc="center right", prop={"family": "monospace"}
+    )
 
     # Upper left confidence %
     ax.annotate(
@@ -321,15 +325,15 @@ def plot_predictions(yi_pred, fig, ax):
 
 def get_colors(cmap, n_colors):
     """Extracts n colors from a colormap"""
-    norm = Normalize(vmin = 0, vmax = n_colors)
+    norm = Normalize(vmin=0, vmax=n_colors)
     return [plt.get_cmap(cmap)(norm(i)) for i in range(n_colors)]
 
 
-def plot_gaussian(mean, sigma, ax, x, weight = 1, color = None):
+def plot_gaussian(mean, sigma, ax, x, weight=1, color=None):
     """
     Plots a single gaussian and returns the provided ax, along with computed
     y values
     """
     y = weight * scipy.stats.norm.pdf(x, mean, sigma)
-    ax.plot(x, y, color = color)
+    ax.plot(x, y, color=color)
     return ax, y

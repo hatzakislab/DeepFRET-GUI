@@ -1,9 +1,11 @@
 import multiprocessing
+
 multiprocessing.freeze_support()
 
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from lib.misc import timeit
+
 
 class SheetInspector(QDialog):
     """
@@ -17,7 +19,6 @@ class SheetInspector(QDialog):
         self.parent = parent
         self.setModal(True)
         self.setWindowFlag(Qt.Sheet)
-
 
     def setInspectorConfigs(self, params):
         """
@@ -57,7 +58,9 @@ class RestartDialog(QMessageBox, SheetInspector):
         self.status = None
 
         self.setText("Imaging mode changed")
-        self.setInformativeText("Restart application for new settings to take effect.")
+        self.setInformativeText(
+            "Restart application for new settings to take effect."
+        )
         self.minimumSizeHint()
 
         self.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
@@ -71,7 +74,7 @@ class RestartDialog(QMessageBox, SheetInspector):
         self.buttonClicked.connect(self.returnButton)
 
     def returnButton(self, i):
-        self.status = 'Restart' if i.text() == 'Restart' else 'Cancel'
+        self.status = "Restart" if i.text() == "Restart" else "Cancel"
 
 
 class ExportDialog(QFileDialog):
@@ -92,12 +95,14 @@ class ProgressBar(QProgressDialog, SheetInspector):
     Displays a progressbar, using known length of a loop.
     """
 
-    def __init__(self, parent, loop_len = 0):
+    def __init__(self, parent, loop_len=0):
         super().__init__(parent=parent)
         self.minimumSizeHint()
         self.setValue(0)
         self.setMinimum(0)
-        self.setMaximum(loop_len)  # Corrected because iterations start from zero, but minimum length is 1
+        self.setMaximum(
+            loop_len
+        )  # Corrected because iterations start from zero, but minimum length is 1
         self.show()
 
     def increment(self):
@@ -115,7 +120,11 @@ class UpdatingList:
     """
 
     def __iter__(self):
-        return (self.__getattribute__(i) for i in dir(self) if not i.startswith("__"))
+        return (
+            self.__getattribute__(i)
+            for i in dir(self)
+            if not i.startswith("__")
+        )
 
 
 class CheckBoxDelegate(QStyledItemDelegate):

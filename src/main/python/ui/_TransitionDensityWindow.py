@@ -14,10 +14,14 @@ class Ui_TransitionDensityWindow(object):
     def setupUi(self, TransitionDensityWindow):
         TransitionDensityWindow.setObjectName("TransitionDensityWindow")
         TransitionDensityWindow.resize(1200, 600)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(TransitionDensityWindow.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            TransitionDensityWindow.sizePolicy().hasHeightForWidth()
+        )
         TransitionDensityWindow.setSizePolicy(sizePolicy)
         TransitionDensityWindow.setMinimumSize(QtCore.QSize(1200, 600))
         TransitionDensityWindow.setMaximumSize(QtCore.QSize(5000, 2000))
@@ -42,19 +46,30 @@ class Ui_TransitionDensityWindow(object):
         self.gridLayout.setSpacing(6)
         self.gridLayout.setObjectName("gridLayout")
         self.nClustersSpinBox = QtWidgets.QSpinBox(self.centralWidget)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.nClustersSpinBox.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.nClustersSpinBox.sizePolicy().hasHeightForWidth()
+        )
         self.nClustersSpinBox.setSizePolicy(sizePolicy)
         self.nClustersSpinBox.setMinimumSize(QtCore.QSize(30, 0))
         self.nClustersSpinBox.setFrame(True)
-        self.nClustersSpinBox.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
+        self.nClustersSpinBox.setButtonSymbols(
+            QtWidgets.QAbstractSpinBox.NoButtons
+        )
         self.nClustersSpinBox.setMinimum(1)
         self.nClustersSpinBox.setMaximum(9)
         self.nClustersSpinBox.setObjectName("nClustersSpinBox")
         self.gridLayout.addWidget(self.nClustersSpinBox, 0, 1, 1, 1)
-        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        spacerItem = QtWidgets.QSpacerItem(
+            40,
+            20,
+            QtWidgets.QSizePolicy.Expanding,
+            QtWidgets.QSizePolicy.Minimum,
+        )
         self.gridLayout.addItem(spacerItem, 0, 2, 1, 1)
         self.label = QtWidgets.QLabel(self.centralWidget)
         self.label.setObjectName("label")
@@ -67,12 +82,17 @@ class Ui_TransitionDensityWindow(object):
 
     def retranslateUi(self, TransitionDensityWindow):
         _translate = QtCore.QCoreApplication.translate
-        TransitionDensityWindow.setWindowTitle(_translate("TransitionDensityWindow", "Transition Density Plot"))
-        self.label.setText(_translate("TransitionDensityWindow", "Number of Clusters Per Half"))
+        TransitionDensityWindow.setWindowTitle(
+            _translate("TransitionDensityWindow", "Transition Density Plot")
+        )
+        self.label.setText(
+            _translate("TransitionDensityWindow", "Number of Clusters Per Half")
+        )
 
 
 if __name__ == "__main__":
     import sys
+
     app = QtWidgets.QApplication(sys.argv)
     TransitionDensityWindow = QtWidgets.QMainWindow()
     ui = Ui_TransitionDensityWindow()

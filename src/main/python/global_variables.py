@@ -13,7 +13,6 @@ class GlobalVariables:
     LICENSE = "DeepFRET is free software, distributed under the terms of the MIT open source license"
     CONFIGNAME = "config.ini"
 
-
     boolMaps = {"True": 1, "1": 1, "False": 0, "0": 0}
     # List of possible user-configurable options (i.e. available keys),
     # so they'll be available with autocomplete and refactoring
@@ -118,9 +117,15 @@ class GlobalVariables:
         7  # How large circles are, visually (has no impact on colocalization)
     )
     roi_draw_linewidth = 0.9  # ROI linewidth
-    roi_inner_area = 2.3  # Inner area of ROI pixel intensity mask (adjusted to iSMS)
-    roi_outer_area = 5.6  # Outer area of ROI pixel intensity mask (adjusted to iSMS)
-    roi_gap_space = 4.4  # Gap space of ROI pixel intensity mask (adjusted to iSMS)
+    roi_inner_area = (
+        2.3  # Inner area of ROI pixel intensity mask (adjusted to iSMS)
+    )
+    roi_outer_area = (
+        5.6  # Outer area of ROI pixel intensity mask (adjusted to iSMS)
+    )
+    roi_gap_space = (
+        4.4  # Gap space of ROI pixel intensity mask (adjusted to iSMS)
+    )
     roi_coloc_overlap_factor = (
         2  # Degree of overlap before it counts (this is roughly 90%)
     )
@@ -128,7 +133,9 @@ class GlobalVariables:
     roi_coloc_tolerances = {"loose": 2, "moderate": 5, "strict": 20}
 
     # Parameters for functions
-    peak_local_max_p = {"min_distance": 5}  # Spot finder parameters for localization
+    peak_local_max_p = {
+        "min_distance": 5
+    }  # Spot finder parameters for localization
 
     bg_p = {"alpha": 0.5, "linestyle": "--"}
 

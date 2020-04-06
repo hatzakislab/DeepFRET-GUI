@@ -15,16 +15,17 @@ import skimage.io
 import lib.imgdata
 import lib.math
 import lib.misc
+import astropy.io.fits
 
 
-class ImageContainer:
+class MovieContainer:
     """
     Class for storing individual image information.
     """
 
     def __init__(self):
         # stores the raw data
-        self.img = None  # type: Union[None, np.ndarray]
+        self.mov = None  # type: Union[None, np.ndarray]
         self.indices = None  # type: Union[None, np.ndarray]
         self.width = None  # type: Union[None, int]
         self.height = None  # type: Union[None, int]
@@ -59,11 +60,17 @@ class ImageChannel:
 
     def __init__(self, color):
         if color == "green":
-            cmap = LinearSegmentedColormap.from_list("", ["black", gvars.color_green])
+            cmap = LinearSegmentedColormap.from_list(
+                "", ["black", gvars.color_green]
+            )
         elif color == "red":
-            cmap = LinearSegmentedColormap.from_list("", ["black", gvars.color_red])
+            cmap = LinearSegmentedColormap.from_list(
+                "", ["black", gvars.color_red]
+            )
         else:
-            raise ValueError("Invalid color. Available options are 'green' or 'red'")
+            raise ValueError(
+                "Invalid color. Available options are 'green' or 'red'"
+            )
 
         self.exists = True  # type: bool
         self.cmap = cmap  # type: LinearSegmentedColormap
@@ -112,7 +119,7 @@ class TraceChannel:
 
 class TraceContainer:
     """
-    Class for storing individual newTrace information.
+    Class for storing individual newTraceFromMovie information.
     """
 
     ml_column_names = [
@@ -128,7 +135,13 @@ class TraceContainer:
     ]
 
     def __init__(
-        self, filename, name=None, movie=None, n=None, hmm_idealized_config=None
+        self,
+        filename,
+        name=None,
+        movie=None,
+        n=None,
+        hmm_idealized_config=None,
+        loaded_from_ascii=False,
     ):
         self.filename = filename  # type: str
         self.name = (
@@ -157,7 +170,9 @@ class TraceContainer:
 
         # hmm configuration
         self.hmm_idealized_config = (
-            hmm_idealized_config if hmm_idealized_config is not None else "global"
+            hmm_idealized_config
+            if hmm_idealized_config is not None
+            else "global"
         )  # type: Union[None, str]
         # hmm predictions here
         self.hmm = None  # type: Union[None, np.ndarray]
@@ -183,14 +198,18 @@ class TraceContainer:
 
         self.channels = self.grn, self.red, self.acc
         # file loading
-        # TODO make compatible w pathlib
-        try:
-            self.load_from_ascii()
-        except (TypeError, FileNotFoundError) as e:
+        # TODO: make compatible w pathlib
+        # TODO: set flag differently?
+        if loaded_from_ascii:
             try:
-                self.load_from_dat()
+                self.load_from_ascii()
             except (TypeError, FileNotFoundError) as e:
-                warnings.warn("Warning! No data loaded for this trace!", UserWarning)
+                try:
+                    self.load_from_dat()
+                except (TypeError, FileNotFoundError) as e:
+                    warnings.warn(
+                        "Warning! No data loaded for this trace!", UserWarning
+                    )
 
     @property
     def hmm(self):
@@ -247,12 +266,18 @@ class TraceContainer:
                     df.columns = colnames
         # Else DeepFRET trace compatibility
         else:
-            df = lib.misc.csv_skip_to(path=self.filename, line="D-Dexc", sep="\s+")
+            df = lib.misc.csv_skip_to(
+                path=self.filename, line="D-Dexc", sep="\s+"
+            )
         try:
-            pair_n = lib.misc.seek_line(path=self.filename, line_starts="FRET pair")
+            pair_n = lib.misc.seek_line(
+                path=self.filename, line_starts="FRET pair"
+            )
             self.n = int(pair_n.split("#")[-1])
 
-            movie = lib.misc.seek_line(path=self.filename, line_starts="Movie filename")
+            movie = lib.misc.seek_line(
+                path=self.filename, line_starts="Movie filename"
+            )
             self.movie = movie.split(": ")[-1]
 
         except (ValueError, AttributeError):
@@ -268,7 +293,8 @@ class TraceContainer:
 
         if "D-Dexc_F" in df.columns:
             warnings.warn(
-                "This trace is created with an older format.", DeprecationWarning,
+                "This trace is created with an older format.",
+                DeprecationWarning,
             )
             self.grn.int = df["D-Dexc_F"].values
             self.acc.int = df["A-Dexc_I"].values
@@ -283,7 +309,9 @@ class TraceContainer:
             if "p_bleached" in df.columns:
                 colnames += self.ml_column_names
                 self.y_pred = df[self.ml_column_names].values
-                self.y_class, self.confidence = lib.math.seq_probabilities(self.y_pred)
+                self.y_class, self.confidence = lib.math.seq_probabilities(
+                    self.y_pred
+                )
 
             # This strips periods if present
             df.columns = [c.strip(".") for c in df.columns]
@@ -499,12 +527,12 @@ class MovieData:
         self.traces = {}
         self.currName = None
 
-    def get(self, name) -> ImageContainer:
+    def get(self, name) -> MovieContainer:
         """Shortcut to return the metadata of selected movie."""
         if self.currName is not None:
             return self.movies[name]
 
-    def _data(self) -> ImageContainer:
+    def _data(self) -> MovieContainer:
         """
         Shortcut for returning the metadata of movie currently being loaded,
         for internal use.
@@ -533,34 +561,42 @@ class MovieData:
         # Instantiate container
         self.currName = name
         self.name = name
-        self.movies[name] = ImageContainer()
+        self.movies[name] = MovieContainer()
         self._data().traces = {}
         # Populate metadata
-        self._data().img = skimage.io.imread(path)
+        ext = path.split(".")[-1]
+        if ext == "fits":
+            mov = astropy.io.fits.open(path, memmap=False)[0].data
+        else:
+            mov = skimage.io.imread(path)
+
+        self._data().mov = mov
 
         swapflag = False
         try:
-            swapflag = (setup != "dual") and (self._data().img.shape[3] > 3)
+            swapflag = (setup != "dual") and (self._data().mov.shape[3] > 3)
         except IndexError as e:
             pass
 
         if swapflag:
-            self._data().img = self._data().img.swapaxes(3, 1).swapaxes(2, 1)
+            self._data().mov = self._data().mov.swapaxes(3, 1).swapaxes(2, 1)
 
-        self._data().height = self._data().img.shape[1]
-        self._data().width = self._data().img.shape[2]
+        self._data().height = self._data().mov.shape[1]
+        self._data().width = self._data().mov.shape[2]
         # Scaling factor for ROI
-        self._data().roi_radius = max(self._data().height, self._data().width) / 80
+        self._data().roi_radius = (
+            max(self._data().height, self._data().width) / 80
+        )
         if self._data().height == self._data().width:  # quadratic image
             if setup == "dual":
                 c1, c2, c3, _ = lib.imgdata.image_channels(4)
 
                 # Acceptor (Dexc-Aem)
-                self._data().acc.raw = self._data().img[c1, :, :]
+                self._data().acc.raw = self._data().mov[c1, :, :]
                 # ALEX (Aexc-Aem)
-                self._data().red.raw = self._data().img[c2, :, :]
+                self._data().red.raw = self._data().mov[c2, :, :]
                 # Donor (Dexc-Dem)
-                self._data().grn.raw = self._data().img[c3, :, :]
+                self._data().grn.raw = self._data().mov[c3, :, :]
 
                 self._data().channels = self._data().grn, self._data().red
 
@@ -569,9 +605,9 @@ class MovieData:
                     height=self._data().height, width=self._data().width
                 )
 
-                self._data().grn.raw = self._data().img[:, top, lft, 0]
-                self._data().acc.raw = self._data().img[:, top, rgt, 0]
-                self._data().red.raw = self._data().img[:, top, rgt, 1]
+                self._data().grn.raw = self._data().mov[:, top, lft, 0]
+                self._data().acc.raw = self._data().mov[:, top, rgt, 0]
+                self._data().red.raw = self._data().mov[:, top, rgt, 1]
 
                 self._data().channels = self._data().grn, self._data().red
 
@@ -580,10 +616,10 @@ class MovieData:
                     height=self._data().height, width=self._data().width
                 )
 
-                if self._data().img.shape[3] == 2:
-                    self._data().grn.raw = self._data().img[:, btm, rgt, 0]
-                    self._data().acc.raw = self._data().img[:, btm, lft, 0]
-                    self._data().red.raw = self._data().img[:, btm, lft, 1]
+                if self._data().mov.shape[3] == 2:
+                    self._data().grn.raw = self._data().mov[:, btm, rgt, 0]
+                    self._data().acc.raw = self._data().mov[:, btm, lft, 0]
+                    self._data().red.raw = self._data().mov[:, btm, lft, 1]
 
                     self._data().channels = self._data().grn, self._data().red
 
@@ -591,8 +627,8 @@ class MovieData:
                     raise ValueError("Format not supported.")
 
             elif setup == "bypass":
-                self._data().grn.raw = self._data().img[:, :, :, 0]
-                self._data().red.raw = self._data().img[:, :, :, 1]
+                self._data().grn.raw = self._data().mov[:, :, :, 0]
+                self._data().red.raw = self._data().mov[:, :, :, 1]
 
                 self._data().channels = (
                     self._data().grn,
@@ -608,11 +644,11 @@ class MovieData:
                 h=self._data().height, w=self._data().width
             )
             # ALEX (Aexc-Aem)
-            self._data().red.raw = self._data().img[0::2, :, lft]
+            self._data().red.raw = self._data().mov[0::2, :, lft]
             # Acceptor (Dexc-Aem)
-            self._data().acc.raw = self._data().img[1::2, :, lft]
+            self._data().acc.raw = self._data().mov[1::2, :, lft]
             # Donor (Dexc-Dem)
-            self._data().grn.raw = self._data().img[1::2, :, rgt]
+            self._data().grn.raw = self._data().mov[1::2, :, rgt]
 
             self._data().channels = self._data().grn, self._data().red
 

@@ -34,7 +34,7 @@ import scipy.signal
 import scipy.optimize
 import scipy.special
 import sklearn.preprocessing
-from tensorflow_core.python.keras.models import load_model
+from tensorflow_core.python.keras.models import load_model, Model
 
 from ui._AboutWindow import Ui_About
 from ui._MenuBar import Ui_MenuBar
@@ -56,7 +56,7 @@ from ui.misc import (
     ExportDialog,
 )
 from lib.container import (
-    ImageContainer,
+    MovieContainer,
     ImageChannel,
     TraceChannel,
     TraceContainer,
@@ -403,27 +403,27 @@ class BaseWindow(QMainWindow):
         self.ui.actionClear_Correction_Factors.triggered.connect(
             self.clearCorrectionFactors
         )
-        self.ui.actionSelect_Bleach_Red_Channel.triggered.connect(
-            partial(self.triggerBleach, "red")
-        )
-        self.ui.actionSelect_Bleach_Green_Channel.triggered.connect(
-            partial(self.triggerBleach, "green")
-        )
+
+        for f in (partial(self.triggerBleach, "red"), self.refreshPlot):
+            self.ui.actionSelect_Bleach_Red_Channel.triggered.connect(f)
+
+        for f in (partial(self.triggerBleach, "green"), self.refreshPlot):
+            self.ui.actionSelect_Bleach_Green_Channel.triggered.connect(f)
+
         # self.ui.actionFit_Hmm_Current.triggered.connect(
         #     partial(self.fitSingleTraceHiddenMarkovModel, True)
         # )
-        self.ui.actionFit_Hmm_Selected.triggered.connect(
-            self.fitCheckedTracesHiddenMarkovModel
-        )
-        self.ui.actionPredict_Selected_Traces.triggered.connect(
-            partial(self.classifyTraces, True)
-        )
-        self.ui.actionPredict_All_traces.triggered.connect(
-            partial(self.classifyTraces, False)
-        )
-        self.ui.actionClear_All_Predictions.triggered.connect(
-            self.clearAllClassifications
-        )
+        for f in (self.fitCheckedTracesHiddenMarkovModel, self.refreshPlot):
+            self.ui.actionFit_Hmm_Selected.triggered.connect(f)
+
+        for f in (partial(self.classifyTraces, True), self.refreshPlot):
+            self.ui.actionPredict_Selected_Traces.triggered.connect(f)
+
+        for f in (partial(self.classifyTraces, False), self.refreshPlot):
+            self.ui.actionPredict_All_traces.triggered.connect(f)
+
+        for f in (self.clearAllClassifications, self.refreshPlot):
+            self.ui.actionClear_All_Predictions.triggered.connect(f)
 
         # Window
         # Minimizes window
@@ -999,7 +999,7 @@ class BaseWindow(QMainWindow):
 
     def exportCorrectionFactors(self):
         """
-        Exports all available correction factors for each newTrace to table.
+        Exports all available correction factors for each newTraceFromMovie to table.
         """
 
         exp_txt, date_txt = self.returnInfoHeader()
@@ -1131,6 +1131,12 @@ class BaseWindow(QMainWindow):
         """
         if TraceWindow_.isVisible():
             CorrectionFactorInspector_.show()
+
+    """
+    Functions below are not used in the BaseWindow, but they MUST be present
+    in order to be triggered via the menubar. It's also a good way to keep
+    naming consistent
+    """
 
     def clearAllClassifications(self):
         """Override in subclass."""
@@ -1266,16 +1272,16 @@ class MainWindow(BaseWindow):
 
         self.show()
 
-    def currentMovie(self) -> ImageContainer:
+    def currentMovie(self) -> MovieContainer:
         """
         Quick interface to obtain file data (or names will be extremely long).
         Add type hinting in metadata to improve autocomplete.
         """
         return self.data.get(self.currName)
 
-    def newTrace(self, n) -> TraceContainer:
+    def newTraceFromMovie(self, n) -> TraceContainer:
         """
-        Shortcut to obtain newTrace, and create a new one if it doesn't exist.
+        Shortcut to obtain trace, and create a new one if it doesn't exist.
         """
         tracename = self.currName + "_" + str(n)
         if tracename not in self.data.traces:
@@ -1286,14 +1292,14 @@ class MainWindow(BaseWindow):
 
     def trace_c(self, n, channel) -> TraceChannel:
         """
-        Shortcut to obtain trace channel. See newTrace().
+        Shortcut to obtain trace channel. See newTraceFromMovie().
         """
         if channel == "green":
-            return self.newTrace(n).grn
+            return self.newTraceFromMovie(n).grn
         elif channel == "red":
-            return self.newTrace(n).red
+            return self.newTraceFromMovie(n).red
         elif channel == "acc":
-            return self.newTrace(n).acc
+            return self.newTraceFromMovie(n).acc
         else:
             raise ValueError("Invalid channel")
 
@@ -1312,7 +1318,7 @@ class MainWindow(BaseWindow):
             filenames, selectedFilter = QFileDialog.getOpenFileNames(
                 self,
                 caption="Open File",
-                filter="Movie files (*.tif)",
+                filter="Movie files (*.tif *fits)",
                 directory=directory,
             )
 
@@ -1375,14 +1381,12 @@ class MainWindow(BaseWindow):
             self,
             caption="Open File",
             directory=directory,
-            filter="Movie files (*.tif)",
+            filter="Movie files (*.tif *.fits)",
         )
 
         if len(filenames) > 0:
             ctxt.app.processEvents()
-            progressbar = ProgressBar(
-                loop_len=len(filenames), parent=MainWindow_
-            )
+            progressbar = ProgressBar(loop_len=len(filenames), parent=self)
             for i, full_filename in enumerate(filenames):
                 if progressbar.wasCanceled():
                     break
@@ -1411,7 +1415,7 @@ class MainWindow(BaseWindow):
                             channel=c, find_npairs="spinbox"
                         )
                 self.getTracesSingleMovie()
-                self.currentMovie().img = None
+                self.currentMovie().mov = None
                 for c in self.currentMovie().channels + (
                     self.currentMovie().acc,
                 ):
@@ -1530,7 +1534,7 @@ class MainWindow(BaseWindow):
         Displays colocalized spot for a single movie.
         """
         self.getCurrentListObject()
-        print(self.currName)
+
         if self.currName is not None:
             self.colocalizeSpotsSingleMovie(channel)
             self.refreshPlot()
@@ -1570,7 +1574,7 @@ class MainWindow(BaseWindow):
             for n, *row in mov.coloc_grn_red.spots.itertuples():
                 yx_grn, yx_red = lib.misc.pairwise(row)
 
-                trace = self.newTrace(n)
+                trace = self.newTraceFromMovie(n)
 
                 # Green
                 if mov.grn.exists and yx_grn is not None:
@@ -1938,7 +1942,9 @@ class TraceWindow(BaseWindow):
 
                 self.currDir = os.path.dirname(full_filename)
                 try:
-                    newTrace = TraceContainer(filename=full_filename)
+                    newTrace = TraceContainer(
+                        filename=full_filename, loaded_from_ascii=True
+                    )
                 except AttributeError:  # if a non-trace file was selected
                     warnings.warn(
                         f"This file could not be read: \n{full_filename}",
@@ -1994,15 +2000,12 @@ class TraceWindow(BaseWindow):
         """
         Fits all selected traces with a Hidden Markov Model (HMM)
         """
-        ctxt.app.processEvents()
+        self.processEvents()
         traces = [
             trace for trace in self.data.traces.values() if trace.is_checked
         ]
-        if traces == []:
+        if not traces:
             warnings.warn("No traces were selected!", UserWarning)
-            pass
-
-        # if hmm_idealized_config_flag == "global":
 
         DD, DA, AA, E, lengths = [], [], [], [], []
         for trace in traces:
@@ -2092,8 +2095,6 @@ class TraceWindow(BaseWindow):
 
             trace.calculate_transitions()
 
-        self.refreshPlot()
-
         if TransitionDensityWindow_.isVisible():
             TransitionDensityWindow_.refreshPlot()
 
@@ -2114,7 +2115,7 @@ class TraceWindow(BaseWindow):
         """
         Classifies checked traces with deep learning model.
         """
-        ctxt.app.processEvents()
+        self.processEvents()
 
         alpha = self.getConfig(gvars.key_alphaFactor)
         delta = self.getConfig(gvars.key_deltaFactor)
@@ -2135,7 +2136,7 @@ class TraceWindow(BaseWindow):
         if len(traces) > 0:
             batch_size = 256
             batches = (len(traces) // batch_size) + 1
-            progressbar = ProgressBar(loop_len=batches, parent=TraceWindow_)
+            progressbar = ProgressBar(loop_len=batches, parent=self)
 
             if not single:
                 all_lengths_eq = lib.math.all_equal(
@@ -2176,9 +2177,9 @@ class TraceWindow(BaseWindow):
                     X = X[np.newaxis, :, :]
 
                 model = (
-                    ctxt.keras_2c_model
+                    self.keras_two_channel_model
                     if X.shape[-1] == 2
-                    else ctxt.keras_3c_model
+                    else self.keras_three_channel_model
                 )
 
                 Y = lib.math.predict_batch(
@@ -2195,15 +2196,15 @@ class TraceWindow(BaseWindow):
                             trace.get_intensities(), alpha=alpha, delta=delta
                         )
                     )
-
                     if lib.math.contains_nan(xi[..., -1]):
-                        model = ctxt.keras_2c_model
+                        model = self.keras_two_channel_model
                         xi = xi[..., [1, 2]]
                     else:
-                        model = ctxt.keras_3c_model
+                        model = self.keras_three_channel_model
                         xi = xi[..., [1, 2, 3]]
 
                     xi = lib.math.sample_max_normalize_3d(X=xi)
+
                     yi = lib.math.predict_single(xi=xi, model=model)
                     Y.append(yi)
                     if n % batch_size == 0:
@@ -2213,7 +2214,6 @@ class TraceWindow(BaseWindow):
                 self.setClassifications(trace=trace, yi_pred=Y[n])
 
             self.resetCurrentName()
-            self.refreshPlot()
 
     def clearAllClassifications(self):
         """
@@ -2227,7 +2227,6 @@ class TraceWindow(BaseWindow):
             trace.first_bleach = None
             for c in trace.channels:
                 c.bleach = None
-        self.refreshPlot()
 
     def triggerBleach(self, color):
         """
@@ -2515,6 +2514,7 @@ class TraceWindow(BaseWindow):
         if self.currName is not None:
             self.currentTrace().xdata = []
 
+    @timeit
     def refreshPlot(self):
         """
         Refreshes plot for TraceWindow.
@@ -2562,13 +2562,13 @@ class TraceWindow(BaseWindow):
                 self.canvas.axes_c, channels, colors
             ):
                 if label == "A":
-                    int_ = F_DA
+                    signal = F_DA
                     ax = self.canvas.ax_red
                 elif label == "A-direct":
-                    int_ = I_AA
+                    signal = I_AA
                     ax = self.canvas.ax_alx
                 elif label == "D":
-                    int_ = I_DD
+                    signal = I_DD
                     ax = self.canvas.ax_grn
 
                     af = (
@@ -2588,8 +2588,8 @@ class TraceWindow(BaseWindow):
                         color=gvars.color_grey,
                     )
                 else:
-                    int_ = channel.int
-                if int_ is None:
+                    signal = channel.int
+                if signal is None:
                     continue
 
                 if label != "A":
@@ -2604,15 +2604,20 @@ class TraceWindow(BaseWindow):
                         zorder=0,
                     )
 
-                ax.plot(trace.frames, int_, color=color)
+                ax.plot(trace.frames, signal, color=color)
                 try:
-                    ax.set_ylim(0 - int_.max() * 0.1, int_.max() * 1.1)
+                    ax.set_ylim(0 - signal.max() * 0.1, signal.max() * 1.1)
                 except ValueError:
                     ax.set_ylim(0, 1.1)
                 ax.yaxis.label.set_color(gvars.color_gui_text)
-                lib.plotting.set_axis_exp_ylabel(
-                    ax=ax, label=label, values=int_
-                )
+
+                if not lib.math.contains_nan(signal):
+                    lib.plotting.set_axis_exp_ylabel(
+                        ax=ax, label=label, values=signal
+                    )
+                else:
+                    ax.set_ylabel("")
+                    ax.set_yticks(())
 
             # Continue drawing FRET specifics
             if self.canvas.ax_setup != "bypass":
@@ -2636,7 +2641,21 @@ class TraceWindow(BaseWindow):
                         alpha=0.4,
                         zorder=0,
                     )
-                    ax.set_ylabel(label)
+                    if not lib.math.contains_nan(signal):
+                        ax.set_ylabel(label)
+                        ax.set_ylim(-0.1, 1.1)
+                        ax.set_yticks([0.5])
+                        ax.axhline(
+                            0.5,
+                            color="black",
+                            alpha=0.3,
+                            lw=0.5,
+                            ls="--",
+                            zorder=2,
+                        )
+                    else:
+                        ax.set_ylabel("")
+                        ax.set_yticks(())
 
                 if trace.hmm is not None:
                     ax_E.plot(
@@ -2645,13 +2664,6 @@ class TraceWindow(BaseWindow):
                         color=gvars.color_blue,
                         zorder=3,
                     )
-
-                ax_E.set_ylim(-0.1, 1.1)
-                ax_S.set_ylim(0, 1)
-                ax_S.set_yticks([0.5])
-                ax_S.axhline(
-                    0.5, color="black", alpha=0.3, lw=0.5, ls="--", zorder=2
-                )
 
                 # If clicking on the trace
                 if len(trace.xdata) == 1:
@@ -2726,25 +2738,20 @@ class HistogramWindow(BaseWindow):
         self.data = MainWindow_.data
 
     def connectUi(self):
-        [
+        for f in (
+            partial(self.fitGaussians, "auto"),
+            partial(self.refreshPlot, True),
+        ):
             self.ui.gaussianAutoButton.clicked.connect(f)
-            for f in (
-                partial(self.fitGaussians, "auto"),
-                partial(self.refreshPlot, True),
-            )
-        ]
-        [
+
+        for f in (self.fitGaussians, self.refreshPlot):
             self.ui.gaussianSpinBox.valueChanged.connect(f)
-            for f in (self.fitGaussians, self.refreshPlot)
-        ]
-        [
+
+        for f in (self.fitGaussians, self.refreshPlot):
             self.ui.applyCorrectionsCheckBox.clicked.connect(f)
-            for f in (self.fitGaussians, self.refreshPlot)
-        ]
-        [
+
+        for f in (self.fitGaussians, self.refreshPlot):
             self.ui.framesSpinBox.valueChanged.connect(f)
-            for f in (self.fitGaussians, self.refreshPlot)
-        ]
 
     def savePlot(self):
         """
@@ -3597,11 +3604,11 @@ class SimulatorWindow(BaseWindow):
     def connectUi(self):
         """Connect interface"""
         # Find and connect all checkboxes dynamically
-        [
-            getattr(self.ui, c).clicked.connect(self.refreshUi)
-            for c in dir(self.ui)
-            if c.startswith("checkBox")
-        ]
+
+        for c in dir(self.ui):
+            if c.startswith("checkBox"):
+                getattr(self.ui, c).clicked.connect(self.refreshUi)
+
         self.ui.pushButtonRefresh.clicked.connect(self.refreshPlot)
         self.ui.examplesComboBox.currentTextChanged.connect(self.refreshPlot)
         self.ui.pushButtonExport.clicked.connect(self.exportTracesToAscii)
@@ -3929,26 +3936,45 @@ class AppContext(ApplicationContext):
 
     def __init__(self):
         super().__init__()
-        self.keras_2c_model = None
-        self.keras_3c_model = None
+        self.keras_two_channel_model = None
+        self.keras_three_channel_model = None
         self.config = None
         self.app_version = None
         self.load_resources()
+        self.assign()
 
     def load_resources(self):
         """
         Loads initial resources from disk to application
         """
         # model_experimental is better but undocumented
-        self.keras_2c_model = load_model(
+        self.keras_two_channel_model = load_model(
             self.get_resource("FRET_2C_experimental.h5")
-        )
-        self.keras_3c_model = load_model(
+        )  # type: Model
+        self.keras_three_channel_model = load_model(
             self.get_resource("FRET_3C_experimental.h5")
-        )
+        )  # type: Model
         self.config = ConfigObj(self.get_resource("config.ini"))
+
+    def assign(self):
+        """
+        Assigns resources and functions to the right windows
+        """
         PreferencesWindow.config = self.config
         AboutWindow.app_version = self.config["appVersion"]
+        TraceWindow.keras_two_channel_model = self.keras_two_channel_model
+        TraceWindow.keras_three_channel_model = self.keras_three_channel_model
+
+        # Assigns processEvents to fix short-term lockups due to progress.
+        # Add more windows if needed. Use sparingly!
+        for window in (
+            MainWindow,
+            TraceWindow,
+            HistogramWindow,
+            TransitionDensityWindow,
+            SimulatorWindow,
+        ):
+            window.processEvents = self.app.processEvents
 
     def run(self):
         """

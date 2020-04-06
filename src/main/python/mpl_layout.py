@@ -14,6 +14,7 @@ from matplotlib.gridspec import GridSpec
 # TODO: subplots_adjust should be part of the init to clean up and make it
 #  easier to control when creating the window
 
+
 class MatplotlibCanvas(FigureCanvas):
     """
     This is the matplotlib plot inside that controls all the visuals.
@@ -30,9 +31,7 @@ class MatplotlibCanvas(FigureCanvas):
         height=2,
         dpi=100,
     ):
-        self.fig = Figure(
-            figsize=(width, height), dpi=dpi,
-        )
+        self.fig = Figure(figsize=(width, height), dpi=dpi,)
         self.fig.set_facecolor(gvars.color_gui_bg)
         FigureCanvas.__init__(self, self.fig)
         self.setParent(parent)
@@ -149,7 +148,7 @@ class MatplotlibCanvas(FigureCanvas):
         """
         self.ax = self.fig.add_subplot(111, aspect="equal")
         m = 0.02
-        self.fig.subplots_adjust(left=m, right=1-m, top=1-m, bottom=m)
+        self.fig.subplots_adjust(left=m, right=1 - m, top=1 - m, bottom=m)
 
     def setupDoubleAxesPlotLayout(self):
         """
@@ -234,7 +233,8 @@ class PlotWidget(QWidget):
     the layoutbox, so as to add customized listviews. In these cases the canvas
     needs to be added manually
     """
-    def __init__(self, use_layoutbox = False, **kwargs):
+
+    def __init__(self, use_layoutbox=False, **kwargs):
         QWidget.__init__(self)
         self.canvas = MatplotlibCanvas(parent=self, **kwargs)
         self.toolbar = NavigationToolbar(self.canvas, self, coordinates=True)

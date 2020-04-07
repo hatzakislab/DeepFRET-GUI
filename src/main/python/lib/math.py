@@ -220,6 +220,7 @@ def fit_gaussian_mixture(
     min_n_components: int = 1,
     max_n_components: int = 1,
     strict_bic: [bool, int, float] = False,
+    verbose: bool = False,
 ):
     """
     Fits the best univariate gaussian mixture model, based on BIC
@@ -252,7 +253,6 @@ def fit_gaussian_mixture(
             bic.append(b)
 
     best_gmm = models[int(np.argmin(bic))]
-    print("number of components ", best_gmm.n_components)
 
     weights = best_gmm.weights_.ravel()
     means = best_gmm.means_.ravel()
@@ -261,10 +261,11 @@ def fit_gaussian_mixture(
     # Due to covariance type
     if len(sigs) != len(means):
         sigs = np.repeat(sigs, len(means))
-
-    print("weights: ", weights)
-    print("means: ", means)
-    print("sigs: ", sigs)
+    if verbose:
+        print("number of components ", best_gmm.n_components)
+        print("weights: ", weights)
+        print("means: ", means)
+        print("sigs: ", sigs)
 
     params = [(m, s, w) for m, s, w in zip(means, sigs, weights)]
     params = sorted(params, key=lambda tup: tup[0])

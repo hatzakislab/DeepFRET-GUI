@@ -117,7 +117,6 @@ class PreferencesWindow(QDialog):
             mismatch_error = (
                 "Make sure widgets have the correct number of keys in gvars"
             )
-
             raise ValueError(mismatch_error)
 
         self.connectUi()
@@ -134,7 +133,7 @@ class PreferencesWindow(QDialog):
 
         # HMM radio buttons
         for hmmMode, radioButton in zip(
-            gvars.keys_HmmModes, self.hmmRadioButtons
+            gvars.keys_hmmModes, self.hmmRadioButtons
         ):
             if radioButton.isChecked():
                 self.setConfig(key=gvars.key_hmmMode, value=hmmMode)
@@ -166,7 +165,7 @@ class PreferencesWindow(QDialog):
             gvars.keys_globalCheckBoxes, self.globalCheckBoxes
         ):
             checkBox.clicked.connect(self.writeUiToConfig)
-
+            
         # TODO: add that changing the hmmLocal checkbox should change the parameters for all traces
         #  both existing and new traces
 
@@ -233,7 +232,7 @@ class PreferencesWindow(QDialog):
             checkBox.setChecked(bool(self.getConfig(configKey)))
 
         for radioButton, hmmMode in zip(
-            self.hmmRadioButtons, gvars.keys_HmmModes
+            self.hmmRadioButtons, gvars.keys_hmmModes
         ):
             if self.getConfig(gvars.key_hmmMode) == hmmMode:
                 radioButton.setChecked(True)
@@ -1978,37 +1977,43 @@ class TraceWindow(BaseWindow):
         ]
         if not traces:
             warnings.warn("No traces were selected!", UserWarning)
-
-        DD, DA, AA, E, lengths = [], [], [], [], []
+        print(
+            "Fitting HMM with {} setting".format(
+                self.getConfig(gvars.key_hmmMode)
+            )
+        )
+        lDD, lDA, lAA, lE, llengths = [], [], [], [], []
         for trace in traces:
             _, I_DD, I_DA, I_AA = lib.math.correct_DA(trace.get_intensities())
-            DD.append(I_DD[: trace.first_bleach])
-            DA.append(I_DA[: trace.first_bleach])
-            AA.append(I_AA[: trace.first_bleach])
-            E.append(trace.fret[: trace.first_bleach])
-            lengths.append(len(I_DD[: trace.first_bleach]))
-            if self.getConfig(gvars.key_hmmLocal):  # set the variable here
-                trace.hmm_idealized_config = "local"
+            lDD.append(I_DD[: trace.first_bleach])
+            lDA.append(I_DA[: trace.first_bleach])
+            lAA.append(I_AA[: trace.first_bleach])
+            lE.append(trace.fret[: trace.first_bleach])
+            llengths.append(len(I_DD[: trace.first_bleach]))
 
-        DD = np.concatenate(DD)
-        DA = np.concatenate(DA)
-        AA = np.concatenate(AA)
-        E = np.array(E)
-        E_trace = np.concatenate(E).reshape(-1, 1)
+        E = np.array(lE)
+
         if self.getConfig(gvars.key_hmmMode) == "DA":
-            if lib.math.contains_nan(AA):
-                X = np.column_stack((DD, DA, E_trace))
-            else:
-                X = np.column_stack((DD, DA, AA, E_trace))
-            raise NotImplementedError
-        else:  # Use E_FRET
+            X = []
+            for ti in range(len(lDD)):
+                _x = np.column_stack((lDD[ti], lDA[ti], lAA[ti], lE[ti]))
+                X.append(_x)
+
+            if lib.math.contains_nan([np.sum(aa) for aa in X[:][2]]):
+                X = [np.concatenate((_x[:, :2], _x[:, 3:]), axis=1) for _x in X]
+
+            X = np.array(X)
+        else:
             X = E.copy()
 
+        E_flat = np.concatenate(E)
+
         best_mixture_model, params = lib.math.fit_gaussian_mixture(
-            E_trace,
+            E_flat,
             min_n_components=1,
             max_n_components=6,
             strict_bic=self.getConfig(gvars.key_hmmBICStrictness),
+            verbose=True,
         )
         n_components = best_mixture_model.n_components
         self.hmmModel = lib.math.get_hmm_model(X, n_components=n_components)
@@ -2021,12 +2026,20 @@ class TraceWindow(BaseWindow):
 
         state_dict = {}
         for i, state in enumerate(self.hmmModel.states):
-            try:
-                state_dict[
-                    f"{state.name}".replace("s", "")
-                ] = state.distribution.parameters
-            except AttributeError:
-                continue
+            if self.getConfig(gvars.key_hmmMode) == "DA":
+                try:
+                    state_dict[
+                        f"{state.name}".replace("s", "")
+                    ] = state.distribution.parameters[0][-1].parameters
+                except AttributeError:
+                    continue
+            else:  # this is if we use E as X
+                try:
+                    state_dict[
+                        f"{state.name}".replace("s", "")
+                    ] = state.distribution.parameters
+                except AttributeError:
+                    continue
         means = np.array([v[0] for v in state_dict.values()])
         sigs = np.array([v[1] for v in state_dict.values()])
 
@@ -2034,10 +2047,8 @@ class TraceWindow(BaseWindow):
         print("State means:\n", means)
         print("State sigmas:\n", sigs)
 
-        for trace in traces:  # type: TraceContainer
-            _X = trace.fret[
-                : trace.first_bleach
-            ]  # TODO This needs to change to choose DA vs E
+        for ti, trace in enumerate(traces):
+            _X = X[ti]
             tf = pd.DataFrame()
             tf["e_obs"] = trace.fret[: trace.first_bleach]
             tf["state"] = np.array(self.hmmModel.predict(_X)).astype(int)
@@ -2493,6 +2504,11 @@ class TraceWindow(BaseWindow):
         trace = self.currentTrace()
 
         if trace is not None and len(self.data.traces) > 0:
+            if self.getConfig(gvars.key_hmmLocal):
+                trace.hmm_idealized_config = "local"
+            else:
+                trace.hmm_idealized_config = "global"
+
             alpha = self.getConfig(gvars.key_alphaFactor)
             delta = self.getConfig(gvars.key_deltaFactor)
             factors = alpha, delta

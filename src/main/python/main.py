@@ -165,7 +165,7 @@ class PreferencesWindow(QDialog):
             gvars.keys_globalCheckBoxes, self.globalCheckBoxes
         ):
             checkBox.clicked.connect(self.writeUiToConfig)
-            
+
         # TODO: add that changing the hmmLocal checkbox should change the parameters for all traces
         #  both existing and new traces
 
@@ -619,6 +619,11 @@ class BaseWindow(QMainWindow):
     @pyqtSlot(QModelIndex)
     def onChecked(self, index):
         pass
+
+    @pyqtSlot(QListView)
+    def keyPressEvent(self, QKeyEvent):
+        if QKeyEvent.key() in [Qt.UpArrow, Qt.DownArrow]:
+            self.refreshPlot()
 
     def returnCurrentListviewNames(self):
         """
@@ -1851,8 +1856,6 @@ class TraceWindow(BaseWindow):
         self.setupPlot()
         self.setupSplitter(layout=self.ui.layoutBox)
 
-        # self.data = MainWindow_.data
-
         # Canvas event handler
         self.cid = self.canvas.mpl_connect(
             "button_press_event", self.selectCorrectionFactorRange
@@ -2495,7 +2498,6 @@ class TraceWindow(BaseWindow):
         if self.currName is not None:
             self.currentTrace().xdata = []
 
-    @timeit
     def refreshPlot(self):
         """
         Refreshes plot for TraceWindow.
@@ -2528,21 +2530,8 @@ class TraceWindow(BaseWindow):
                 else:
                     ax.set_xlim(1, trace.frames_max)
 
-            # Canvas setup
-            if self.canvas.ax_setup in (
-                "dual",
-                "2-color",
-                "2-color-inv",
-                "3-color",
-            ):
-                channels = [trace.grn, trace.acc, trace.red]
-                colors = [gvars.color_green, gvars.color_red, gvars.color_red]
-
-            elif self.canvas.ax_setup == "bypass":
-                channels = trace.grn, trace.red
-                colors = gvars.color_green, gvars.color_red
-            else:
-                raise ValueError("Setup is not valid. Corrupted config.ini?")
+            channels = [trace.grn, trace.acc, trace.red]
+            colors = [gvars.color_green, gvars.color_red, gvars.color_red]
 
             for (ax, label), channel, color in zip(
                 self.canvas.axes_c, channels, colors
@@ -2606,42 +2595,38 @@ class TraceWindow(BaseWindow):
                     ax.set_yticks(())
 
             # Continue drawing FRET specifics
-            if self.canvas.ax_setup != "bypass":
-                fret = lib.math.calc_E(trace.get_intensities(), *factors)
-                stoi = lib.math.calc_S(trace.get_intensities(), *factors)
+            fret = lib.math.calc_E(trace.get_intensities(), *factors)
+            stoi = lib.math.calc_S(trace.get_intensities(), *factors)
 
-                ax_E = self.canvas.ax_fret
-                ax_S = self.canvas.ax_stoi
+            ax_E = self.canvas.ax_fret
+            ax_S = self.canvas.ax_stoi
 
-                for signal, ax, color, label in zip(
-                    (fret, stoi),
-                    (ax_E, ax_S),
-                    (gvars.color_orange, gvars.color_purple),
-                    ("E", "S"),
-                ):
-                    ax.plot(trace.frames, signal, color=color)
-                    ax.axvspan(
-                        trace.first_bleach,
-                        trace.frames_max,
-                        color="darkgrey",
-                        alpha=0.4,
-                        zorder=0,
+            for signal, ax, color, label in zip(
+                (fret, stoi),
+                (ax_E, ax_S),
+                (gvars.color_orange, gvars.color_purple),
+                ("E", "S"),
+            ):
+                ax.plot(trace.frames, signal, color=color)
+                ax.axvspan(
+                    trace.first_bleach,
+                    trace.frames_max,
+                    color="darkgrey",
+                    alpha=0.4,
+                    zorder=0,
+                )
+                if not lib.math.contains_nan(signal):
+                    ax.set_ylabel(label)
+                    ax.set_ylim(-0.1, 1.1)
+                    ax.set_yticks([0.5])
+                    ax.axhline(
+                        0.5,
+                        color="black",
+                        alpha=0.3,
+                        lw=0.5,
+                        ls="--",
+                        zorder=2,
                     )
-                    if not lib.math.contains_nan(signal):
-                        ax.set_ylabel(label)
-                        ax.set_ylim(-0.1, 1.1)
-                        ax.set_yticks([0.5])
-                        ax.axhline(
-                            0.5,
-                            color="black",
-                            alpha=0.3,
-                            lw=0.5,
-                            ls="--",
-                            zorder=2,
-                        )
-                    else:
-                        ax.set_ylabel("")
-                        ax.set_yticks(())
 
                 if trace.hmm is not None:
                     ax_E.plot(

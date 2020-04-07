@@ -98,7 +98,9 @@ def calc_E(intensities, alpha=0, delta=0, clip_range=(-0.3, 1.3)):
     return E
 
 
-def calc_S(intensities, alpha=0, delta=0, beta=1, gamma=1, clip_range=(-0.3, 1.3)):
+def calc_S(
+    intensities, alpha=0, delta=0, beta=1, gamma=1, clip_range=(-0.3, 1.3)
+):
     """
     Calculates raw calc_S from donor (Dexc-Dem), acceptor (Dexc-Aem) and direct
     emission of acceptor ("ALEX", Aexc-Aem) Note that iSMS has the option of
@@ -117,7 +119,9 @@ def calc_S(intensities, alpha=0, delta=0, beta=1, gamma=1, clip_range=(-0.3, 1.3
     return S
 
 
-def corrected_ES(intensities, alpha, delta, beta, gamma, clip_range=(-0.3, 1.3)):
+def corrected_ES(
+    intensities, alpha, delta, beta, gamma, clip_range=(-0.3, 1.3)
+):
     """
     Calculates the fully corrected FRET and stoichiometry, given all the
     correction factors. This is only used for the combined 2D histogram,
@@ -370,7 +374,9 @@ def find_transitions(states, fret):
     hf = pd.DataFrame()
     hf["state"] = states
     hf["y_obs"] = fret
-    hf["y_fit"] = hf.groupby(["state"], as_index=False)["y_obs"].transform("median")
+    hf["y_fit"] = hf.groupby(["state"], as_index=False)["y_obs"].transform(
+        "median"
+    )
 
     hf["time"] = hf["y_fit"].index + 1
 
@@ -518,6 +524,7 @@ def contour_2d(
     shade_lowest=False,
     resolution=100,
     cbins="auto",
+    diagonal: bool = False,
 ):
     """
     Calculates the 2D kernel density estimate for a dataset.
@@ -540,7 +547,7 @@ def contour_2d(
     For optional colorbar, add fig.colorbar(c)
     """
 
-    if kernel == "epa":
+    if kernel.startswith("epa"):
         kernel = "epanechnikov"
 
     if bandwidth == "auto":
@@ -552,18 +559,29 @@ def contour_2d(
     meany = np.mean(ydata) * extend_grid
 
     # Create a grid for KDE
-    x, y = np.mgrid[
-        min(xdata) - meanx : max(xdata) + meanx : complex(resolution),
-        min(ydata) - meany : max(ydata) + meany : complex(resolution),
-    ]
+    if diagonal:
+        vmin = min(min(xdata), min(ydata))
+        vmax = max(max(xdata), max(ydata))
+
+        mean = np.mean(np.concatenate([xdata, ydata])) * extend_grid
+
+        x, y = np.mgrid[
+            vmin - mean : vmax + mean : complex(resolution),
+            vmin - mean : vmax + mean : complex(resolution),
+        ]
+    else:
+        x, y = np.mgrid[
+            min(xdata) - meanx : max(xdata) + meanx : complex(resolution),
+            min(ydata) - meany : max(ydata) + meany : complex(resolution),
+        ]
 
     positions = np.vstack([x.ravel(), y.ravel()])
     values = np.vstack([xdata, ydata])
 
     # Define KDE with specified bandwidth
-    kernel_sk = sklearn.neighbors.KernelDensity(kernel=kernel, bandwidth=bandwidth).fit(
-        list(zip(*values))
-    )
+    kernel_sk = sklearn.neighbors.KernelDensity(
+        kernel=kernel, bandwidth=bandwidth
+    ).fit(list(zip(*values)))
     z = np.exp(kernel_sk.score_samples(list(zip(*positions))))
 
     z = np.reshape(z.T, x.shape)
@@ -607,7 +625,9 @@ def estimate_bw(n, d, factor):
     return ((n * (d + 2) / 4.0) ** (-1.0 / (d + 4))) * factor ** 2
 
 
-def histpoints_w_err(data, bins, density, remove_empty_bins=False, least_count=1):
+def histpoints_w_err(
+    data, bins, density, remove_empty_bins=False, least_count=1
+):
     """
     Converts unbinned data to x,y-curvefitable points with Poisson errors.
 
@@ -886,7 +906,9 @@ def generate_traces(
             if noise_end > trace_length:
                 noise_end = trace_length
 
-            DD[noise_start:noise_end] *= np.random.normal(1, 1, noise_end - noise_start)
+            DD[noise_start:noise_end] *= np.random.normal(
+                1, 1, noise_end - noise_start
+            )
 
         # Flip traces
         flip_trace = np.random.choice(("flipDD", "flipDA", "flipAA"))
@@ -1074,7 +1096,9 @@ def generate_traces(
         # effect otherwise)
         is_scrambled = False
         if np.random.uniform(0, 1) < scramble_prob and n_pairs <= 2:
-            DD, DA, AA, label = scramble(DD=DD, DA=DA, AA=AA, cls=cls, label=label)
+            DD, DA, AA, label = scramble(
+                DD=DD, DA=DA, AA=AA, cls=cls, label=label
+            )
             is_scrambled = True
 
         # Figure out bleached places before true signal is modified:
@@ -1137,7 +1161,9 @@ def generate_traces(
             for i in range(5):
                 k_states = i + 1
                 if len(observed_states) == k_states:
-                    label[label != cls["bleached"]] = cls["{}-state".format(k_states)]
+                    label[label != cls["bleached"]] = cls[
+                        "{}-state".format(k_states)
+                    ]
 
         # Bad traces don't contain FRET
         if any((is_noisy, is_aggregated, is_scrambled)):
@@ -1206,7 +1232,9 @@ def generate_traces(
     return traces
 
 
-def func_double_exp(_x: np.ndarray, _lambda_1: float, _lambda_2: float, _k: float):
+def func_double_exp(
+    _x: np.ndarray, _lambda_1: float, _lambda_2: float, _k: float
+):
     if _k > 1.0:
         raise ValueError(f"_k of value {_k:.2f} is larger than 1!")
     if _k < 0:

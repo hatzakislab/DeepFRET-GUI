@@ -162,20 +162,6 @@
       <property name="topMargin">
        <number>12</number>
       </property>
-      <item row="3" column="0">
-       <widget class="QRadioButton" name="radioButton_dual">
-        <property name="text">
-         <string>Interleaved Video</string>
-        </property>
-       </widget>
-      </item>
-      <item row="4" column="0">
-       <widget class="QRadioButton" name="radioButton_2_col">
-        <property name="text">
-         <string>Quad View (2-channel)</string>
-        </property>
-       </widget>
-      </item>
       <item row="2" column="0">
        <widget class="QLabel" name="label_7">
         <property name="font">
@@ -188,10 +174,10 @@
         </property>
        </widget>
       </item>
-      <item row="5" column="0">
-       <widget class="QRadioButton" name="radioButton_2_col_inv">
+      <item row="0" column="0">
+       <widget class="QCheckBox" name="checkBox_firstFrameIsDonor">
         <property name="text">
-         <string>Quad View (inverted 2-channel)</string>
+         <string>First frame is donor excitation</string>
         </property>
        </widget>
       </item>
@@ -199,13 +185,6 @@
        <widget class="QCheckBox" name="checkBox_donorLeft">
         <property name="text">
          <string>Donor is left side</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="0">
-       <widget class="QCheckBox" name="checkBox_firstFrameIsDonor">
-        <property name="text">
-         <string>First frame is donor excitation</string>
         </property>
        </widget>
       </item>
@@ -401,9 +380,6 @@
   <tabstop>checkBox_fitSpots</tabstop>
   <tabstop>checkBox_firstFrameIsDonor</tabstop>
   <tabstop>checkBox_donorLeft</tabstop>
-  <tabstop>radioButton_dual</tabstop>
-  <tabstop>radioButton_2_col</tabstop>
-  <tabstop>radioButton_2_col_inv</tabstop>
   <tabstop>radioButton_hmm_fitE</tabstop>
   <tabstop>radioButton_hmm_fitDD</tabstop>
   <tabstop>doubleSpinBox_hmm_BIC</tabstop>

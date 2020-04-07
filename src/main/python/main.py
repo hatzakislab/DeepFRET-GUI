@@ -107,25 +107,17 @@ class PreferencesWindow(QDialog):
             self.ui.checkBox_firstFrameIsDonor,
             self.ui.checkBox_donorLeft,
         )
-        self.imgModeRadioButtons = (
-            self.ui.radioButton_dual,
-            self.ui.radioButton_2_col,
-            self.ui.radioButton_2_col_inv,
-        )
 
         self.hmmRadioButtons = (
             self.ui.radioButton_hmm_fitE,
             self.ui.radioButton_hmm_fitDD,
         )
 
-        mismatch_error = (
-            "Make sure widgets have the correct number of keys in gvars"
-        )
-
         if len(self.globalCheckBoxes) != len(gvars.keys_globalCheckBoxes):
-            raise ValueError(mismatch_error)
+            mismatch_error = (
+                "Make sure widgets have the correct number of keys in gvars"
+            )
 
-        if len(self.imgModeRadioButtons) != len(gvars.keys_ImgModes):
             raise ValueError(mismatch_error)
 
         self.connectUi()
@@ -140,16 +132,7 @@ class PreferencesWindow(QDialog):
         ):
             self.setConfig(key=key, value=checkBox.isChecked())
 
-        # Imaging type radio buttons
-        # Qt makes the radio buttons exclusive so only one can be checked, but
-        # Python doesn't know that, so need to check all of them to find the one
-        # that is checked
-        for imgMode, radioButton in zip(
-            gvars.keys_ImgModes, self.imgModeRadioButtons
-        ):
-            if radioButton.isChecked():
-                self.setConfig(key=gvars.key_imgMode, value=imgMode)
-
+        # HMM radio buttons
         for hmmMode, radioButton in zip(
             gvars.keys_HmmModes, self.hmmRadioButtons
         ):
@@ -186,10 +169,6 @@ class PreferencesWindow(QDialog):
 
         # TODO: add that changing the hmmLocal checkbox should change the parameters for all traces
         #  both existing and new traces
-
-        # Imaging type radio buttons
-        for radioButton in self.imgModeRadioButtons:
-            radioButton.clicked.connect(self.writeUiToConfig)
 
         # HMM type radio buttons
         for radioButton in self.hmmRadioButtons:
@@ -253,16 +232,10 @@ class PreferencesWindow(QDialog):
         ):
             checkBox.setChecked(bool(self.getConfig(configKey)))
 
-        for radioButton, imgMode in zip(
-            self.imgModeRadioButtons, gvars.keys_ImgModes
-        ):
-            if self.getConfig(gvars.key_imgMode) == imgMode:
-                radioButton.setChecked(True)
-
         for radioButton, hmmMode in zip(
             self.hmmRadioButtons, gvars.keys_HmmModes
         ):
-            if self.getConfig(gvars.key_imgMode) == hmmMode:
+            if self.getConfig(gvars.key_hmmMode) == hmmMode:
                 radioButton.setChecked(True)
 
         self.ui.toleranceComboBox.setCurrentText(
@@ -813,15 +786,11 @@ class BaseWindow(QMainWindow):
         if TransitionDensityWindow_.isVisible():
             TransitionDensityWindow_.refreshPlot()
 
-    def setupFigureCanvas(
-        self, ax_setup, ax_window, use_layoutbox=True, **kwargs
-    ):
+    def setupFigureCanvas(self, ax_type, use_layoutbox=True, **kwargs):
         """
         Creates a canvas with a given ax layout.
         """
-        self.plotWidget = PlotWidget(
-            ax_setup=ax_setup, ax_window=ax_window, **kwargs
-        )
+        self.plotWidget = PlotWidget(ax_type=ax_type, **kwargs)
         self.canvas = self.plotWidget.canvas
 
         if use_layoutbox:
@@ -1218,7 +1187,6 @@ class MainWindow(BaseWindow):
         self.currRow = None
         self.currDir = None
         self.currRoiSize = gvars.roi_draw_radius
-        self.img_mode = self.getConfig(gvars.key_imgMode)
         self.donor_first = self.getConfig(gvars.key_firstFrameIsDonor)
         self.donor_is_left = self.getConfig(gvars.key_donorLeft)
         self.bg_correction = self.getConfig(gvars.key_illuCorrect)
@@ -1239,9 +1207,7 @@ class MainWindow(BaseWindow):
         )
 
         self.setupListView(use_layoutbox=False)
-        self.setupFigureCanvas(
-            ax_setup=self.img_mode, ax_window="img", use_layoutbox=False
-        )
+        self.setupFigureCanvas(ax_type="img", use_layoutbox=False)
         self.setupPlot()
         self.setupSplitter(layout=self.ui.LayoutBox)
 
@@ -1344,7 +1310,6 @@ class MainWindow(BaseWindow):
                     self.data.load_video_data(
                         path=full_filename,
                         name=uniqueName,
-                        setup=self.img_mode,
                         donor_is_first=self.donor_first,
                         donor_is_left=self.donor_is_left,
                         bg_correction=self.bg_correction,
@@ -1409,7 +1374,6 @@ class MainWindow(BaseWindow):
                 self.data.load_video_data(
                     path=full_filename,
                     name=os.path.basename(full_filename),
-                    setup=self.img_mode,
                     donor_is_first=self.donor_first,
                     donor_is_left=self.donor_is_left,
                     bg_correction=self.bg_correction,
@@ -1697,7 +1661,7 @@ class MainWindow(BaseWindow):
             )
             # Rescale values according to UI first
             # might break image if too high
-            sensitivity = 100 if self.img_mode == "bypass" else 250
+            sensitivity = 250
 
             for c, lo, hi in zip(
                 vid.channels, contrast_lo, contrast_hi
@@ -1883,9 +1847,7 @@ class TraceWindow(BaseWindow):
         self.ui.setupUi(self)
         self.setupListView(use_layoutbox=False)
         self.setupFigureCanvas(
-            ax_setup=self.getConfig(gvars.key_imgMode),
-            ax_window="trace",
-            use_layoutbox=False,
+            ax_type="trace", use_layoutbox=False,
         )
         self.setupPlot()
         self.setupSplitter(layout=self.ui.layoutBox)
@@ -2460,9 +2422,7 @@ class TraceWindow(BaseWindow):
                 spine.set_edgecolor(gvars.color_gui_text)
                 spine.set_linewidth(0.5)
 
-        if self.getConfig(gvars.key_imgMode) != "bypass":
-            # only for FRET red axis (right side)
-            self.canvas.ax_red.yaxis.set_label_coords(1.05, 0.5)
+        self.canvas.ax_red.yaxis.set_label_coords(1.05, 0.5)
 
     def getCorrectionFactors(self, factor):
         """
@@ -2739,9 +2699,7 @@ class HistogramWindow(BaseWindow):
         self.ui = Ui_HistogramWindow()
         self.ui.setupUi(self)
 
-        self.setupFigureCanvas(
-            ax_setup="plot", ax_window="jointgrid", width=2, height=2
-        )
+        self.setupFigureCanvas(ax_type="jointgrid", width=2, height=2)
         self.setupPlot()
         self.connectUi()
 
@@ -3090,9 +3048,7 @@ class TransitionDensityWindow(BaseWindow):
         self.ui.setupUi(self)
         self.ui.nClustersSpinBox.valueChanged.connect(self.refreshPlot)
 
-        self.setupFigureCanvas(
-            ax_setup="plot", ax_window="dynamic", width=2, height=2
-        )
+        self.setupFigureCanvas(ax_type="plot", width=2, height=2)
         self.setupPlot()
 
     def savePlot(self):
@@ -3606,9 +3562,7 @@ class SimulatorWindow(BaseWindow):
         self.ui = Ui_SimulatorWindow()
         self.ui.setupUi(self)
 
-        self.setupFigureCanvas(
-            ax_setup="plot", ax_window="single", use_layoutbox=True
-        )
+        self.setupFigureCanvas(ax_type="plot", use_layoutbox=True)
         self.connectUi()
 
     def connectUi(self):
@@ -3946,6 +3900,7 @@ class AppContext(ApplicationContext):
 
     def __init__(self):
         super().__init__()
+
         self.keras_two_channel_model = None
         self.keras_three_channel_model = None
         self.config = None

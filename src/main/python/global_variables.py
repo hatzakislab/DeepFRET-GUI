@@ -42,16 +42,10 @@ class GlobalVariables:
     key_hmmMode = "hmmMode"
     key_spotDetection = "spotDetection"  # Spot detection speed
     key_lastOpenedDir = "lastOpenedDir"  # Sets recent directory
-    key_imgMode = "imgMode"  # Sets imaging mode
-
-    key_imgModeDual = "dual"
-    key_imgMode2Color = "2-color"
-    key_imgMode2ColorInv = "2-color-inv"
 
     key_HmmModeE = "E"
     key_HmmModeDD = "DD"
 
-    keys_ImgModes = key_imgModeDual, key_imgMode2Color, key_imgMode2ColorInv
     keys_HmmModes = key_HmmModeE, key_HmmModeDD
 
     # MainWindow

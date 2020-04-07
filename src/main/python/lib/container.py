@@ -3,6 +3,8 @@ import os.path
 import re
 import time
 import warnings
+import PIL.Image
+import PIL.TiffTags
 
 multiprocessing.freeze_support()
 
@@ -545,9 +547,8 @@ class VideoData:
         self,
         path: str,
         name: str,
-        setup: str,
-        donor_is_left: bool,
-        donor_is_first: bool,
+        donor_is_left: bool = True,
+        donor_is_first: bool = True,
         bg_correction: bool = False,
     ):
         """
@@ -560,8 +561,6 @@ class VideoData:
             Full path of video to be loaded
         name:
             Unique identifier (to prevent videos being loaded in duplicate)
-        setup:
-            Imaging setup from config
         bg_correction:
             Corrects for illumination profile and crops misaligned edges
             slightly
@@ -601,7 +600,8 @@ class VideoData:
         # Scaling factor for ROI
         video.roi_radius = max(video.height, video.width) / 80
 
-        if setup == "dual":
+        # Support for internal format
+        if self.is_interleaved_dual_cam(path):
             c1, c2, c3, _ = lib.imgdata.image_channels(4)
 
             # Donor (Dexc-Dem)
@@ -650,7 +650,7 @@ class VideoData:
             # ALEX (Aexc-Aem)
             video.red.raw = video.array[_1::2, :, rgt]
 
-            video.channels = video.grn, video.red
+        video.channels = video.grn, video.red
 
         for c in video.channels + (video.acc,):
             if c.raw is not None:
@@ -674,3 +674,29 @@ class VideoData:
             video.indices = np.indices(video.red.mean.shape)
         else:
             video.indices = np.indices(video.grn.mean.shape)
+
+    @staticmethod
+    def is_interleaved_dual_cam(path):
+        """
+        Detects whether TIFF file is interleaved dual cam video from
+        Hatzakis lab
+        """
+        detected = False
+
+        with PIL.Image.open(path) as img:
+            meta_dict = {
+                PIL.TiffTags.TAGS[key]: img.tag[key] for key in img.tag.keys()
+            }
+
+        # Old Fiji format
+        if (
+            len(meta_dict) == 10
+            and meta_dict["ImageWidth"] == meta_dict["ImageLength"]
+        ):
+            detected = True
+
+        # Newer tifffile.py format
+        elif len(meta_dict) == 16 and meta_dict["Software"][0] == "tifffile.py":
+            detected = True
+
+        return detected

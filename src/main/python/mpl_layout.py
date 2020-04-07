@@ -23,13 +23,7 @@ class MatplotlibCanvas(FigureCanvas):
     """
 
     def __init__(
-        self,
-        parent=None,
-        ax_setup=None,
-        ax_window=None,
-        width=6,
-        height=2,
-        dpi=100,
+        self, ax_type, parent=None, width=6, height=2, dpi=100,
     ):
         self.fig = Figure(figsize=(width, height), dpi=dpi,)
         self.fig.set_facecolor(gvars.color_gui_bg)
@@ -41,44 +35,18 @@ class MatplotlibCanvas(FigureCanvas):
         )
         FigureCanvas.updateGeometry(self)
 
-        self.ax_setup = ax_setup
-        self.ax_window = ax_window
+        self.ax_type = ax_type
 
-        if ax_setup == "dual":
-            if ax_window == "img":
-                self.setupTwoColorImageLayout()
-            elif ax_window == "trace":
-                self.setupTwoColorTraceLayout()
-            else:
-                raise ValueError
-
-        if ax_setup == "2-color":
-            if ax_window == "img":
-                self.setupTwoColorImageLayout()
-            elif ax_window == "trace":
-                self.setupTwoColorTraceLayout()
-            else:
-                raise ValueError
-
-        if ax_setup == "2-color-inv":
-            if ax_window == "img":
-                self.setupTwoColorImageLayout()
-            elif ax_window == "trace":
-                self.setupTwoColorTraceLayout()
-            else:
-                raise ValueError
-
-        if ax_setup == "plot":
-            if ax_window == "jointgrid":
-                self.setupJointGridLayout()
-            elif ax_window == "correction":
-                self.setupDoubleAxesPlotLayout()
-            elif ax_window == "single":
-                self.setupSinglePlotLayout()
-            elif ax_window == "dynamic":
-                self.setupDynamicGridLayout()
-            else:
-                raise ValueError
+        if ax_type == "img":
+            self.setupTwoColorImageLayout()
+        elif ax_type == "trace":
+            self.setupTwoColorTraceLayout()
+        elif ax_type == "plot":
+            self.setupSinglePlotLayout()
+        elif ax_type == "jointgrid":
+            self.setupJointGridLayout()
+        else:
+            raise ValueError
 
     def setupTwoColorImageLayout(self):
         """

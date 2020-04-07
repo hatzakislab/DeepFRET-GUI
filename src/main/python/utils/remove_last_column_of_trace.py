@@ -12,9 +12,9 @@ def load_and_reduce_trace(filename: str) -> TraceContainer:
     return trace
 
 
-if __name__ == '__main__':
-    filename = '/Users/mag/Desktop/Sample traces/trace_0_20200212_1734.txt'
-    file_path = 'temp.txt'
+if __name__ == "__main__":
+    filename = "/Users/mag/Desktop/Sample traces/trace_0_20200212_1734.txt"
+    file_path = "temp.txt"
     _trace = load_and_reduce_trace(filename)
     _trace.savename = file_path
     s1 = _trace.get_export_txt()

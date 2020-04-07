@@ -8,28 +8,32 @@ from lib.container import TraceContainer
 class TestTraceContainer(TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.file_path = 'temp.txt'
+        cls.file_path = "temp.txt"
 
     def test_load_trace_from_ascii(self):
-        filename = '../resources/traces/fiddler_3dim_0.txt'
+        filename = "../resources/traces/fiddler_3dim_0.txt"
         trace = TraceContainer(filename)
         self.assertTrue(trace.load_successful)
         self.assertIsInstance(trace.acc.int, np.ndarray)
         self.assertIsInstance(trace.grn.int, np.ndarray)
         self.assertIsInstance(trace.red.int, np.ndarray)
-        self.assertEqual((57, 57, 57), trace.get_bleaches())  # expect bleach to propagate all channels
+        self.assertEqual(
+            (57, 57, 57), trace.get_bleaches()
+        )  # expect bleach to propagate all channels
 
     def test_load_trace_from_ascii_specified_bleach(self):
-        filename = '../resources/traces/fiddler_3dim_0_reduced.txt'
+        filename = "../resources/traces/fiddler_3dim_0_reduced.txt"
         trace = TraceContainer(filename)
         self.assertTrue(trace.load_successful)
         self.assertIsInstance(trace.acc.int, np.ndarray)
         self.assertIsInstance(trace.grn.int, np.ndarray)
         self.assertIsInstance(trace.red.int, np.ndarray)
-        self.assertEqual((57, None, 57), trace.get_bleaches())  # expect bleach to propagate all channels
+        self.assertEqual(
+            (57, None, 57), trace.get_bleaches()
+        )  # expect bleach to propagate all channels
 
     def test_load_trace_from_dat(self):
-        filename = '../resources/traces/kinsoftSampleTrace.dat'
+        filename = "../resources/traces/kinsoftSampleTrace.dat"
         trace = TraceContainer(filename)
         self.assertTrue(trace.load_successful)
         self.assertIsInstance(trace.acc.int, np.ndarray)
@@ -39,7 +43,7 @@ class TestTraceContainer(TestCase):
 
     def test_save_and_load_trace_dat(self):
         self.addCleanup(os.remove, self.file_path)
-        filename = '../resources/traces/kinsoftSampleTrace.dat'
+        filename = "../resources/traces/kinsoftSampleTrace.dat"
         trace = TraceContainer(filename)
         trace.tracename = self.file_path
         trace.export_trace_to_txt()
@@ -52,7 +56,7 @@ class TestTraceContainer(TestCase):
 
     def test_save_and_load_trace(self):
         self.addCleanup(os.remove, self.file_path)
-        filename = '../resources/traces/fiddler_3dim_0.txt'
+        filename = "../resources/traces/fiddler_3dim_0.txt"
         trace = TraceContainer(filename)
         trace.tracename = self.file_path
         trace.export_trace_to_txt()
@@ -62,7 +66,7 @@ class TestTraceContainer(TestCase):
 
     def test_reducing_trace_save_and_load(self):
         self.addCleanup(os.remove, self.file_path)
-        filename = '../resources/traces/fiddler_3dim_0.txt'
+        filename = "../resources/traces/fiddler_3dim_0.txt"
         trace = TraceContainer(filename)
         trace.red.int[:] = None
         trace.red.bg[:] = None
@@ -83,7 +87,7 @@ class TestTraceContainer(TestCase):
 
     def test_reducing_trace_calculating_fret(self):
         self.addCleanup(os.remove, self.file_path)
-        filename = '../resources/traces/fiddler_3dim_0.txt'
+        filename = "../resources/traces/fiddler_3dim_0.txt"
         trace = TraceContainer(filename)
         trace.red.int[:] = None
         trace.red.bg[:] = None
@@ -95,4 +99,4 @@ class TestTraceContainer(TestCase):
         trace2 = TraceContainer(self.file_path)
         df2 = trace2.get_export_df()
 
-        np.testing.assert_array_almost_equal(df['E'], df2['E'])
+        np.testing.assert_array_almost_equal(df["E"], df2["E"])

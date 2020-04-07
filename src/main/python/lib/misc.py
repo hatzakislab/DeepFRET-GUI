@@ -47,14 +47,19 @@ def merge_tuples(*t):
     return tuple(j for i in (t) for j in (i if isinstance(i, tuple) else (i,)))
 
 
-def timeit(method):
+def print_elapsed(start, end, name=""):
+    """Print the time elapsed given start and end time() points"""
+    print("'{}' {:.2f} ms".format(name, (end - start) * 1e3))
+
+
+def timeit(method, *args, **kwargs):
     """Decorator to time functions and methods for optimization"""
 
     def timed(*args, **kwargs):
         ts = time.time()
         result = method(*args, **kwargs)
         te = time.time()
-        print("'{}' {:.2f} ms".format(method.__name__, (te - ts) * 1e3))
+        print_elapsed(name=method.__name__, start=ts, end=te)
         return result
 
     return timed
@@ -87,7 +92,9 @@ def m_append(objects: tuple, to: tuple, method="append"):
         raise ValueError("Method must be 'append' or 'extend'")
 
 
-def seek_line(line_starts: Union[str, Tuple[str, str]], path: str, timeout: int = 10):
+def seek_line(
+    line_starts: Union[str, Tuple[str, str]], path: str, timeout: int = 10
+):
     """Seeks the file until specified line start is encountered in the start of
      the line."""
     with open(path, encoding="utf-8") as f:
@@ -185,7 +192,7 @@ def sim_to_ascii(df, trace_len, outdir):
         ).round(4)
 
         date_txt = "Date: {}".format(time.strftime("%Y-%m-%d, %H:%M"))
-        mov_txt = "Movie filename: {}".format(None)
+        vid_txt = "Video filename: {}".format(None)
         id_txt = "FRET pair #{}".format(idx)
         bl_txt = "Bleaches at {}".format(trace["fb"].values[0])
 
@@ -199,7 +206,7 @@ def sim_to_ascii(df, trace_len, outdir):
                 "{5}".format(
                     exp_txt,
                     date_txt,
-                    mov_txt,
+                    vid_txt,
                     id_txt,
                     bl_txt,
                     df.to_csv(index=False, sep="\t"),
@@ -262,6 +269,8 @@ def nice_string_output(
     string = ""
     for name, value in zip(names, values):
         string += "{0:s} {1:>{spacing}} \n".format(
-            name, value, spacing=extra_spacing + max_values + max_names - len(name),
+            name,
+            value,
+            spacing=extra_spacing + max_values + max_names - len(name),
         )
     return string[:-2]

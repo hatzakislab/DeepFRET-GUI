@@ -14,10 +14,14 @@ class Ui_DensityWindowInspector(object):
     def setupUi(self, DensityWindowInspector):
         DensityWindowInspector.setObjectName("DensityWindowInspector")
         DensityWindowInspector.resize(281, 159)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Minimum)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Minimum
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(DensityWindowInspector.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            DensityWindowInspector.sizePolicy().hasHeightForWidth()
+        )
         DensityWindowInspector.setSizePolicy(sizePolicy)
         DensityWindowInspector.setMinimumSize(QtCore.QSize(0, 0))
         DensityWindowInspector.setMaximumSize(QtCore.QSize(1000, 1000))
@@ -98,16 +102,27 @@ class Ui_DensityWindowInspector(object):
 
     def retranslateUi(self, DensityWindowInspector):
         _translate = QtCore.QCoreApplication.translate
-        DensityWindowInspector.setWindowTitle(_translate("DensityWindowInspector", "Adjust"))
-        self.overlayLabel.setText(_translate("DensityWindowInspector", "Overlay Points:"))
+        DensityWindowInspector.setWindowTitle(
+            _translate("DensityWindowInspector", "Adjust")
+        )
+        self.overlayLabel.setText(
+            _translate("DensityWindowInspector", "Overlay Points:")
+        )
         self.colorLabel.setText(_translate("DensityWindowInspector", "Colors:"))
-        self.smoothingLabel.setText(_translate("DensityWindowInspector", "Smoothing: "))
-        self.resolutionLabel.setText(_translate("DensityWindowInspector", "Resolution: "))
-        self.label.setText(_translate("DensityWindowInspector", "Overlay Alpha:"))
+        self.smoothingLabel.setText(
+            _translate("DensityWindowInspector", "Smoothing: ")
+        )
+        self.resolutionLabel.setText(
+            _translate("DensityWindowInspector", "Resolution: ")
+        )
+        self.label.setText(
+            _translate("DensityWindowInspector", "Overlay Alpha:")
+        )
 
 
 if __name__ == "__main__":
     import sys
+
     app = QtWidgets.QApplication(sys.argv)
     DensityWindowInspector = QtWidgets.QDialog()
     ui = Ui_DensityWindowInspector()

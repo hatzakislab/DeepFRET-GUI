@@ -13,7 +13,6 @@ class GlobalVariables:
     LICENSE = "DeepFRET is free software, distributed under the terms of the MIT open source license"
     CONFIGNAME = "config.ini"
 
-
     boolMaps = {"True": 1, "1": 1, "False": 0, "0": 0}
     # List of possible user-configurable options (i.e. available keys),
     # so they'll be available with autocomplete and refactoring
@@ -22,8 +21,14 @@ class GlobalVariables:
     key_unColocRed = "unColocRed"  # Uncolocalized red
     key_illuCorrect = "illuCorrect"  # Illumination profile correction
     key_fitSpots = "fitSpots"  # Whether to use LoG-based spot detection
-    key_hmmLocal = "hmmLocal"  # Whether to use local hmm, gets passed to traces
+    
     key_hmmBICStrictness = "hmmBICStrictness"
+    key_hmmLocal = (
+        "hmmLocal"  # Whether to use global or local hmm, gets passed to traces
+    )
+    
+    key_firstFrameIsDonor = "firstFrameIsDonor"
+    key_donorLeft = "donorLeft"
 
     keys_globalCheckBoxes = (
         key_batchLoadingMode,
@@ -31,6 +36,8 @@ class GlobalVariables:
         key_illuCorrect,
         key_fitSpots,
         key_hmmLocal,
+        key_firstFrameIsDonor,
+        key_donorLeft,
     )
 
     key_hmmMode = "hmmMode"
@@ -40,16 +47,10 @@ class GlobalVariables:
 
     key_spotDetection = "spotDetection"  # Spot detection speed
     key_lastOpenedDir = "lastOpenedDir"  # Sets recent directory
-    key_imgMode = "imgMode"  # Sets imaging mode
-
-    key_imgModeDual = "dual"
-    key_imgMode2Color = "2-color"
-    key_imgMode2ColorInv = "2-color-inv"
 
     key_HmmModeE = "E"
     key_HmmModeDD = "DD"
 
-    keys_ImgModes = key_imgModeDual, key_imgMode2Color, key_imgMode2ColorInv
     keys_HmmModes = key_HmmModeE, key_HmmModeDD
 
     # MainWindow

@@ -10,8 +10,8 @@ def generatePyFromUi(verbose=True):
 
     for filename in ui_files:
         if os.path.exists(filename):
-            out_name = (
-                join(dirname(filename), "_" + basename(filename)).rstrip(".ui")
+            out_name = join(dirname(filename), "_" + basename(filename)).rstrip(
+                ".ui"
             )
 
             if verbose:

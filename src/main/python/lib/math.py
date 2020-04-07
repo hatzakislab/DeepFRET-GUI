@@ -98,7 +98,9 @@ def calc_E(intensities, alpha=0, delta=0, clip_range=(-0.3, 1.3)):
     return E
 
 
-def calc_S(intensities, alpha=0, delta=0, beta=1, gamma=1, clip_range=(-0.3, 1.3)):
+def calc_S(
+    intensities, alpha=0, delta=0, beta=1, gamma=1, clip_range=(-0.3, 1.3)
+):
     """
     Calculates raw calc_S from donor (Dexc-Dem), acceptor (Dexc-Aem) and direct
     emission of acceptor ("ALEX", Aexc-Aem) Note that iSMS has the option of
@@ -117,7 +119,9 @@ def calc_S(intensities, alpha=0, delta=0, beta=1, gamma=1, clip_range=(-0.3, 1.3
     return S
 
 
-def corrected_ES(intensities, alpha, delta, beta, gamma, clip_range=(-0.3, 1.3)):
+def corrected_ES(
+    intensities, alpha, delta, beta, gamma, clip_range=(-0.3, 1.3)
+):
     """
     Calculates the fully corrected FRET and stoichiometry, given all the
     correction factors. This is only used for the combined 2D histogram,
@@ -370,7 +374,9 @@ def find_transitions(states, fret):
     hf = pd.DataFrame()
     hf["state"] = states
     hf["y_obs"] = fret
-    hf["y_fit"] = hf.groupby(["state"], as_index=False)["y_obs"].transform("median")
+    hf["y_fit"] = hf.groupby(["state"], as_index=False)["y_obs"].transform(
+        "median"
+    )
 
     hf["time"] = hf["y_fit"].index + 1
 
@@ -472,10 +478,11 @@ def predict_batch(X, model, batch_size=256, progressbar: ProgressBar = None):
     """
     batches = (X.shape[0] // batch_size) + 1
     y_pred = []
-
     for i in range(batches):
         i1 = i * batch_size
         i2 = i1 + batch_size
+        print(X[i1:i2].shape)
+
         y_pred.append(model.predict_on_batch(X[i1:i2]))
 
         if progressbar is not None:
@@ -561,9 +568,9 @@ def contour_2d(
     values = np.vstack([xdata, ydata])
 
     # Define KDE with specified bandwidth
-    kernel_sk = sklearn.neighbors.KernelDensity(kernel=kernel, bandwidth=bandwidth).fit(
-        list(zip(*values))
-    )
+    kernel_sk = sklearn.neighbors.KernelDensity(
+        kernel=kernel, bandwidth=bandwidth
+    ).fit(list(zip(*values)))
     z = np.exp(kernel_sk.score_samples(list(zip(*positions))))
 
     z = np.reshape(z.T, x.shape)
@@ -607,7 +614,9 @@ def estimate_bw(n, d, factor):
     return ((n * (d + 2) / 4.0) ** (-1.0 / (d + 4))) * factor ** 2
 
 
-def histpoints_w_err(data, bins, density, remove_empty_bins=False, least_count=1):
+def histpoints_w_err(
+    data, bins, density, remove_empty_bins=False, least_count=1
+):
     """
     Converts unbinned data to x,y-curvefitable points with Poisson errors.
 
@@ -886,7 +895,9 @@ def generate_traces(
             if noise_end > trace_length:
                 noise_end = trace_length
 
-            DD[noise_start:noise_end] *= np.random.normal(1, 1, noise_end - noise_start)
+            DD[noise_start:noise_end] *= np.random.normal(
+                1, 1, noise_end - noise_start
+            )
 
         # Flip traces
         flip_trace = np.random.choice(("flipDD", "flipDA", "flipAA"))
@@ -1074,7 +1085,9 @@ def generate_traces(
         # effect otherwise)
         is_scrambled = False
         if np.random.uniform(0, 1) < scramble_prob and n_pairs <= 2:
-            DD, DA, AA, label = scramble(DD=DD, DA=DA, AA=AA, cls=cls, label=label)
+            DD, DA, AA, label = scramble(
+                DD=DD, DA=DA, AA=AA, cls=cls, label=label
+            )
             is_scrambled = True
 
         # Figure out bleached places before true signal is modified:
@@ -1137,7 +1150,9 @@ def generate_traces(
             for i in range(5):
                 k_states = i + 1
                 if len(observed_states) == k_states:
-                    label[label != cls["bleached"]] = cls["{}-state".format(k_states)]
+                    label[label != cls["bleached"]] = cls[
+                        "{}-state".format(k_states)
+                    ]
 
         # Bad traces don't contain FRET
         if any((is_noisy, is_aggregated, is_scrambled)):
@@ -1206,7 +1221,9 @@ def generate_traces(
     return traces
 
 
-def func_double_exp(_x: np.ndarray, _lambda_1: float, _lambda_2: float, _k: float):
+def func_double_exp(
+    _x: np.ndarray, _lambda_1: float, _lambda_2: float, _k: float
+):
     if _k > 1.0:
         raise ValueError(f"_k of value {_k:.2f} is larger than 1!")
     if _k < 0:

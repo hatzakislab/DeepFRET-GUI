@@ -14,10 +14,14 @@ class Ui_TraceWindowInspector(object):
     def setupUi(self, TraceWindowInspector):
         TraceWindowInspector.setObjectName("TraceWindowInspector")
         TraceWindowInspector.resize(347, 238)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(TraceWindowInspector.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            TraceWindowInspector.sizePolicy().hasHeightForWidth()
+        )
         TraceWindowInspector.setSizePolicy(sizePolicy)
         TraceWindowInspector.setMinimumSize(QtCore.QSize(0, 0))
         TraceWindowInspector.setMaximumSize(QtCore.QSize(1000, 1000))
@@ -33,7 +37,9 @@ class Ui_TraceWindowInspector(object):
         self.gridLayout_2.addWidget(self.FretLabel, 1, 0, 1, 1)
         self.spinBoxStoiLo = QtWidgets.QDoubleSpinBox(TraceWindowInspector)
         self.spinBoxStoiLo.setFrame(True)
-        self.spinBoxStoiLo.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
+        self.spinBoxStoiLo.setButtonSymbols(
+            QtWidgets.QAbstractSpinBox.NoButtons
+        )
         self.spinBoxStoiLo.setMaximum(1.0)
         self.spinBoxStoiLo.setSingleStep(0.1)
         self.spinBoxStoiLo.setObjectName("spinBoxStoiLo")
@@ -43,7 +49,9 @@ class Ui_TraceWindowInspector(object):
         self.gridLayout_2.addWidget(self.FramesLabel, 4, 0, 1, 1)
         self.spinBoxFretLo = QtWidgets.QDoubleSpinBox(TraceWindowInspector)
         self.spinBoxFretLo.setFrame(True)
-        self.spinBoxFretLo.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
+        self.spinBoxFretLo.setButtonSymbols(
+            QtWidgets.QAbstractSpinBox.NoButtons
+        )
         self.spinBoxFretLo.setMaximum(1.0)
         self.spinBoxFretLo.setSingleStep(0.1)
         self.spinBoxFretLo.setObjectName("spinBoxFretLo")
@@ -53,14 +61,18 @@ class Ui_TraceWindowInspector(object):
         self.gridLayout_2.addWidget(self.FramesLabel_3, 3, 0, 1, 1)
         self.spinBoxDynamics = QtWidgets.QDoubleSpinBox(TraceWindowInspector)
         self.spinBoxDynamics.setFrame(True)
-        self.spinBoxDynamics.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
+        self.spinBoxDynamics.setButtonSymbols(
+            QtWidgets.QAbstractSpinBox.NoButtons
+        )
         self.spinBoxDynamics.setMaximum(1.0)
         self.spinBoxDynamics.setSingleStep(0.05)
         self.spinBoxDynamics.setObjectName("spinBoxDynamics")
         self.gridLayout_2.addWidget(self.spinBoxDynamics, 3, 1, 1, 2)
         self.spinBoxFretHi = QtWidgets.QDoubleSpinBox(TraceWindowInspector)
         self.spinBoxFretHi.setFrame(True)
-        self.spinBoxFretHi.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
+        self.spinBoxFretHi.setButtonSymbols(
+            QtWidgets.QAbstractSpinBox.NoButtons
+        )
         self.spinBoxFretHi.setMaximum(1.0)
         self.spinBoxFretHi.setSingleStep(0.1)
         self.spinBoxFretHi.setProperty("value", 1.0)
@@ -68,7 +80,9 @@ class Ui_TraceWindowInspector(object):
         self.gridLayout_2.addWidget(self.spinBoxFretHi, 1, 2, 1, 1)
         self.spinBoxStoiHi = QtWidgets.QDoubleSpinBox(TraceWindowInspector)
         self.spinBoxStoiHi.setFrame(True)
-        self.spinBoxStoiHi.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
+        self.spinBoxStoiHi.setButtonSymbols(
+            QtWidgets.QAbstractSpinBox.NoButtons
+        )
         self.spinBoxStoiHi.setMaximum(1.0)
         self.spinBoxStoiHi.setSingleStep(0.1)
         self.spinBoxStoiHi.setProperty("value", 1.0)
@@ -81,7 +95,9 @@ class Ui_TraceWindowInspector(object):
         self.StoiLabel.setObjectName("StoiLabel")
         self.gridLayout_2.addWidget(self.StoiLabel, 0, 0, 1, 1)
         self.spinBoxMinFrames = QtWidgets.QSpinBox(TraceWindowInspector)
-        self.spinBoxMinFrames.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
+        self.spinBoxMinFrames.setButtonSymbols(
+            QtWidgets.QAbstractSpinBox.NoButtons
+        )
         self.spinBoxMinFrames.setMaximum(1000)
         self.spinBoxMinFrames.setProperty("value", 15)
         self.spinBoxMinFrames.setObjectName("spinBoxMinFrames")
@@ -91,7 +107,9 @@ class Ui_TraceWindowInspector(object):
         self.gridLayout_2.addWidget(self.pushButtonFind, 6, 2, 1, 1)
         self.spinBoxConfidence = QtWidgets.QDoubleSpinBox(TraceWindowInspector)
         self.spinBoxConfidence.setFrame(True)
-        self.spinBoxConfidence.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
+        self.spinBoxConfidence.setButtonSymbols(
+            QtWidgets.QAbstractSpinBox.NoButtons
+        )
         self.spinBoxConfidence.setMaximum(1.0)
         self.spinBoxConfidence.setSingleStep(0.05)
         self.spinBoxConfidence.setProperty("value", 0.75)
@@ -111,25 +129,48 @@ class Ui_TraceWindowInspector(object):
         TraceWindowInspector.setTabOrder(self.spinBoxStoiLo, self.spinBoxStoiHi)
         TraceWindowInspector.setTabOrder(self.spinBoxStoiHi, self.spinBoxFretLo)
         TraceWindowInspector.setTabOrder(self.spinBoxFretLo, self.spinBoxFretHi)
-        TraceWindowInspector.setTabOrder(self.spinBoxFretHi, self.spinBoxConfidence)
-        TraceWindowInspector.setTabOrder(self.spinBoxConfidence, self.spinBoxDynamics)
-        TraceWindowInspector.setTabOrder(self.spinBoxDynamics, self.spinBoxMinFrames)
-        TraceWindowInspector.setTabOrder(self.spinBoxMinFrames, self.pushButtonFind)
+        TraceWindowInspector.setTabOrder(
+            self.spinBoxFretHi, self.spinBoxConfidence
+        )
+        TraceWindowInspector.setTabOrder(
+            self.spinBoxConfidence, self.spinBoxDynamics
+        )
+        TraceWindowInspector.setTabOrder(
+            self.spinBoxDynamics, self.spinBoxMinFrames
+        )
+        TraceWindowInspector.setTabOrder(
+            self.spinBoxMinFrames, self.pushButtonFind
+        )
 
     def retranslateUi(self, TraceWindowInspector):
         _translate = QtCore.QCoreApplication.translate
-        TraceWindowInspector.setWindowTitle(_translate("TraceWindowInspector", "Adjust"))
-        self.FretLabel.setText(_translate("TraceWindowInspector", "FRET Median Range:"))
-        self.FramesLabel.setText(_translate("TraceWindowInspector", "Minimum Number of Frames:"))
-        self.FramesLabel_3.setText(_translate("TraceWindowInspector", "Minimum Dynamics Confidence"))
-        self.FramesLabel_2.setText(_translate("TraceWindowInspector", "Minimum Trace Confidence:"))
-        self.StoiLabel.setText(_translate("TraceWindowInspector", "Stoichiometry Median Range:"))
+        TraceWindowInspector.setWindowTitle(
+            _translate("TraceWindowInspector", "Adjust")
+        )
+        self.FretLabel.setText(
+            _translate("TraceWindowInspector", "FRET Median Range:")
+        )
+        self.FramesLabel.setText(
+            _translate("TraceWindowInspector", "Minimum Number of Frames:")
+        )
+        self.FramesLabel_3.setText(
+            _translate("TraceWindowInspector", "Minimum Dynamics Confidence")
+        )
+        self.FramesLabel_2.setText(
+            _translate("TraceWindowInspector", "Minimum Trace Confidence:")
+        )
+        self.StoiLabel.setText(
+            _translate("TraceWindowInspector", "Stoichiometry Median Range:")
+        )
         self.pushButtonFind.setText(_translate("TraceWindowInspector", "Find"))
-        self.FramesLabel_4.setText(_translate("TraceWindowInspector", "Trace Must Bleach:"))
+        self.FramesLabel_4.setText(
+            _translate("TraceWindowInspector", "Trace Must Bleach:")
+        )
 
 
 if __name__ == "__main__":
     import sys
+
     app = QtWidgets.QApplication(sys.argv)
     TraceWindowInspector = QtWidgets.QDialog()
     ui = Ui_TraceWindowInspector()

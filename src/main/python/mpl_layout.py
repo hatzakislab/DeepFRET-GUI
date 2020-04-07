@@ -14,6 +14,7 @@ from matplotlib.gridspec import GridSpec
 # TODO: subplots_adjust should be part of the init to clean up and make it
 #  easier to control when creating the window
 
+
 class MatplotlibCanvas(FigureCanvas):
     """
     This is the matplotlib plot inside that controls all the visuals.
@@ -22,17 +23,9 @@ class MatplotlibCanvas(FigureCanvas):
     """
 
     def __init__(
-        self,
-        parent=None,
-        ax_setup=None,
-        ax_window=None,
-        width=6,
-        height=2,
-        dpi=100,
+        self, ax_type, parent=None, width=6, height=2, dpi=100,
     ):
-        self.fig = Figure(
-            figsize=(width, height), dpi=dpi,
-        )
+        self.fig = Figure(figsize=(width, height), dpi=dpi,)
         self.fig.set_facecolor(gvars.color_gui_bg)
         FigureCanvas.__init__(self, self.fig)
         self.setParent(parent)
@@ -42,44 +35,18 @@ class MatplotlibCanvas(FigureCanvas):
         )
         FigureCanvas.updateGeometry(self)
 
-        self.ax_setup = ax_setup
-        self.ax_window = ax_window
+        self.ax_type = ax_type
 
-        if ax_setup == "dual":
-            if ax_window == "img":
-                self.setupTwoColorImageLayout()
-            elif ax_window == "trace":
-                self.setupTwoColorTraceLayout()
-            else:
-                raise ValueError
-
-        if ax_setup == "2-color":
-            if ax_window == "img":
-                self.setupTwoColorImageLayout()
-            elif ax_window == "trace":
-                self.setupTwoColorTraceLayout()
-            else:
-                raise ValueError
-
-        if ax_setup == "2-color-inv":
-            if ax_window == "img":
-                self.setupTwoColorImageLayout()
-            elif ax_window == "trace":
-                self.setupTwoColorTraceLayout()
-            else:
-                raise ValueError
-
-        if ax_setup == "plot":
-            if ax_window == "jointgrid":
-                self.setupJointGridLayout()
-            elif ax_window == "correction":
-                self.setupDoubleAxesPlotLayout()
-            elif ax_window == "single":
-                self.setupSinglePlotLayout()
-            elif ax_window == "dynamic":
-                self.setupDynamicGridLayout()
-            else:
-                raise ValueError
+        if ax_type == "img":
+            self.setupTwoColorImageLayout()
+        elif ax_type == "trace":
+            self.setupTwoColorTraceLayout()
+        elif ax_type == "plot":
+            self.setupSinglePlotLayout()
+        elif ax_type == "jointgrid":
+            self.setupJointGridLayout()
+        else:
+            raise ValueError
 
     def setupTwoColorImageLayout(self):
         """
@@ -149,7 +116,7 @@ class MatplotlibCanvas(FigureCanvas):
         """
         self.ax = self.fig.add_subplot(111, aspect="equal")
         m = 0.02
-        self.fig.subplots_adjust(left=m, right=1-m, top=1-m, bottom=m)
+        self.fig.subplots_adjust(left=m, right=1 - m, top=1 - m, bottom=m)
 
     def setupDoubleAxesPlotLayout(self):
         """
@@ -234,7 +201,8 @@ class PlotWidget(QWidget):
     the layoutbox, so as to add customized listviews. In these cases the canvas
     needs to be added manually
     """
-    def __init__(self, use_layoutbox = False, **kwargs):
+
+    def __init__(self, use_layoutbox=False, **kwargs):
         QWidget.__init__(self)
         self.canvas = MatplotlibCanvas(parent=self, **kwargs)
         self.toolbar = NavigationToolbar(self.canvas, self, coordinates=True)

@@ -2802,6 +2802,7 @@ class HistogramWindow(BaseWindow):
         Returns pooled E and S_app data before bleaching, for each trace. The
         loops take approx. 0.1 ms per trace, and it's too much trouble to
         lower it further.
+        Also return DD, DA, and Pearson correlation data.
         """
         if n_first_frames == "all":
             n_first_frames = None
@@ -2932,10 +2933,6 @@ class HistogramWindow(BaseWindow):
         """
         self.canvas.tl_ax_ctr.set_xlim(-0.1, 1.1)
         self.canvas.tl_ax_ctr.set_ylim(-0.1, 1.1)
-        # self.canvas.tr_ax_ctr.set_xlim(-0.1, 1.1)
-        # self.canvas.tr_ax_ctr.set_ylim(-0.1, 1.1)
-        # self.canvas.tl_ax_ctr.set_xlabel(xlabel="E", color=gvars.color_gui_text)
-        # self.canvas.tl_ax_ctr.set_ylabel(ylabel="S", color=gvars.color_gui_text)
 
         for ax in self.canvas.axes_marg:
             for tk in ax.get_xticklabels():
@@ -2961,7 +2958,7 @@ class HistogramWindow(BaseWindow):
 
     def plotTopLeft_TopMarginal(self, corrected):
         """
-        Plots the top histogram (E).
+        Plots the top left top marginal histogram (E).
         """
         E = self.E if corrected else self.E_un
 
@@ -2998,7 +2995,7 @@ class HistogramWindow(BaseWindow):
 
     def plotTopLeft_RightMarginal(self, corrected):
         """
-        Plots the right histogram (S).
+        Plots the top left right marginal histogram (S).
         """
         S = self.S if corrected else self.S_un
         # self.canvas.tl_ax_rgt : plt.Axes
@@ -3018,7 +3015,7 @@ class HistogramWindow(BaseWindow):
 
     def plotTopLeft_CenterContour(self, corrected):
         """
-        Plots the center without histograms.
+        Plots the top left center E+S contour plot.
         """
         S = self.S if corrected else self.S_un
         E = self.E if corrected else self.E_un
@@ -3088,7 +3085,7 @@ class HistogramWindow(BaseWindow):
 
     def plotTopRight_RightMarginal(self):
         """
-        Plots the right histogram (DA).
+        Plots the top right right marginal histogram (DA).
         """
         data = self.DA
         self.canvas.tr_ax_rgt.set_ylabel(self.da_label)
@@ -3106,6 +3103,9 @@ class HistogramWindow(BaseWindow):
             )
 
     def plotTopRight_TopMarginal(self):
+        """
+        Plots the top right top marginal histogram (DD).
+        """
         data = self.DD
 
         if data is not None:
@@ -3142,8 +3142,9 @@ class HistogramWindow(BaseWindow):
             )  # cmap="viridis")
 
     def plotBottomLeft_Duration(self):
-        # self.canvas.bl_ax_t.set_xlabel("Duration")
-        # self.canvas.bl_ax_t.xaxis.set_label_position("top")
+        """
+        Plots the bottom left top half Histogram, as well as an exponential fit of lifetimes.
+        """
 
         lengths = self.lengths
         if lengths is not None:
@@ -3189,7 +3190,7 @@ class HistogramWindow(BaseWindow):
 
     def plotBottomLeft_Pearson(self, plot_errors=False):
         """
-        Plots Pearson Correlation Coefficients
+        Plots Mean Pearson Correlation Coefficients in bottom left bottom as an errorbar plot.
         """
 
         if self.corrs is not None:
@@ -3269,7 +3270,6 @@ class HistogramWindow(BaseWindow):
         self.canvas.draw()
 
     def refreshPlot(self, autofit=False):
-
         """
         Refreshes plot with currently selected traces. Plot to refresh can be
         top, right (histograms) or center (scatterplot), or all.

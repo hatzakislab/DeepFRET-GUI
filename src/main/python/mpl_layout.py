@@ -18,6 +18,19 @@ from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
 
 
 def setupJointGrid(f: Figure, gs: GridSpec):
+    """
+    Sets up JointGrid Setup as in Seaborn, from existing GridSpec.
+    :param f: Figure to plot axes on
+    :param gs: GridSpec to use. Should be square
+    :return axes: Tuple of Axes, order center, top, right
+    Example:
+    for a 4x4 GridSpec, the three axes will be distributed as:
+    tttx
+    cccr
+    cccr
+    cccr
+    where t is the top, c is center, and r is right axis
+    """
     ax_ctr = f.add_subplot(gs[1:, :-1])
     ax_rgt = f.add_subplot(gs[1:, -1], sharey=ax_ctr)
     ax_top = f.add_subplot(gs[0, :-1], sharex=ax_ctr)
@@ -115,9 +128,18 @@ class MatplotlibCanvas(FigureCanvas):
         self.axes_marg = self.ax_top, self.ax_rgt
 
     def setupHistogramWindowPlot(self):
+        """
+        Sets up plot for HistogramWindow using nested GridSpec.
+        Outer grid is a 2x2 grid, and the inner grids are from top left, clockwise:
+        6x6, 6x6, 2x1, 1x1
+        """
         outer_grid = GridSpec(
-            nrows=2, ncols=2, wspace=0.15, hspace=0.15, figure=self.fig,
-        )  # 2x2 grid
+            nrows=2,
+            ncols=2,  # 2x2 grid
+            wspace=0.15,
+            hspace=0.15,
+            figure=self.fig,
+        )
 
         gs_top_lft = GridSpecFromSubplotSpec(
             nrows=6, ncols=6, subplot_spec=outer_grid[0, 0], wspace=0, hspace=0,

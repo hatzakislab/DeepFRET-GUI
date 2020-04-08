@@ -217,6 +217,10 @@ class TraceContainer:
 
     @property
     def hmm(self):
+        """
+        The self.hmm is now a property, so that we can set a global or local flag for the traces.
+        This maintains compatibility and allows us to change the type of output dynamically.
+        """
         if self.hmm_idealized_config.lower().startswith("glo"):
             if self.hmm_global_fret is not None:
                 return self.hmm_global_fret
@@ -342,7 +346,8 @@ class TraceContainer:
 
     def load_from_dat(self):
         """
-        Loading from .dat files, as supplied in the kinSoft challenge
+        Reads and loads trace data from .dat file, as supplied in the kinSoft challenge.
+        These traces were supplied as non-ALEX traces, so the red TraceChannel is all NaNs.
         """
         arr = np.loadtxt(self.filename)
 
@@ -411,12 +416,13 @@ class TraceContainer:
 
     def get_export_df(self, keep_nan_columns: Union[bool, None] = None):
         """
-        Returns the DataFrame to use for export
+        Returns the DataFrame to use for export.
+        This should get passed on to get_export_txt
         """
         if keep_nan_columns is None:
             keep_nan_columns = True
 
-        dfdict = {
+        df_dict = {
             "D-Dexc-bg": self.grn.bg,
             "A-Dexc-bg": self.acc.bg,
             "A-Aexc-bg": self.red.bg,
@@ -429,9 +435,9 @@ class TraceContainer:
 
         if self.y_pred is not None:
             # Add predictions column names and values
-            dfdict.update(dict(zip(self.ml_column_names, self.y_pred.T)))
+            df_dict.update(dict(zip(self.ml_column_names, self.y_pred.T)))
 
-        df = pd.DataFrame(dfdict).round(4)
+        df = pd.DataFrame(df_dict).round(4)
 
         if keep_nan_columns is False:
             df.dropna(axis=1, how="all", inplace=True)
@@ -446,12 +452,17 @@ class TraceContainer:
         keep_nan_columns: Union[bool, None] = None,
     ):
         """
-        Returns the string to use for saving the trace as a txt
+        Returns the string to use for saving the trace as a txt.
+        Option of passing a DF manually to convert it to a txt added to simplify testing.
+        :param exp_txt: string to include in header
+        :param date_txt: string to specify date.
+        :param keep_nan_columns: bool, whether or not to include columns with NaNs. Passed on to get_export_df
         """
         if df is None:
             df = self.get_export_df(keep_nan_columns=keep_nan_columns)
-        if (exp_txt is None) or (date_txt is None):
+        if exp_txt is None:
             exp_txt = "Exported by DeepFRET"
+        if date_txt is None:
             date_txt = "Date: {}".format(time.strftime("%Y-%m-%d, %H:%M"))
 
         vid_txt = "Video filename: {}".format(self.video)
@@ -475,6 +486,10 @@ class TraceContainer:
         )
 
     def get_tracename(self) -> str:
+        """
+        Gets and sets the tracename based on the current videoname and the pair number
+        :return self.tracename: str
+        """
         if self.tracename is None:
             if self.video is None:
                 name = "Trace_pair{}.txt".format(self.n)
@@ -489,6 +504,12 @@ class TraceContainer:
         return self.tracename
 
     def get_savename(self, dir_to_join: Union[None, str] = None):
+        """
+        Returns the name with which the trace should be saved.
+        Option for specifying output directory.
+        :param dir_to_join: output directory, optional
+        :return self.savename: str
+        """
         if self.savename is None:
             if dir_to_join is not None:
                 self.savename = os.path.join(dir_to_join, self.get_tracename())
@@ -501,17 +522,34 @@ class TraceContainer:
         dir_to_join: Union[None, str] = None,
         keep_nan_columns: Union[bool, None] = None,
     ):
+        """
+        Exports the trace to the file location specified by self.savename.
+        :param dir_to_join: output directory, optional, passed to get_savename
+        :param keep_nan_columns: Whether to keep columns that are nan, passed to get_export_txt
+        """
         savename = self.get_savename(dir_to_join=dir_to_join)
         with open(savename, "w") as f:
             f.write(self.get_export_txt(keep_nan_columns=keep_nan_columns))
 
     def calculate_fret(self):
+        """
+        Calculates fret value for current trace
+        """
         self.fret = lib.math.calc_E(self.get_intensities())
 
     def calculate_stoi(self):
+        """
+        calculates stoichiometry values for current trace.
+        :return:
+        """
         self.stoi = lib.math.calc_S(self.get_intensities())
 
     def calculate_transitions(self):
+        """
+        Calculates and sets the transition df (self.transitions).
+        Includes lifetime of states and transitions between states.
+        :return:
+        """
         lf = pd.DataFrame()
         lf["state"] = self.hmm_state
         lf["e_fit"] = self.hmm

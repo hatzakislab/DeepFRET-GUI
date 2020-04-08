@@ -21,12 +21,12 @@ class GlobalVariables:
     key_unColocRed = "unColocRed"  # Uncolocalized red
     key_illuCorrect = "illuCorrect"  # Illumination profile correction
     key_fitSpots = "fitSpots"  # Whether to use LoG-based spot detection
-    
+
     key_hmmBICStrictness = "hmmBICStrictness"
     key_hmmLocal = (
         "hmmLocal"  # Whether to use global or local hmm, gets passed to traces
     )
-    
+
     key_firstFrameIsDonor = "firstFrameIsDonor"
     key_donorLeft = "donorLeft"
 

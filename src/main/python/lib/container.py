@@ -1,10 +1,12 @@
 import multiprocessing
 import os.path
-import re
 import time
 import warnings
+
 import PIL.Image
 import PIL.TiffTags
+
+from lib.misc import timeit
 
 multiprocessing.freeze_support()
 
@@ -138,7 +140,7 @@ class TraceContainer:
 
     def __init__(
         self,
-        filename,
+        filename=None,
         name=None,
         video=None,
         n=None,
@@ -392,6 +394,26 @@ class TraceContainer:
         red_bleach = self.red.bleach  # type: Union[None, int]
         return grn_bleach, acc_bleach, red_bleach
 
+    def set_from_df(self, df):
+        """
+        Set intensities from a dataframe
+        """
+        self.grn.bg = df["D-Dexc-bg"].values
+        self.acc.bg = df["A-Dexc-bg"].values
+        self.red.bg = df["A-Aexc-bg"].values
+        self.grn.int = df["D-Dexc-rw"].values
+        self.acc.int = df["A-Dexc-rw"].values
+        self.red.int = df["A-Aexc-rw"].values
+        self.stoi = df["S"].values
+        self.fret = df["E"].values
+        self.first_bleach = df["_bleaches_at"].values[0]
+
+        # TODO: check if correct and define in init
+        self.y_class = df["label"].values
+        self.fret_true = df["E_true"].values
+        self.frames = np.arange(1, len(self.grn.int) + 1, 1)
+        self.frames_max = self.frames.max()
+
     def get_export_df(self, keep_nan_columns: Union[bool, None] = None):
         """
         Returns the DataFrame to use for export.
@@ -399,6 +421,7 @@ class TraceContainer:
         """
         if keep_nan_columns is None:
             keep_nan_columns = True
+
         df_dict = {
             "D-Dexc-bg": self.grn.bg,
             "A-Dexc-bg": self.acc.bg,
@@ -444,9 +467,8 @@ class TraceContainer:
 
         vid_txt = "Video filename: {}".format(self.video)
         id_txt = "FRET pair #{}".format(self.n)
-        bl_txt = "Donor bleaches at: {} - " "Acceptor bleaches at: {}".format(
-            self.grn.bleach, self.red.bleach
-        )
+        bl_txt = "Bleaches at {}".format(self.first_bleach)
+
         return (
             "{0}\n"
             "{1}\n"
@@ -476,9 +498,8 @@ class TraceContainer:
                     self.video.replace(".", "_"), self.n
                 )
 
-            # Scrub mysterious \n if they appear due to filenames
-            name = "".join(name.splitlines(keepends=False))
-            self.tracename = name
+            # Scrub mysterious \n if they appear from filename loading
+            self.tracename = lib.misc.remove_newlines(name)
 
         return self.tracename
 

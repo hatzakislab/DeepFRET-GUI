@@ -1,36 +1,62 @@
 import sys
-from main import TraceWindow, TraceContainer, AppContext, VideoData
-from lib.misc import print_elapsed
-from time import time
+
+from main import AppContext, TraceContainer, TraceWindow
 
 
-def setUp(trace_file_path):
-    """
-    Set up the essentials for the window to launch
-    """
-    mock_trace_file = trace_file_path
-    trace = TraceContainer(mock_trace_file)
-    TraceWindow.data = VideoData()
-    TraceWindow.data.traces[trace.name] = trace
-    TraceWindow.currName = trace.name
-    TraceWindow_ = TraceWindow()
-    TraceWindow_.classifyTraces(checked_only=False, single=False)
-    TraceWindow_.currName = trace.name
-    TraceWindow_.refreshPlot()
-    return TraceWindow_
+class SetUp(TraceWindow):
+    class Data:
+        traces = {}
+
+    def __init__(self):
+        super(SetUp, self).__init__()
+
+        # Patch over the missing container (no MainWindow)
+        self.data = self.Data()
+
+    def setFile(self, path):
+        """
+        Basic setup
+        """
+        trace = TraceContainer(filename=path, loaded_from_ascii=True,)
+        self.data.traces[trace.name] = trace
+        self.currName = trace.name
+        self._currName = trace.name
+
+    def classify(self):
+        """
+        Predicts on the current trace
+        """
+        # resets self.currentName to None without a listView
+        self.classifyTraces()
+
+        self.currName = self._currName
+        self.refreshPlot()
+
+    def testFullTrace(self, **kwargs):
+        self.setFile(**kwargs)
+        self.classify()
+        self.show()
+
+    def testNoAATrace(self, **kwargs):
+        self.setFile(**kwargs)
+        self.classify()
+        self.show()
+
+    def testKinsoftTrace(self, **kwargs):
+        self.setFile(**kwargs)
+        self.classify()
+        self.show()
 
 
 if __name__ == "__main__":
     ctxt = AppContext()
     ctxt.load_resources()
 
-    start = time()
+    cls = SetUp()
 
-    TraceWindow_ = setUp("../resources/traces/fiddler_3dim_0.txt")
-    TraceWindow_.show()
-
-    end = time()
-    print_elapsed(start, end, "TraceWindow")
+    # cls.testFullTrace(path = "../resources/traces/Trace.txt")
+    # cls.testNoAATrace(path = "../resources/traces/TraceNoAA.txt")
+    cls.testKinsoftTrace(path="../resources/traces/kinsoftTrace.dat")
 
     exit_code = ctxt.run()
     sys.exit(exit_code)

@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ui/MenuBar.ui'
 #
-# Created by: PyQt5 UI code generator 5.14.1
+# Created by: PyQt5 UI code generator 5.14.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -225,11 +225,12 @@ class Ui_MenuBar(object):
         self.actionExport_Transition_Density_Data.setObjectName(
             "actionExport_Transition_Density_Data"
         )
-        self.actionSelect_All = QtWidgets.QAction(MenuBar)
-        self.actionSelect_All.setEnabled(True)
-        self.actionSelect_All.setObjectName("actionSelect_All")
-        self.actionDeselect_All = QtWidgets.QAction(MenuBar)
-        self.actionDeselect_All.setObjectName("actionDeselect_All")
+        self.actionCheck_All_Traces = QtWidgets.QAction(MenuBar)
+        self.actionCheck_All_Traces.setEnabled(False)
+        self.actionCheck_All_Traces.setObjectName("actionCheck_All_Traces")
+        self.actionUncheck_All_Traces = QtWidgets.QAction(MenuBar)
+        self.actionUncheck_All_Traces.setEnabled(False)
+        self.actionUncheck_All_Traces.setObjectName("actionUncheck_All_Traces")
         self.actionLifetimes = QtWidgets.QAction(MenuBar)
         self.actionLifetimes.setObjectName("actionLifetimes")
         self.actionPredict_Selected_Traces = QtWidgets.QAction(MenuBar)
@@ -247,6 +248,8 @@ class Ui_MenuBar(object):
         self.actionTraceSimulatorWindow.setObjectName(
             "actionTraceSimulatorWindow"
         )
+        self.actionSelect_All = QtWidgets.QAction(MenuBar)
+        self.actionSelect_All.setObjectName("actionSelect_All")
         self.menuExport.addAction(self.actionExport_Correction_Factors)
         self.menuExport.addAction(self.actionExport_Colocalization)
         self.menuExport.addAction(self.actionExport_Selected_Traces)
@@ -261,8 +264,9 @@ class Ui_MenuBar(object):
         self.menuFile.addAction(self.menuExport.menuAction())
         self.menuEdit.addAction(self.actionRemove_File)
         self.menuEdit.addAction(self.actionRemove_All_Files)
+        self.menuEdit.addAction(self.actionCheck_All_Traces)
+        self.menuEdit.addAction(self.actionUncheck_All_Traces)
         self.menuEdit.addAction(self.actionSelect_All)
-        self.menuEdit.addAction(self.actionDeselect_All)
         self.menuManually_Select_Bleaching.addAction(
             self.actionSelect_Bleach_Red_Channel
         )
@@ -345,7 +349,7 @@ class Ui_MenuBar(object):
         self.actionSave.setText(_translate("MenuBar", "Save Plot"))
         self.actionSave.setShortcut(_translate("MenuBar", "Ctrl+S"))
         self.actionRemove_File.setText(
-            _translate("MenuBar", "Remove Current From List")
+            _translate("MenuBar", "Remove Current Item From List")
         )
         self.actionRemove_File.setShortcut(
             _translate("MenuBar", "Ctrl+Backspace")
@@ -407,7 +411,7 @@ class Ui_MenuBar(object):
             _translate("MenuBar", "Load Session (Beta)")
         )
         self.actionRemove_All_Files.setText(
-            _translate("MenuBar", "Remove All From List")
+            _translate("MenuBar", "Remove All Items From List")
         )
         self.actionGet_alphaFactor.setText(
             _translate("MenuBar", "Find ɑ-Factor (for D-only)")
@@ -482,7 +486,7 @@ class Ui_MenuBar(object):
         self.actionFormat_Plot.setText(_translate("MenuBar", "Format Plot"))
         self.actionUncheck_All.setText(_translate("MenuBar", "Uncheck All"))
         self.actionUncheck_All.setShortcut(
-            _translate("MenuBar", "Ctrl+Alt+Shift+A")
+            _translate("MenuBar", "Ctrl+Alt+Shift+E")
         )
         self.actionClear_and_Rerun.setText(
             _translate("MenuBar", "Clear Traces and Rerun")
@@ -495,14 +499,22 @@ class Ui_MenuBar(object):
         )
         self.actionAdvanced_Sort.setText(_translate("MenuBar", "Advanced Sort"))
         self.actionCheck_All.setText(_translate("MenuBar", "Check All"))
-        self.actionCheck_All.setShortcut(_translate("MenuBar", "Ctrl+Alt+A"))
+        self.actionCheck_All.setShortcut(
+            _translate("MenuBar", "Ctrl+Alt+Shift+E")
+        )
         self.actionExport_Transition_Density_Data.setText(
             _translate("MenuBar", "Transition Density Data")
         )
-        self.actionSelect_All.setText(_translate("MenuBar", "Select All"))
-        self.actionSelect_All.setShortcut(_translate("MenuBar", "Ctrl+A"))
-        self.actionDeselect_All.setText(_translate("MenuBar", "Deselect All"))
-        self.actionDeselect_All.setShortcut(_translate("MenuBar", "Ctrl+Alt+A"))
+        self.actionCheck_All_Traces.setText(
+            _translate("MenuBar", "Check All Traces")
+        )
+        self.actionCheck_All_Traces.setShortcut(_translate("MenuBar", "Ctrl+E"))
+        self.actionUncheck_All_Traces.setText(
+            _translate("MenuBar", "Uncheck All Traces")
+        )
+        self.actionUncheck_All_Traces.setShortcut(
+            _translate("MenuBar", "Ctrl+Alt+E")
+        )
         self.actionLifetimes.setText(
             _translate("MenuBar", "Transition Lifetimes")
         )
@@ -531,6 +543,8 @@ class Ui_MenuBar(object):
         self.actionTraceSimulatorWindow.setShortcut(
             _translate("MenuBar", "Ctrl+5")
         )
+        self.actionSelect_All.setText(_translate("MenuBar", "Select All"))
+        self.actionSelect_All.setShortcut(_translate("MenuBar", "Ctrl+A"))
 
 
 if __name__ == "__main__":

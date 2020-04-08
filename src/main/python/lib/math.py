@@ -208,7 +208,7 @@ def trim_ES(E: list, S: list):
     E, S = np.array(E), np.array(S)
     if contains_nan(S):
         # Use E only
-        E = E[(E > -0.3) & (E < 1.3)]
+        E = E[(E > -0.3) & (E < 1.3)]  # original line
     else:
         idx = (S > -0.3) & (S < 1.3)
         E, S = E[idx], S[idx]
@@ -1347,3 +1347,38 @@ def fit_and_compare_exp_funcs(
     out["DOUBLE_ERRS"] = errs2
 
     return out
+
+
+def corrcoef_lags(x, y, n_lags: int = 5):
+    if not isinstance(n_lags, int):
+        n_lags = int(n_lags)
+    if n_lags > len(x):
+        n_lags = len(x) - 1
+    cs = np.zeros(2 * n_lags + 1)
+    for i in range(2 * n_lags + 1):
+        if i <= n_lags:  # 0,1,2,3,4
+            _x = np.pad(x, (0, n_lags), mode="constant")  # , 'edge')
+            _y = np.pad(y, (n_lags - i, i), mode="constant")  # , 'edge')
+        else:  # 5,6,7,8,9
+            _x = np.pad(x, (i - n_lags, 2 * n_lags - i), mode="constant")
+            _y = np.pad(y, (0, n_lags), mode="constant")
+        cs[i], _ = scipy.stats.pearsonr(_x, _y)
+    return cs
+
+
+def correct_corrs(corrs):
+    maxlen = max([len(arr) for arr in corrs])
+    _corrs = np.zeros((len(corrs), maxlen))
+    for j, corr in enumerate(corrs):
+        _l = len(corr)
+        if _l == maxlen:
+            _corrs[j] = corr
+        else:
+            missing_per_side = int(int(maxlen - _l) / 2)
+            _corrs[j] = np.pad(
+                corr,
+                (missing_per_side, missing_per_side),
+                "constant",
+                constant_values=(np.nan, np.nan),
+            )
+    return _corrs

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>700</width>
-    <height>700</height>
+    <width>1000</width>
+    <height>1000</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -57,7 +57,7 @@
     <item row="2" column="0">
      <layout class="QVBoxLayout" name="mpl_LayoutBox">
       <property name="spacing">
-       <number>-1</number>
+       <number>6</number>
       </property>
       <property name="sizeConstraint">
        <enum>QLayout::SetNoConstraint</enum>

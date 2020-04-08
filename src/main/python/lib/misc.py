@@ -2,6 +2,8 @@ import itertools
 import multiprocessing
 import re
 
+from matplotlib.ticker import FuncFormatter
+
 multiprocessing.freeze_support()
 
 import time
@@ -87,7 +89,9 @@ def m_append(objects: tuple, to: tuple, method="append"):
         raise ValueError("Method must be 'append' or 'extend'")
 
 
-def seek_line(line_starts: Union[str, Tuple[str, str]], path: str, timeout: int = 10):
+def seek_line(
+    line_starts: Union[str, Tuple[str, str]], path: str, timeout: int = 10
+):
     """Seeks the file until specified line start is encountered in the start of
      the line."""
     with open(path, encoding="utf-8") as f:
@@ -262,6 +266,16 @@ def nice_string_output(
     string = ""
     for name, value in zip(names, values):
         string += "{0:s} {1:>{spacing}} \n".format(
-            name, value, spacing=extra_spacing + max_values + max_names - len(name),
+            name,
+            value,
+            spacing=extra_spacing + max_values + max_names - len(name),
         )
     return string[:-2]
+
+
+@FuncFormatter
+def format_string_to_k(x, pos):
+    s = f"{int(x):d}"
+    if s.endswith("000"):
+        s = s[:-3] + "k"
+    return s

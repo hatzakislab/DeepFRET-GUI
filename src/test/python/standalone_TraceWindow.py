@@ -8,39 +8,44 @@ class SetUp(TraceWindow):
         traces = {}
 
     def __init__(self):
-        TraceWindow.data = self.Data()
         super(SetUp, self).__init__()
 
-        self.setFile()
+        # Patch over the missing container (no MainWindow)
+        self.data = self.Data()
 
-    def setFile(self):
-        trace = TraceContainer(
-            filename="../resources/traces/simulated_trace.txt",
-            loaded_from_ascii=True,
-        )
+    def setFile(self, path):
+        """
+        Basic setup
+        """
+        trace = TraceContainer(filename=path, loaded_from_ascii=True,)
         self.data.traces[trace.name] = trace
         self.currName = trace.name
         self._currName = trace.name
-        self.refreshPlot()
 
-    def predict(self):
-        self.classifyTraces()  # resets self.currentName
+    def classify(self):
+        """
+        Predicts on the current trace
+        """
+        # resets self.currentName to None without a listView
+        self.classifyTraces()
+
         self.currName = self._currName
         self.refreshPlot()
 
-    def plot(self):
-        for ax in self.canvas.axes:
-            ax.clear()
+    def testFullTrace(self, **kwargs):
+        self.setFile(**kwargs)
+        self.classify()
+        self.show()
 
-        trace = self.currentTrace()
+    def testNoAATrace(self, **kwargs):
+        self.setFile(**kwargs)
+        self.classify()
+        self.show()
 
-        self.canvas.ax_grn.plot(trace.grn.int, color="green")
-        self.canvas.ax_red.plot(trace.acc.int, color="red")
-        self.canvas.ax_alx.plot(trace.red.int, color="red")
-        self.canvas.ax_fret.plot(trace.fret, color="orange")
-        self.canvas.ax_stoi.plot(trace.stoi, color="purple")
-
-        self.canvas.draw()
+    def testKinsoftTrace(self, **kwargs):
+        self.setFile(**kwargs)
+        self.classify()
+        self.show()
 
 
 if __name__ == "__main__":
@@ -48,9 +53,10 @@ if __name__ == "__main__":
     ctxt.load_resources()
 
     cls = SetUp()
-    # cls.predict()
-    # cls.plot()
-    cls.show()
+
+    # cls.testFullTrace(path = "../resources/traces/Trace.txt")
+    # cls.testNoAATrace(path = "../resources/traces/TraceNoAA.txt")
+    cls.testKinsoftTrace(path="../resources/traces/kinsoftTrace.dat")
 
     exit_code = ctxt.run()
     sys.exit(exit_code)

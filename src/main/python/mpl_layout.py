@@ -74,8 +74,8 @@ class MatplotlibCanvas(FigureCanvas):
         )
 
         self.ax_grn = self.fig.add_subplot(gs[0])  # Green
-        self.ax_red = self.ax_grn.twinx()  # Red
-        self.ax_alx = self.fig.add_subplot(gs[1])  # ALEX
+        self.ax_acc = self.ax_grn.twinx()  # Red
+        self.ax_red = self.fig.add_subplot(gs[1])  # ALEX
         self.ax_fret = self.fig.add_subplot(gs[2])  # FRET
         self.ax_stoi = self.fig.add_subplot(
             gs[3]
@@ -84,14 +84,14 @@ class MatplotlibCanvas(FigureCanvas):
 
         self.axes = (
             self.ax_grn,
+            self.ax_acc,
             self.ax_red,
-            self.ax_alx,
             self.ax_fret,
             self.ax_stoi,
             self.ax_ml,
         )
         self.axes_c = list(
-            zip((self.ax_grn, self.ax_red, self.ax_alx), ("D", "A", "A-direct"))
+            zip((self.ax_grn, self.ax_acc, self.ax_red), ("D", "A", "A-direct"))
         )
 
         self.fig.subplots_adjust(

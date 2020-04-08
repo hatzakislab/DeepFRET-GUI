@@ -22,7 +22,7 @@ class TestTraceContainer(TestCase):
         )  # expect bleach to propagate all channels
 
     def test_load_trace_from_ascii_specified_bleach(self):
-        filename = "../resources/traces/fiddler_3dim_0_reduced.txt"
+        filename = "../resources/traces/TraceNoAA.txt"
         trace = TraceContainer(filename)
         self.assertTrue(trace.load_successful)
         self.assertIsInstance(trace.acc.int, np.ndarray)
@@ -33,7 +33,7 @@ class TestTraceContainer(TestCase):
         )  # expect bleach to propagate all channels
 
     def test_load_trace_from_dat(self):
-        filename = "../resources/traces/kinsoftSampleTrace.dat"
+        filename = "../resources/traces/kinsoftTrace.dat"
         trace = TraceContainer(filename)
         self.assertTrue(trace.load_successful)
         self.assertIsInstance(trace.acc.int, np.ndarray)
@@ -43,7 +43,7 @@ class TestTraceContainer(TestCase):
 
     def test_save_and_load_trace_dat(self):
         self.addCleanup(os.remove, self.file_path)
-        filename = "../resources/traces/kinsoftSampleTrace.dat"
+        filename = "../resources/traces/kinsoftTrace.dat"
         trace = TraceContainer(filename)
         trace.tracename = self.file_path
         trace.export_trace_to_txt()

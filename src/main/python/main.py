@@ -2470,7 +2470,7 @@ class TraceWindow(BaseWindow):
                 spine.set_edgecolor(gvars.color_gui_text)
                 spine.set_linewidth(0.5)
 
-        self.canvas.ax_red.yaxis.set_label_coords(1.05, 0.5)
+        self.canvas.ax_acc.yaxis.set_label_coords(1.05, 0.5)
 
     def getCorrectionFactors(self, factor):
         """
@@ -2572,10 +2572,10 @@ class TraceWindow(BaseWindow):
             ):
                 if label == "A":
                     signal = F_DA
-                    ax = self.canvas.ax_red
+                    ax = self.canvas.ax_acc
                 elif label == "A-direct":
                     signal = I_AA
-                    ax = self.canvas.ax_alx
+                    ax = self.canvas.ax_red
                 elif label == "D":
                     signal = I_DD
                     ax = self.canvas.ax_grn
@@ -2614,10 +2614,12 @@ class TraceWindow(BaseWindow):
                     )
 
                 ax.plot(trace.frames, signal, color=color)
-                # try:
-                #     ax.set_ylim(0 - signal.max() * 0.1, signal.max() * 1.1)
-                # except ValueError:
-                #     ax.set_ylim(0, 1.1)
+
+                # Try to make both signals land on top of each other, and zero
+                try:
+                    ax.set_ylim(0 - signal.max() * 0.1, signal.max() * 1.1)
+                except ValueError:
+                    ax.set_ylim(0, 1.1)
                 ax.yaxis.label.set_color(gvars.color_gui_text)
 
                 if not lib.math.contains_nan(signal):
@@ -2648,18 +2650,11 @@ class TraceWindow(BaseWindow):
                 )
 
                 ax.set_ylim(-0.1, 1.1)
-                print(ax.get_ylim())
-                # ax.set_ylabel(label)
-                # ax.set_yticks([0.5])
-                # ax.set_ylim(-0.1, 1.1)
-                # ax.axhline(
-                #     0.5,
-                #     color="black",
-                #     alpha=0.3,
-                #     lw=0.5,
-                #     ls="--",
-                #     zorder=2,
-                # )
+                ax.set_ylabel(label)
+                ax.set_yticks([0.5])
+                ax.axhline(
+                    0.5, color="black", alpha=0.3, lw=0.5, ls="--", zorder=2,
+                )
 
             if trace.hmm is not None:
                 self.canvas.ax_fret.plot(
@@ -2675,7 +2670,7 @@ class TraceWindow(BaseWindow):
                     zorder=10,
                     color=gvars.color_red,
                 )
-                self.canvas.ax_alx.axvline(
+                self.canvas.ax_red.axvline(
                     trace.xdata[0],
                     ls="-",
                     alpha=0.2,
@@ -2684,12 +2679,23 @@ class TraceWindow(BaseWindow):
                 )
             elif len(trace.xdata) == 2:
                 xmin, xmax = sorted(trace.xdata)
-                self.canvas.ax_grn.axvline(
-                    xmin, color=gvars.color_red, zorder=10, lw=30, alpha=0.2
-                )
-                self.canvas.ax_grn.axvline(
-                    xmax, color=gvars.color_red, zorder=10, lw=30, alpha=0.2
-                )
+
+                for ax in self.canvas.axes:
+                    if ax != self.canvas.ax_acc:
+                        ax.axvline(
+                            xmin,
+                            color=gvars.color_red,
+                            zorder=10,
+                            lw=30,
+                            alpha=0.2,
+                        )
+                        ax.axvline(
+                            xmax,
+                            color=gvars.color_red,
+                            zorder=10,
+                            lw=30,
+                            alpha=0.2,
+                        )
 
             if hasattr(self.canvas, "ax_ml") and trace.y_pred is not None:
                 lib.plotting.plot_predictions(

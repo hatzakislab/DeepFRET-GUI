@@ -1041,7 +1041,7 @@ def generate_traces(
             bleach_AA_all = np.argmax(AA == 0)
 
             # Find first bleaching overall
-            first_bleach_all = lib.utils.min_none(
+            first_bleach_all = lib.misc.min_none(
                 (bleach_DD_all, bleach_DA_all, bleach_AA_all)
             )
             if first_bleach_all == 0:
@@ -1173,13 +1173,18 @@ def generate_traces(
         else:
             min_diff = np.nan
 
+        bg = np.zeros_like(DD)
+
         # Columns pre-fixed with underscore contain metadata, and only the
         # first value should be used (repeated because table structure)
         trace = pd.DataFrame(
             {
-                "DD": DD,
-                "DA": DA,
-                "AA": AA,
+                "D-Dexc-rw": DD,
+                "A-Dexc-rw": DA,
+                "A-Aexc-rw": AA,
+                "D-Dexc-bg": bg,
+                "A-Dexc-bg": bg,
+                "A-Aexc-bg": bg,
                 "E": E_obs,
                 "E_true": E_true,
                 "S": S_obs,

@@ -66,6 +66,10 @@ from mpl_layout import PlotWidget
 
 from fbs_runtime.application_context.PyQt5 import ApplicationContext
 
+pd.set_option("display.max_rows", 500)
+pd.set_option("display.max_columns", 500)
+pd.set_option("display.width", 10000)
+
 
 class AboutWindow(QDialog):
     """
@@ -327,8 +331,9 @@ class BaseWindow(QMainWindow):
         self.ui.actionRemove_All_Files.triggered.connect(
             self.deleteAllListObjects
         )
-        self.ui.actionSelect_All.triggered.connect(self.checkAll)
-        self.ui.actionDeselect_All.triggered.connect(self.unCheckAll)
+
+        self.ui.actionCheck_All_Traces.triggered.connect(self.checkAll)
+        self.ui.actionUncheck_All_Traces.triggered.connect(self.unCheckAll)
 
         # View
         self.ui.actionFormat_Plot.triggered.connect(self.formatPlotInspector)
@@ -439,8 +444,6 @@ class BaseWindow(QMainWindow):
             self.ui.actionFind_Show_Traces,
             self.ui.actionClear_Traces,
             self.ui.actionClear_and_Rerun,
-            self.ui.actionSelect_All,
-            self.ui.actionDeselect_All,
         )
 
         enableMenus_TraceWindow = (
@@ -470,8 +473,8 @@ class BaseWindow(QMainWindow):
             self.ui.actionPredict_All_traces,
             self.ui.actionClear_All_Predictions,
             self.ui.actionClear_and_Rerun,
-            self.ui.actionSelect_All,
-            self.ui.actionDeselect_All,
+            self.ui.actionCheck_All_Traces,
+            self.ui.actionUncheck_All_Traces,
         )
 
         enableMenus_TransitionDensityWindow = (self.ui.actionFormat_Plot,)
@@ -760,8 +763,12 @@ class BaseWindow(QMainWindow):
 
     def unCheckAll(self):
         """
-        Unchecks all list elements.
+        Unchecks all list elements. Attribute check because they override
+        "select", which is normally reserved for text fields
         """
+        if not hasattr(self, "listModel"):
+            return
+
         for index in range(self.listModel.rowCount()):
             item = self.listModel.item(index)
             item.setCheckState(Qt.Unchecked)
@@ -778,6 +785,9 @@ class BaseWindow(QMainWindow):
         """
         Checks all list elements.
         """
+        if not hasattr(self, "listModel"):
+            return
+
         for index in range(self.listModel.rowCount()):
             item = self.listModel.item(index)
             item.setCheckState(Qt.Checked)
@@ -891,7 +901,8 @@ class BaseWindow(QMainWindow):
         """Override in subclass."""
         pass
 
-    def returnInfoHeader(self):
+    @staticmethod
+    def returnInfoHeader():
         """
         Generates boilerplate header text for every exported file.
         """
@@ -899,6 +910,34 @@ class BaseWindow(QMainWindow):
         date_txt = "Date: {}".format(time.strftime("%Y-%m-%d, %H:%M"))
 
         return exp_txt, date_txt
+
+    @staticmethod
+    def traceHeader(
+        trace_df, exp_txt, id_txt, video_filename, bleaches_at, is_simulated
+    ):
+        """Returns the string to use for saving the trace as txt"""
+        date_txt = "Date: {}".format(time.strftime("%Y-%m-%d, %H:%M"))
+        bl_txt = "Bleaches at {}".format(bleaches_at)
+        vid_txt = "Video filename: {}".format(video_filename)
+
+        if is_simulated:
+            exp_txt += " (Simulated)"
+
+        return (
+            "{0}\n"
+            "{1}\n"
+            "{2}\n"
+            "{3}\n"
+            "{4}\n\n"
+            "{5}".format(
+                exp_txt,
+                date_txt,
+                vid_txt,
+                id_txt,
+                bl_txt,
+                trace_df.to_csv(index=False, sep="\t", na_rep="NaN"),
+            )
+        )
 
     def exportColocalization(self):
         """
@@ -948,19 +987,17 @@ class BaseWindow(QMainWindow):
                     )
                 )
 
-    def exportTracesToAscii(self, checked_only):
+    def exportTracesToAscii(self, checked_only=False):
         """
         Exports all traces as ASCII files to selected directory.
         Maintains compatibility with iSMS and older pySMS scripts.
         """
         if checked_only:
             traces = [
-                trace
-                for trace in MainWindow_.data.traces.values()
-                if trace.is_checked
+                trace for trace in self.data.traces.values() if trace.is_checked
             ]
         else:
-            traces = [trace for trace in MainWindow_.data.traces.values()]
+            traces = [trace for trace in self.data.traces.values()]
 
         diag = ExportDialog(
             init_dir=gvars.key_lastOpenedDir, accept_label="Export"
@@ -968,7 +1005,7 @@ class BaseWindow(QMainWindow):
 
         if diag.exec():
             path = diag.selectedFiles()[0]
-            ctxt.app.processEvents()
+            self.processEvents()
 
             for trace in traces:
                 trace.export_trace_to_txt(dir_to_join=path)
@@ -1122,7 +1159,7 @@ class BaseWindow(QMainWindow):
         """Override in subclass."""
         pass
 
-    def getTrace(self, name):
+    def getTrace(self, name) -> TraceContainer:
         """Override in subclass."""
 
     def getTracesAllVideos(self):
@@ -2029,20 +2066,17 @@ class TraceWindow(BaseWindow):
 
         state_dict = {}
         for i, state in enumerate(self.hmmModel.states):
-            if self.getConfig(gvars.key_hmmMode) == "DA":
-                try:
+            try:
+                if self.getConfig(gvars.key_hmmMode) == "DA":
                     state_dict[
                         f"{state.name}".replace("s", "")
                     ] = state.distribution.parameters[0][-1].parameters
-                except AttributeError:
-                    continue
-            else:  # this is if we use E as X
-                try:
+                else:
                     state_dict[
                         f"{state.name}".replace("s", "")
                     ] = state.distribution.parameters
-                except AttributeError:
-                    continue
+            except AttributeError:
+                continue
         means = np.array([v[0] for v in state_dict.values()])
         sigs = np.array([v[1] for v in state_dict.values()])
 
@@ -2580,10 +2614,10 @@ class TraceWindow(BaseWindow):
                     )
 
                 ax.plot(trace.frames, signal, color=color)
-                try:
-                    ax.set_ylim(0 - signal.max() * 0.1, signal.max() * 1.1)
-                except ValueError:
-                    ax.set_ylim(0, 1.1)
+                # try:
+                #     ax.set_ylim(0 - signal.max() * 0.1, signal.max() * 1.1)
+                # except ValueError:
+                #     ax.set_ylim(0, 1.1)
                 ax.yaxis.label.set_color(gvars.color_gui_text)
 
                 if not lib.math.contains_nan(signal):
@@ -2598,12 +2632,9 @@ class TraceWindow(BaseWindow):
             fret = lib.math.calc_E(trace.get_intensities(), *factors)
             stoi = lib.math.calc_S(trace.get_intensities(), *factors)
 
-            ax_E = self.canvas.ax_fret
-            ax_S = self.canvas.ax_stoi
-
             for signal, ax, color, label in zip(
                 (fret, stoi),
-                (ax_E, ax_S),
+                (self.canvas.ax_fret, self.canvas.ax_stoi),
                 (gvars.color_orange, gvars.color_purple),
                 ("E", "S"),
             ):
@@ -2615,51 +2646,50 @@ class TraceWindow(BaseWindow):
                     alpha=0.4,
                     zorder=0,
                 )
-                if not lib.math.contains_nan(signal):
-                    ax.set_ylabel(label)
-                    ax.set_ylim(-0.1, 1.1)
-                    ax.set_yticks([0.5])
-                    ax.axhline(
-                        0.5,
-                        color="black",
-                        alpha=0.3,
-                        lw=0.5,
-                        ls="--",
-                        zorder=2,
-                    )
 
-                if trace.hmm is not None:
-                    ax_E.plot(
-                        trace.hmm_idx,
-                        trace.hmm,
-                        color=gvars.color_blue,
-                        zorder=3,
-                    )
+                ax.set_ylim(-0.1, 1.1)
+                print(ax.get_ylim())
+                # ax.set_ylabel(label)
+                # ax.set_yticks([0.5])
+                # ax.set_ylim(-0.1, 1.1)
+                # ax.axhline(
+                #     0.5,
+                #     color="black",
+                #     alpha=0.3,
+                #     lw=0.5,
+                #     ls="--",
+                #     zorder=2,
+                # )
 
-                # If clicking on the trace
-                if len(trace.xdata) == 1:
-                    self.canvas.ax_grn.axvline(
-                        trace.xdata[0],
-                        ls="-",
-                        alpha=0.2,
-                        zorder=10,
-                        color=gvars.color_red,
-                    )
-                    self.canvas.ax_alx.axvline(
-                        trace.xdata[0],
-                        ls="-",
-                        alpha=0.2,
-                        zorder=10,
-                        color=gvars.color_red,
-                    )
-                elif len(trace.xdata) == 2:
-                    xmin, xmax = sorted(trace.xdata)
-                    self.canvas.ax_grn.axvline(
-                        xmin, color=gvars.color_red, zorder=10, lw=30, alpha=0.2
-                    )
-                    self.canvas.ax_grn.axvline(
-                        xmax, color=gvars.color_red, zorder=10, lw=30, alpha=0.2
-                    )
+            if trace.hmm is not None:
+                self.canvas.ax_fret.plot(
+                    trace.hmm_idx, trace.hmm, color=gvars.color_blue, zorder=3,
+                )
+
+            # If clicking on the trace
+            if len(trace.xdata) == 1:
+                self.canvas.ax_grn.axvline(
+                    trace.xdata[0],
+                    ls="-",
+                    alpha=0.2,
+                    zorder=10,
+                    color=gvars.color_red,
+                )
+                self.canvas.ax_alx.axvline(
+                    trace.xdata[0],
+                    ls="-",
+                    alpha=0.2,
+                    zorder=10,
+                    color=gvars.color_red,
+                )
+            elif len(trace.xdata) == 2:
+                xmin, xmax = sorted(trace.xdata)
+                self.canvas.ax_grn.axvline(
+                    xmin, color=gvars.color_red, zorder=10, lw=30, alpha=0.2
+                )
+                self.canvas.ax_grn.axvline(
+                    xmax, color=gvars.color_red, zorder=10, lw=30, alpha=0.2
+                )
 
             if hasattr(self.canvas, "ax_ml") and trace.y_pred is not None:
                 lib.plotting.plot_predictions(
@@ -2667,7 +2697,6 @@ class TraceWindow(BaseWindow):
                     fig=self.canvas.fig,
                     ax=self.canvas.ax_ml,
                 )
-
         else:
             for ax in self.canvas.axes:
                 ax.clear()
@@ -3558,12 +3587,18 @@ class SimulatorWindow(BaseWindow):
     smFRET trace simulator window
     """
 
+    class Data:
+        traces = {}
+        examples = {}
+
     def __init__(self):
         super().__init__()
+        self.data = self.Data()
+        self.df = pd.DataFrame()
         self.ui = Ui_SimulatorWindow()
         self.ui.setupUi(self)
 
-        self.setupFigureCanvas(ax_type="plot", use_layoutbox=True)
+        self.setupFigureCanvas(ax_type="dynamic", use_layoutbox=True)
         self.connectUi()
 
     def connectUi(self):
@@ -3572,11 +3607,25 @@ class SimulatorWindow(BaseWindow):
 
         for c in dir(self.ui):
             if c.startswith("checkBox"):
-                getattr(self.ui, c).clicked.connect(self.refreshUi)
+                [
+                    getattr(self.ui, c).clicked.connect(f)
+                    for f in (self.refreshUi, self.refreshPlot)
+                ]
 
-        self.ui.pushButtonRefresh.clicked.connect(self.refreshPlot)
+        self.ui.inputFretStateMeans.returnPressed.connect(self.refreshPlot)
+
+        for i in dir(self.ui):
+            if i.startswith("input") and not i.startswith("inputFret"):
+                getattr(self.ui, i).textChanged.connect(self.refreshPlot)
+
         self.ui.examplesComboBox.currentTextChanged.connect(self.refreshPlot)
-        self.ui.pushButtonExport.clicked.connect(self.exportTracesToAscii)
+
+        for f in (
+            self.valuesFromGUI,
+            partial(self.generateTraces, False),
+            self.exportTracesToAscii,
+        ):
+            self.ui.pushButtonExport.clicked.connect(f)
 
     def savePlot(self):
         """
@@ -3636,9 +3685,19 @@ class SimulatorWindow(BaseWindow):
         if self.ui.checkBoxRandomState.isChecked():
             self.fret_means = "random"
         else:
-            self.fret_means = lib.misc.numstring_to_ls(
-                self.ui.inputFretStateMeans.text()
+            if hasattr(self, "fret_means"):
+                old_fret_means = self.fret_means
+            else:
+                old_fret_means = float(self.ui.inputFretStateMeans.text())
+
+            new_fret_means = sorted(
+                lib.misc.numstring_to_ls(self.ui.inputFretStateMeans.text())
             )
+            if not new_fret_means:
+                self.fret_means = 0
+
+            if new_fret_means != old_fret_means:
+                self.fret_means = new_fret_means
 
         # Max number of random states
         self.max_random_states = int(self.ui.inputMaxRandomStates.value())
@@ -3707,9 +3766,17 @@ class SimulatorWindow(BaseWindow):
                 float(self.ui.inputScalerHi.value()),
             )
 
-    def generateTraces(self, n_traces):
-        """Generate traces to show in the GUI or export"""
+    def getTrace(self, idx) -> TraceContainer:
+        """Returns a trace, given assigned index from df"""
+        return self.data.traces[idx]
+
+    def generateTraces(self, examples: bool):
+        """Generate traces to show in the GUI (examples) or for export"""
+        n_traces = self.n_examples if examples else self.n_traces
+
         if n_traces > 50:
+            # every number of traces gets 20 updates in total
+            # but closes if less
             update_every_nth = n_traces // 20
             progressbar = ProgressBar(
                 parent=self, loop_len=n_traces / update_every_nth
@@ -3718,7 +3785,12 @@ class SimulatorWindow(BaseWindow):
             update_every_nth = None
             progressbar = None
 
-        self.traces = lib.math.generate_traces(
+        if examples:
+            self.data.examples.clear()
+        else:
+            self.data.traces.clear()
+
+        df = lib.math.generate_traces(
             n_traces=n_traces,
             aa_mismatch=self.aa_mismatch,
             state_means=self.fret_means,
@@ -3742,21 +3814,34 @@ class SimulatorWindow(BaseWindow):
             callback_every=update_every_nth,
         )
 
+        df.index = np.arange(0, len(df), 1) // int(self.trace_len)
+        for n, (idx, trace_df) in enumerate(df.groupby(df.index)):
+            self.data.traces[idx] = TraceContainer(
+                filename="trace_{}.txt".format(idx),
+                loaded_from_ascii=False,
+                n=idx,
+            )
+
+            self.getTrace(idx).set_from_df(df=trace_df)
+
         if progressbar is not None:
             progressbar.close()
 
     def refreshPlot(self):
         """Refreshes preview plots"""
-        self.canvas.flush_events()
-        self.canvas.fig.clear()
-
         self.valuesFromGUI()
+
+        try:
+            for ax in self.canvas.axes:
+                self.canvas.fig.delaxes(ax)
+        except KeyError:
+            pass
 
         # generate at least enough traces to show required number of examples
         if self.n_traces < self.n_examples:
             self.n_traces = self.n_examples
 
-        self.generateTraces(self.n_examples)
+        self.generateTraces(examples=True)
 
         n_subplots = self.n_examples
         nrows = int(self.n_examples ** (1 / 2))
@@ -3765,8 +3850,10 @@ class SimulatorWindow(BaseWindow):
             nrows, ncols, wspace=0.1, hspace=0.1
         )  # 2x2 grid
 
+        self.canvas.axes = []
+
         for i in range(n_subplots):
-            trace = self.traces[self.traces["name"] == i]
+            trace = self.getTrace(i)
             inner_subplot = matplotlib.gridspec.GridSpecFromSubplotSpec(
                 nrows=5,
                 ncols=1,
@@ -3778,25 +3865,29 @@ class SimulatorWindow(BaseWindow):
             axes = [
                 plt.Subplot(self.canvas.fig, inner_subplot[n]) for n in range(5)
             ]
+            self.canvas.axes.extend(axes)
+
             ax_g_r, ax_red, ax_frt, ax_sto, ax_lbl = axes
-            bleach = trace["_bleaches_at"].values[0]
-            tmax = trace["frame"].max()
-            fret_states = np.unique(trace["E_true"])
+            bleach = trace.first_bleach
+            tmax = len(trace.grn.int)
+            fret_states = np.unique(trace.fret_true)
             fret_states = fret_states[fret_states != -1]
 
-            ax_g_r.plot(trace["DD"], color="seagreen")
-            ax_g_r.plot(trace["DA"], color="salmon")
-            ax_red.plot(trace["AA"], color="red")
-            ax_frt.plot(trace["E"], color="orange")
-            ax_frt.plot(trace["E_true"], color="black", ls="-", alpha=0.3)
+            ax_g_r.plot(trace.grn.int, color="seagreen")
+            ax_g_r.plot(trace.acc.int, color="salmon")
+            ax_red.plot(trace.red.int, color="red")
+            ax_frt.plot(trace.fret, color="orange")
+            ax_frt.plot(
+                trace.fret_true, color="black", ls="-", alpha=0.3
+            )  # TODO: fix in init
 
             for state in fret_states:
                 ax_frt.plot([0, bleach], [state, state], color="red", alpha=0.2)
 
-            ax_sto.plot(trace["S"], color="purple")
+            ax_sto.plot(trace.stoi, color="purple")
 
             lib.plotting.plot_simulation_category(
-                y=trace["label"],
+                y=trace.y_class,  # TODO: fix in init
                 ax=ax_lbl,
                 alpha=0.4,
                 fontsize=max(10, 36 // self.n_examples),
@@ -3805,7 +3896,7 @@ class SimulatorWindow(BaseWindow):
             for ax in ax_frt, ax_sto:
                 ax.set_ylim(-0.15, 1.15)
 
-            for ax, s in zip((ax_g_r, ax_red), (trace["DD"], trace["AA"])):
+            for ax, s in zip((ax_g_r, ax_red), (trace.grn.int, trace.red.int)):
                 ax.set_ylim(s.max() * -0.15)
                 ax.plot([0] * len(s), color="black", ls="--", alpha=0.5)
 
@@ -3821,76 +3912,8 @@ class SimulatorWindow(BaseWindow):
                 ax.set_xlim(0, tmax)
                 self.canvas.fig.add_subplot(ax)
 
+        # self.canvas.flush_events()
         self.canvas.draw()
-
-    # TODO: consolidate this with the general trace exporter to cut down duplicate?
-    def exportTracesToAscii(self):
-        """
-        Opens a folder dialog to save traces to ASCII .txt files
-        """
-        self.generateTraces(n_traces=int(self.ui.inputNumberOfTraces.value()))
-        df = self.traces
-
-        diag = ExportDialog(init_dir="~/Desktop/", accept_label="Export")
-
-        outdir = diag.selectedFiles()[0] if diag.exec() else None
-        df.index = np.arange(0, len(df), 1) // int(
-            self.ui.inputTraceLength.value()
-        )
-
-        if outdir is not None:
-            update_every_nth = self.n_traces // 20
-            progressbar = ProgressBar(
-                parent=self, loop_len=self.n_traces / update_every_nth
-            )
-
-            for n, (idx, trace) in enumerate(df.groupby(df.index)):
-                bg = np.zeros(len(trace))
-                path = os.path.join(
-                    outdir,
-                    "trace_{}_{}.txt".format(idx, time.strftime("%Y%m%d_%H%M")),
-                )
-
-                df = pd.DataFrame(
-                    {
-                        "D-Dexc-bg": bg,
-                        "A-Dexc-bg": bg,
-                        "A-Aexc-bg": bg,
-                        "D-Dexc-rw": trace["DD"],
-                        "A-Dexc-rw": trace["DA"],
-                        "A-Aexc-rw": trace["AA"],
-                        "S": trace["S"],
-                        "E": trace["E"],
-                    }
-                ).round(4)
-
-                date_txt = "Date: {}".format(time.strftime("%Y-%m-%d, %H:%M"))
-                vid_txt = "Video filename: {}".format(None)
-                id_txt = "FRET pair #{}".format(idx)
-                bl_txt = "Bleaches at {}".format(
-                    trace["_bleaches_at"].values[0]
-                )
-
-                with open(path, "w") as f:
-                    exp_txt = "Simulated trace exported by DeepFRET"
-                    f.write(
-                        "{0}\n"
-                        "{1}\n"
-                        "{2}\n"
-                        "{3}\n"
-                        "{4}\n\n"
-                        "{5}".format(
-                            exp_txt,
-                            date_txt,
-                            vid_txt,
-                            id_txt,
-                            bl_txt,
-                            df.to_csv(index=False, sep="\t"),
-                        )
-                    )
-
-                if n % update_every_nth == 0:
-                    progressbar.increment()
 
 
 class AppContext(ApplicationContext):

@@ -45,6 +45,8 @@ class MatplotlibCanvas(FigureCanvas):
             self.setupSinglePlotLayout()
         elif ax_type == "jointgrid":
             self.setupJointGridLayout()
+        elif ax_type == "dynamic":
+            self.setupDynamicPlotLayout()
         else:
             raise ValueError
 
@@ -97,18 +99,17 @@ class MatplotlibCanvas(FigureCanvas):
         )
         self.traceOutlineColor()
 
-    def setupDynamicGridLayout(self):
+    def setupDynamicPlotLayout(self):
         """
-        Sets up a dynamic grid with post-adjustable number of subplots
+        Setup for a single panel plot.
         """
-        self.gs = GridSpec(1, 1)
-        self.fig.add_subplot(self.gs[0])
-        self.axes = self.figure.axes
+        self.axes = (self.fig.add_subplot(111, aspect="equal"),)
+        for ax in self.axes:
+            ax.set_xticks(())
+            ax.set_yticks(())
 
-        m = 0.08
-        self.fig.subplots_adjust(
-            hspace=0, left=m, right=1 - m, top=1 - m, bottom=m
-        )
+        m = 0.02
+        self.fig.subplots_adjust(left=m, right=1 - m, top=1 - m, bottom=m)
 
     def setupSinglePlotLayout(self):
         """

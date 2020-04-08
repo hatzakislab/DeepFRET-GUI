@@ -218,9 +218,14 @@ def sim_to_ascii(df, trace_len, outdir):
 
 
 def numstring_to_ls(s):
-    """Transforms any string of numbers into a list of floats, regardless of separators"""
+    """
+    Transforms any string of numbers into a list of floats,
+    regardless of separators
+
+    Zero is ignored!
+    """
     num_s = re.findall(r"\d+(\.\d+)?\s*", s)
-    return [float(s) for s in num_s]
+    return [float(s) for s in num_s if s != ""]
 
 
 def random_seed_mp(verbose=False):
@@ -274,3 +279,10 @@ def nice_string_output(
             spacing=extra_spacing + max_values + max_names - len(name),
         )
     return string[:-2]
+
+
+def remove_newlines(s) -> str:
+    """
+    Removes all newlines from string
+    """
+    return "".join(s.splitlines(keepends=False))

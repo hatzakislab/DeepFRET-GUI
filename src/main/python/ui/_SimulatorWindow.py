@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ui/SimulatorWindow.ui'
 #
-# Created by: PyQt5 UI code generator 5.14.1
+# Created by: PyQt5 UI code generator 5.14.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -236,6 +236,8 @@ class Ui_SimulatorWindow(object):
         )
         self.inputFretStateMeans.setSizePolicy(sizePolicy)
         self.inputFretStateMeans.setMaximumSize(QtCore.QSize(100, 16777215))
+        self.inputFretStateMeans.setMouseTracking(False)
+        self.inputFretStateMeans.setInputMethodHints(QtCore.Qt.ImhNone)
         self.inputFretStateMeans.setObjectName("inputFretStateMeans")
         self.gridLayout.addWidget(self.inputFretStateMeans, 4, 1, 1, 1)
         self.checkBoxBleedthrough = QtWidgets.QCheckBox(self.centralWidget)
@@ -699,10 +701,6 @@ class Ui_SimulatorWindow(object):
         self.inputBleedthroughLo.setProperty("value", 0.0)
         self.inputBleedthroughLo.setObjectName("inputBleedthroughLo")
         self.gridLayout.addWidget(self.inputBleedthroughLo, 12, 1, 1, 1)
-        self.pushButtonRefresh = QtWidgets.QPushButton(self.centralWidget)
-        self.pushButtonRefresh.setMaximumSize(QtCore.QSize(100, 16777215))
-        self.pushButtonRefresh.setObjectName("pushButtonRefresh")
-        self.gridLayout.addWidget(self.pushButtonRefresh, 15, 2, 1, 1)
         self.checkBoxALifetime = QtWidgets.QCheckBox(self.centralWidget)
         self.checkBoxALifetime.setMaximumSize(QtCore.QSize(100, 16777215))
         self.checkBoxALifetime.setObjectName("checkBoxALifetime")
@@ -884,10 +882,7 @@ class Ui_SimulatorWindow(object):
         SimulatorWindow.setTabOrder(self.inputScalerHi, self.checkBoxScaler)
         SimulatorWindow.setTabOrder(self.checkBoxScaler, self.examplesComboBox)
         SimulatorWindow.setTabOrder(
-            self.examplesComboBox, self.pushButtonRefresh
-        )
-        SimulatorWindow.setTabOrder(
-            self.pushButtonRefresh, self.inputNumberOfTraces
+            self.examplesComboBox, self.inputNumberOfTraces
         )
         SimulatorWindow.setTabOrder(
             self.inputNumberOfTraces, self.pushButtonExport
@@ -953,7 +948,6 @@ class Ui_SimulatorWindow(object):
             _translate("SimulatorWindow", "Blinking Probability")
         )
         self.labelExport.setText(_translate("SimulatorWindow", "Export Traces"))
-        self.pushButtonRefresh.setText(_translate("SimulatorWindow", "Refresh"))
         self.checkBoxALifetime.setText(
             _translate("SimulatorWindow", "No bleach")
         )

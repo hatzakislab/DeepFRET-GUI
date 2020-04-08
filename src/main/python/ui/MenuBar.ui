@@ -115,8 +115,9 @@
     </property>
     <addaction name="actionRemove_File"/>
     <addaction name="actionRemove_All_Files"/>
+    <addaction name="actionCheck_All_Traces"/>
+    <addaction name="actionUncheck_All_Traces"/>
     <addaction name="actionSelect_All"/>
-    <addaction name="actionDeselect_All"/>
    </widget>
    <widget class="QMenu" name="menuAnalyze">
     <property name="title">
@@ -220,7 +221,7 @@
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Remove Current From List</string>
+    <string>Remove Current Item From List</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Backspace</string>
@@ -379,7 +380,7 @@
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Remove All From List</string>
+    <string>Remove All Items From List</string>
    </property>
   </action>
   <action name="actionGet_alphaFactor">
@@ -555,7 +556,7 @@
     <string>Uncheck All</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+Alt+Shift+A</string>
+    <string>Ctrl+Alt+Shift+E</string>
    </property>
   </action>
   <action name="actionClear_and_Rerun">
@@ -598,7 +599,7 @@
     <string>Check All</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+Alt+A</string>
+    <string>Ctrl+Alt+Shift+E</string>
    </property>
   </action>
   <action name="actionExport_Transition_Density_Data">
@@ -606,23 +607,26 @@
     <string>Transition Density Data</string>
    </property>
   </action>
-  <action name="actionSelect_All">
+  <action name="actionCheck_All_Traces">
    <property name="enabled">
-    <bool>true</bool>
+    <bool>false</bool>
    </property>
    <property name="text">
-    <string>Select All</string>
+    <string>Check All Traces</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+A</string>
+    <string>Ctrl+E</string>
    </property>
   </action>
-  <action name="actionDeselect_All">
+  <action name="actionUncheck_All_Traces">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
-    <string>Deselect All</string>
+    <string>Uncheck All Traces</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+Alt+A</string>
+    <string>Ctrl+Alt+E</string>
    </property>
   </action>
   <action name="actionLifetimes">
@@ -666,6 +670,14 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+5</string>
+   </property>
+  </action>
+  <action name="actionSelect_All">
+   <property name="text">
+    <string>Select All</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+A</string>
    </property>
   </action>
  </widget>

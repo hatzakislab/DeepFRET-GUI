@@ -1,36 +1,56 @@
 import sys
-from main import TraceWindow, TraceContainer, AppContext, VideoData
-from lib.misc import print_elapsed
-from time import time
+
+from main import AppContext, TraceContainer, TraceWindow
 
 
-def setUp(trace_file_path):
-    """
-    Set up the essentials for the window to launch
-    """
-    mock_trace_file = trace_file_path
-    trace = TraceContainer(mock_trace_file)
-    TraceWindow.data = VideoData()
-    TraceWindow.data.traces[trace.name] = trace
-    TraceWindow.currName = trace.name
-    TraceWindow_ = TraceWindow()
-    TraceWindow_.classifyTraces(checked_only=False, single=False)
-    TraceWindow_.currName = trace.name
-    TraceWindow_.refreshPlot()
-    return TraceWindow_
+class SetUp(TraceWindow):
+    class Data:
+        traces = {}
+
+    def __init__(self):
+        TraceWindow.data = self.Data()
+        super(SetUp, self).__init__()
+
+        self.setFile()
+
+    def setFile(self):
+        trace = TraceContainer(
+            filename="../resources/traces/simulated_trace.txt",
+            loaded_from_ascii=True,
+        )
+        self.data.traces[trace.name] = trace
+        self.currName = trace.name
+        self._currName = trace.name
+        self.refreshPlot()
+
+    def predict(self):
+        self.classifyTraces()  # resets self.currentName
+        self.currName = self._currName
+        self.refreshPlot()
+
+    def plot(self):
+        for ax in self.canvas.axes:
+            ax.clear()
+
+        trace = self.currentTrace()
+
+        self.canvas.ax_grn.plot(trace.grn.int, color="green")
+        self.canvas.ax_red.plot(trace.acc.int, color="red")
+        self.canvas.ax_alx.plot(trace.red.int, color="red")
+        self.canvas.ax_fret.plot(trace.fret, color="orange")
+        self.canvas.ax_stoi.plot(trace.stoi, color="purple")
+
+        self.canvas.draw()
 
 
 if __name__ == "__main__":
     ctxt = AppContext()
     ctxt.load_resources()
 
-    start = time()
-
-    TraceWindow_ = setUp("../resources/traces/fiddler_3dim_0.txt")
-    TraceWindow_.show()
-
-    end = time()
-    print_elapsed(start, end, "TraceWindow")
+    cls = SetUp()
+    # cls.predict()
+    # cls.plot()
+    cls.show()
 
     exit_code = ctxt.run()
     sys.exit(exit_code)

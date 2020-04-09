@@ -76,6 +76,8 @@ class AboutWindow(QDialog):
     'About this application' window with version numbering.
     """
 
+    app_version = None  # This definition is overridden by AppContext
+
     def __init__(self):
         super().__init__()
         self.ui = Ui_About()
@@ -93,6 +95,8 @@ class PreferencesWindow(QDialog):
     Editable preferences. If preferences shouldn't be editable (e.g. global
     color styles), set them in GLOBALs class.
     """
+
+    config = None  # This definition is overridden by AppContext
 
     def __init__(self):
         super().__init__()
@@ -264,8 +268,17 @@ class BaseWindow(QMainWindow):
     Superclass for shared window functions.
     """
 
+    class Data:
+        """self.data placeholder for windows that need it, for PyCharm"""
+
+        traces = {}
+
     def __init__(self):
         super().__init__()
+        self.data = self.Data()
+        self.config = None
+        self.inspector = None
+
         self.ui = Ui_MenuBar()
         self.ui.setupUi(self)
 
@@ -1125,11 +1138,11 @@ class BaseWindow(QMainWindow):
         """
         Opens the inspector (modal) window to format the current plot
         """
-        if HistogramWindow_.isActiveWindow():
-            HistogramInspector_.show()
-
-        if TransitionDensityWindow_.isActiveWindow():
-            TransitionDensityInspector_.show()
+        if (
+            isinstance(self, HistogramWindow)
+            or isinstance(self, TransitionDensityWindow)
+        ) and self.isActiveWindow():
+            self.inspector.show()
 
     def configInspector(self):
         """
@@ -1282,7 +1295,11 @@ class MainWindow(BaseWindow):
 
         # Initialize DataHolder class
         self.data = VideoData()
+
+        # Delegate access to data
         TraceWindow.data = self.data
+        HistogramWindow.data = self.data
+        TransitionDensityWindow.data = self.data
 
         self.show()
 
@@ -2739,14 +2756,10 @@ class HistogramWindow(BaseWindow):
         self.da_label = r"$\mathbf{DA}$"
         self.dd_label = r"$\mathbf{DD}$"
 
-        self.setupFigureCanvas(
-            ax_setup="plot", ax_window="histwin", width=10, height=10,
-        )
+        self.setupFigureCanvas(ax_type="histwin")
 
         self.setupPlot()
         self.connectUi()
-
-        self.data = MainWindow_.data
 
     def connectUi(self):
         for f in (
@@ -2813,15 +2826,19 @@ class HistogramWindow(BaseWindow):
         else:
             raise ValueError("n_first_frames must be either 'all' or 'spinbox'")
 
-        self.E, self.S, self.DD, self.DA, self.corrs, self.E_un, self.S_un = (
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-        )
+        # TODO: we might use this inline more often, but keep self.attr = None
+        # TODO: in the init, to keep PyCharm inspections
+        for attr in ("E", "S", "DD", "DA", "corrs", "E_un", "S_un"):
+            setattr(self, attr, None)
+        # self.E, self.S, self.DD, self.DA, self.corrs, self.E_un, self.S_un = (
+        #     None,
+        #     None,
+        #     None,
+        #     None,
+        #     None,
+        #     None,
+        #     None,
+        # )
 
         checkedTraces = [
             trace for trace in self.data.traces.values() if trace.is_checked
@@ -3089,10 +3106,9 @@ class HistogramWindow(BaseWindow):
         """
         Plots the top right right marginal histogram (DA).
         """
-        data = self.DA
         self.canvas.tr_ax_rgt.set_ylabel(self.da_label)
         self.canvas.tr_ax_rgt.yaxis.set_label_position("right")
-        if data is not None:
+        if self.DA is not None:
             self.canvas.tr_ax_rgt.clear()
             self.canvas.tr_ax_rgt.hist(
                 self.DA,
@@ -3108,9 +3124,7 @@ class HistogramWindow(BaseWindow):
         """
         Plots the top right top marginal histogram (DD).
         """
-        data = self.DD
-
-        if data is not None:
+        if self.DD is not None:
             self.canvas.tr_ax_top.clear()
             self.canvas.tr_ax_top.hist(
                 self.DD,
@@ -3126,8 +3140,8 @@ class HistogramWindow(BaseWindow):
 
     def plotTopRight_CenterContour(self):
         da_contour_x = self.DD
-        da_contour_y = self.DA
         if da_contour_x is not None:
+            da_contour_y = self.DA
             cont = lib.math.contour_2d(
                 xdata=da_contour_x,
                 ydata=da_contour_y,
@@ -3163,7 +3177,7 @@ class HistogramWindow(BaseWindow):
             xarr = np.linspace(0.1, xlim[1], 1000)
 
             single_param = lifetime_dict["SINGLE_PARAM"]
-            single_errs = lifetime_dict["SINGLE_ERRS"]
+            single_errs = lifetime_dict["SINGLE_ERRS"]  # TODO: unused var?
             yarr_1 = lib.math.func_exp(xarr, single_param)
             self.canvas.bl_ax_t.plot(
                 xarr,
@@ -3195,28 +3209,29 @@ class HistogramWindow(BaseWindow):
         Plots Mean Pearson Correlation Coefficients in bottom left bottom as an errorbar plot.
         """
 
-        if self.corrs is not None:
-            self.canvas.bl_ax_b.clear()
-            maxlen = len(self.corrs[0])
-            pr_xs = np.arange(maxlen // 2 + 1)
-            pr_ys = np.zeros(len(pr_xs))
-            pr_er = np.zeros_like(pr_ys)
-            for i in range(maxlen):
-                idx = i - maxlen // 2
-                if idx < 0:
-                    continue
+        if self.corrs is None:
+            return
+        self.canvas.bl_ax_b.clear()
+        maxlen = len(self.corrs[0])
+        pr_xs = np.arange(maxlen // 2 + 1)
+        pr_ys = np.zeros(len(pr_xs))
+        pr_er = np.zeros_like(pr_ys)
+        for i in range(maxlen):
+            idx = i - maxlen // 2
+            if idx < 0:
+                continue
 
-                _corr = self.corrs[:, i]
-                pr_ys[idx] = np.nanmean(_corr)
-                pr_er[idx] = np.nanstd(_corr)
+            _corr = self.corrs[:, i]
+            pr_ys[idx] = np.nanmean(_corr)
+            pr_er[idx] = np.nanstd(_corr)
 
-            self.canvas.bl_ax_b.errorbar(
-                x=pr_xs,
-                y=pr_ys,
-                yerr=pr_er if plot_errors else 0,
-                label=r"$\operatorname{{E}}[\rho_{{DD, DA}}]$",
-            )
-            self.canvas.bl_ax_b.legend()
+        self.canvas.bl_ax_b.errorbar(
+            x=pr_xs,
+            y=pr_ys,
+            yerr=pr_er if plot_errors else 0,
+            label=r"$\operatorname{{E}}[\rho_{{DD, DA}}]$",
+        )
+        self.canvas.bl_ax_b.legend()
         # self.canvas.bl_ax_b.set_xlabel("Frames")
         # self.canvas.bl_ax_b.set_ylabel(r"$\operatorname{{E}}[\rho_{{DD, DA}}]$")
 
@@ -3224,13 +3239,11 @@ class HistogramWindow(BaseWindow):
         """
         Plots 1d histogram of DA and DD for comparison purposes
         """
-        da = self.DA
-        dd = self.DD
-
-        if da is not None:
+        if self.DA is not None:
             self.canvas.br_ax.clear()
+
             self.canvas.br_ax.hist(
-                dd,
+                self.DD,
                 bins=100,
                 density=True,
                 alpha=0.5,
@@ -3238,7 +3251,7 @@ class HistogramWindow(BaseWindow):
                 color=gvars.color_green,
             )
             self.canvas.br_ax.hist(
-                da,
+                self.DA,
                 bins=100,
                 density=True,
                 alpha=0.5,
@@ -3315,7 +3328,6 @@ class TransitionDensityWindow(BaseWindow):
         self.selected_data = None
         self.tdp_df = None
         self.colors = None
-        self.data = MainWindow_.data
 
         # dynamically created once plot is refreshed
         self.tdp_ax = None
@@ -3650,10 +3662,10 @@ class DensityWindowInspector(SheetInspector):
             parent, HistogramWindow
         ):  # Avoids an explicit reference in parent class, for easier copy-paste
             self.keys = gvars.keys_hist
-            HistogramWindow_.inspector = self
+            parent.inspector = self
         elif isinstance(parent, TransitionDensityWindow):
             self.keys = gvars.keys_tdp
-            TransitionDensityWindow_.inspector = self
+            parent.inspector = self
         else:
             raise NotImplementedError
 
@@ -3674,12 +3686,10 @@ class DensityWindowInspector(SheetInspector):
 
                 # Avoids an explicit reference in parent class,
                 # for easier copy-paste
-                if isinstance(parent, HistogramWindow):
-                    slider.valueChanged.connect(HistogramWindow_.refreshPlot)
-                elif isinstance(parent, TransitionDensityWindow):
-                    slider.valueChanged.connect(
-                        TransitionDensityWindow_.refreshPlot
-                    )
+                if isinstance(parent, HistogramWindow) or isinstance(
+                    parent, TransitionDensityWindow
+                ):
+                    slider.valueChanged.connect(parent.refreshPlot)
                 else:
                     raise NotImplementedError
 
@@ -3834,13 +3844,9 @@ class SimulatorWindow(BaseWindow):
     smFRET trace simulator window
     """
 
-    class Data:
-        traces = {}
-        examples = {}
-
     def __init__(self):
         super().__init__()
-        self.data = self.Data()
+        self.data.examples = {}
         self.df = pd.DataFrame()
         self.ui = Ui_SimulatorWindow()
         self.ui.setupUi(self)
@@ -4195,6 +4201,7 @@ class AppContext(ApplicationContext):
     def assign(self):
         """
         Assigns resources and functions to the right windows
+        before they're instantiated
         """
         PreferencesWindow.config = self.config
         AboutWindow.app_version = self.config["appVersion"]

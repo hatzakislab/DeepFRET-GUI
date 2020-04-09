@@ -338,6 +338,7 @@ def plot_gaussian(mean, sigma, ax, x, weight=1, color=None):
     ax.plot(x, y, color=color)
     return ax, y
 
+
 def plot_gaussian_mixture_to_ax(
     mixture_params,
     ax: plt.Axes,

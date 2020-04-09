@@ -332,6 +332,12 @@
           <height>16777215</height>
          </size>
         </property>
+        <property name="mouseTracking">
+         <bool>false</bool>
+        </property>
+        <property name="inputMethodHints">
+         <set>Qt::ImhNone</set>
+        </property>
         <property name="text">
          <string>0.5</string>
         </property>
@@ -1010,19 +1016,6 @@
         </property>
        </widget>
       </item>
-      <item row="15" column="2">
-       <widget class="QPushButton" name="pushButtonRefresh">
-        <property name="maximumSize">
-         <size>
-          <width>100</width>
-          <height>16777215</height>
-         </size>
-        </property>
-        <property name="text">
-         <string>Refresh</string>
-        </property>
-       </widget>
-      </item>
       <item row="7" column="3">
        <widget class="QCheckBox" name="checkBoxALifetime">
         <property name="maximumSize">
@@ -1220,7 +1213,6 @@
   <tabstop>inputScalerHi</tabstop>
   <tabstop>checkBoxScaler</tabstop>
   <tabstop>examplesComboBox</tabstop>
-  <tabstop>pushButtonRefresh</tabstop>
   <tabstop>inputNumberOfTraces</tabstop>
   <tabstop>pushButtonExport</tabstop>
  </tabstops>

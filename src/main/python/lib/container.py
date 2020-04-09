@@ -1,8 +1,12 @@
 import multiprocessing
 import os.path
-import re
 import time
 import warnings
+
+import PIL.Image
+import PIL.TiffTags
+
+from lib.misc import timeit
 
 multiprocessing.freeze_support()
 
@@ -15,16 +19,17 @@ import skimage.io
 import lib.imgdata
 import lib.math
 import lib.misc
+import astropy.io.fits
 
 
-class ImageContainer:
+class VideoContainer:
     """
     Class for storing individual image information.
     """
 
     def __init__(self):
         # stores the raw data
-        self.img = None  # type: Union[None, np.ndarray]
+        self.vid = None  # type: Union[None, np.ndarray]
         self.indices = None  # type: Union[None, np.ndarray]
         self.width = None  # type: Union[None, int]
         self.height = None  # type: Union[None, int]
@@ -59,11 +64,17 @@ class ImageChannel:
 
     def __init__(self, color):
         if color == "green":
-            cmap = LinearSegmentedColormap.from_list("", ["black", gvars.color_green])
+            cmap = LinearSegmentedColormap.from_list(
+                "", ["black", gvars.color_green]
+            )
         elif color == "red":
-            cmap = LinearSegmentedColormap.from_list("", ["black", gvars.color_red])
+            cmap = LinearSegmentedColormap.from_list(
+                "", ["black", gvars.color_red]
+            )
         else:
-            raise ValueError("Invalid color. Available options are 'green' or 'red'")
+            raise ValueError(
+                "Invalid color. Available options are 'green' or 'red'"
+            )
 
         self.exists = True  # type: bool
         self.cmap = cmap  # type: LinearSegmentedColormap
@@ -112,7 +123,7 @@ class TraceChannel:
 
 class TraceContainer:
     """
-    Class for storing individual newTrace information.
+    Class for storing individual trace information.
     """
 
     ml_column_names = [
@@ -128,13 +139,19 @@ class TraceContainer:
     ]
 
     def __init__(
-        self, filename, name=None, movie=None, n=None, hmm_idealized_config=None
+        self,
+        filename=None,
+        name=None,
+        video=None,
+        n=None,
+        hmm_idealized_config=None,
+        loaded_from_ascii=False,
     ):
         self.filename = filename  # type: str
         self.name = (
             name if name is not None else os.path.basename(filename)
         )  # type: str
-        self.movie = movie  # type: str
+        self.video = video  # type: str
         self.n = n  # type: str
 
         self.tracename = None  # type: Union[None, str]
@@ -157,7 +174,9 @@ class TraceContainer:
 
         # hmm configuration
         self.hmm_idealized_config = (
-            hmm_idealized_config if hmm_idealized_config is not None else "global"
+            hmm_idealized_config
+            if hmm_idealized_config is not None
+            else "global"
         )  # type: Union[None, str]
         # hmm predictions here
         self.hmm = None  # type: Union[None, np.ndarray]
@@ -183,17 +202,25 @@ class TraceContainer:
 
         self.channels = self.grn, self.red, self.acc
         # file loading
-        # TODO make compatible w pathlib
-        try:
-            self.load_from_ascii()
-        except (TypeError, FileNotFoundError) as e:
+        # TODO: make compatible w pathlib
+        # TODO: set flag differently?
+        if loaded_from_ascii:
             try:
-                self.load_from_dat()
+                self.load_from_txt()
             except (TypeError, FileNotFoundError) as e:
-                warnings.warn("Warning! No data loaded for this trace!", UserWarning)
+                try:
+                    self.load_from_dat()
+                except (TypeError, FileNotFoundError) as e:
+                    warnings.warn(
+                        "Warning! No data loaded for this trace!", UserWarning
+                    )
 
     @property
     def hmm(self):
+        """
+        The self.hmm is now a property, so that we can set a global or local flag for the traces.
+        This maintains compatibility and allows us to change the type of output dynamically.
+        """
         if self.hmm_idealized_config.lower().startswith("glo"):
             if self.hmm_global_fret is not None:
                 return self.hmm_global_fret
@@ -212,7 +239,7 @@ class TraceContainer:
         elif self.hmm_idealized_config.lower().startswith("loc"):
             self.hmm_local_fret = val
 
-    def load_from_ascii(self):
+    def load_from_txt(self):
         """
         Reads a trace from an ASCII text file. Several checks are included to
         include flexible compatibility with different versions of trace exports.
@@ -247,13 +274,19 @@ class TraceContainer:
                     df.columns = colnames
         # Else DeepFRET trace compatibility
         else:
-            df = lib.misc.csv_skip_to(path=self.filename, line="D-Dexc", sep="\s+")
+            df = lib.misc.csv_skip_to(
+                path=self.filename, line="D-Dexc", sep="\s+"
+            )
         try:
-            pair_n = lib.misc.seek_line(path=self.filename, line_starts="FRET pair")
+            pair_n = lib.misc.seek_line(
+                path=self.filename, line_starts="FRET pair"
+            )
             self.n = int(pair_n.split("#")[-1])
 
-            movie = lib.misc.seek_line(path=self.filename, line_starts="Movie filename")
-            self.movie = movie.split(": ")[-1]
+            video = lib.misc.seek_line(
+                path=self.filename, line_starts="Video filename"
+            )
+            self.video = video.split(": ")[-1]
 
         except (ValueError, AttributeError):
             pass
@@ -268,7 +301,8 @@ class TraceContainer:
 
         if "D-Dexc_F" in df.columns:
             warnings.warn(
-                "This trace is created with an older format.", DeprecationWarning,
+                "This trace is created with an older format.",
+                DeprecationWarning,
             )
             self.grn.int = df["D-Dexc_F"].values
             self.acc.int = df["A-Dexc_I"].values
@@ -283,7 +317,9 @@ class TraceContainer:
             if "p_bleached" in df.columns:
                 colnames += self.ml_column_names
                 self.y_pred = df[self.ml_column_names].values
-                self.y_class, self.confidence = lib.math.seq_probabilities(self.y_pred)
+                self.y_class, self.confidence = lib.math.seq_probabilities(
+                    self.y_pred
+                )
 
             # This strips periods if present
             df.columns = [c.strip(".") for c in df.columns]
@@ -310,7 +346,8 @@ class TraceContainer:
 
     def load_from_dat(self):
         """
-        Loading from .dat files, as supplied in the kinSoft challenge
+        Reads and loads trace data from .dat file, as supplied in the kinSoft challenge.
+        These traces were supplied as non-ALEX traces, so the red TraceChannel is all NaNs.
         """
         arr = np.loadtxt(self.filename)
 
@@ -357,13 +394,35 @@ class TraceContainer:
         red_bleach = self.red.bleach  # type: Union[None, int]
         return grn_bleach, acc_bleach, red_bleach
 
+    def set_from_df(self, df):
+        """
+        Set intensities from a dataframe
+        """
+        self.grn.bg = df["D-Dexc-bg"].values
+        self.acc.bg = df["A-Dexc-bg"].values
+        self.red.bg = df["A-Aexc-bg"].values
+        self.grn.int = df["D-Dexc-rw"].values
+        self.acc.int = df["A-Dexc-rw"].values
+        self.red.int = df["A-Aexc-rw"].values
+        self.stoi = df["S"].values
+        self.fret = df["E"].values
+        self.first_bleach = df["_bleaches_at"].values[0]
+
+        # TODO: check if correct and define in init
+        self.y_class = df["label"].values
+        self.fret_true = df["E_true"].values
+        self.frames = np.arange(1, len(self.grn.int) + 1, 1)
+        self.frames_max = self.frames.max()
+
     def get_export_df(self, keep_nan_columns: Union[bool, None] = None):
         """
-        Returns the DataFrame to use for export
+        Returns the DataFrame to use for export.
+        This should get passed on to get_export_txt
         """
         if keep_nan_columns is None:
             keep_nan_columns = True
-        dfdict = {
+
+        df_dict = {
             "D-Dexc-bg": self.grn.bg,
             "A-Dexc-bg": self.acc.bg,
             "A-Aexc-bg": self.red.bg,
@@ -376,9 +435,9 @@ class TraceContainer:
 
         if self.y_pred is not None:
             # Add predictions column names and values
-            dfdict.update(dict(zip(self.ml_column_names, self.y_pred.T)))
+            df_dict.update(dict(zip(self.ml_column_names, self.y_pred.T)))
 
-        df = pd.DataFrame(dfdict).round(4)
+        df = pd.DataFrame(df_dict).round(4)
 
         if keep_nan_columns is False:
             df.dropna(axis=1, how="all", inplace=True)
@@ -393,19 +452,23 @@ class TraceContainer:
         keep_nan_columns: Union[bool, None] = None,
     ):
         """
-        Returns the string to use for saving the trace as a txt
+        Returns the string to use for saving the trace as a txt.
+        Option of passing a DF manually to convert it to a txt added to simplify testing.
+        :param exp_txt: string to include in header
+        :param date_txt: string to specify date.
+        :param keep_nan_columns: bool, whether or not to include columns with NaNs. Passed on to get_export_df
         """
         if df is None:
             df = self.get_export_df(keep_nan_columns=keep_nan_columns)
-        if (exp_txt is None) or (date_txt is None):
+        if exp_txt is None:
             exp_txt = "Exported by DeepFRET"
+        if date_txt is None:
             date_txt = "Date: {}".format(time.strftime("%Y-%m-%d, %H:%M"))
 
-        mov_txt = "Movie filename: {}".format(self.movie)
+        vid_txt = "Video filename: {}".format(self.video)
         id_txt = "FRET pair #{}".format(self.n)
-        bl_txt = "Donor bleaches at: {} - " "Acceptor bleaches at: {}".format(
-            self.grn.bleach, self.red.bleach
-        )
+        bl_txt = "Bleaches at {}".format(self.first_bleach)
+
         return (
             "{0}\n"
             "{1}\n"
@@ -415,7 +478,7 @@ class TraceContainer:
             "{5}".format(
                 exp_txt,
                 date_txt,
-                mov_txt,
+                vid_txt,
                 id_txt,
                 bl_txt,
                 df.to_csv(index=False, sep="\t", na_rep="NaN"),
@@ -423,21 +486,30 @@ class TraceContainer:
         )
 
     def get_tracename(self) -> str:
+        """
+        Gets and sets the tracename based on the current videoname and the pair number
+        :return self.tracename: str
+        """
         if self.tracename is None:
-            if self.movie is None:
+            if self.video is None:
                 name = "Trace_pair{}.txt".format(self.n)
             else:
                 name = "Trace_{}_pair{}.txt".format(
-                    self.movie.replace(".", "_"), self.n
+                    self.video.replace(".", "_"), self.n
                 )
 
-            # Scrub mysterious \n if they appear due to filenames
-            name = "".join(name.splitlines(keepends=False))
-            self.tracename = name
+            # Scrub mysterious \n if they appear from filename loading
+            self.tracename = lib.misc.remove_newlines(name)
 
         return self.tracename
 
     def get_savename(self, dir_to_join: Union[None, str] = None):
+        """
+        Returns the name with which the trace should be saved.
+        Option for specifying output directory.
+        :param dir_to_join: output directory, optional
+        :return self.savename: str
+        """
         if self.savename is None:
             if dir_to_join is not None:
                 self.savename = os.path.join(dir_to_join, self.get_tracename())
@@ -450,17 +522,34 @@ class TraceContainer:
         dir_to_join: Union[None, str] = None,
         keep_nan_columns: Union[bool, None] = None,
     ):
+        """
+        Exports the trace to the file location specified by self.savename.
+        :param dir_to_join: output directory, optional, passed to get_savename
+        :param keep_nan_columns: Whether to keep columns that are nan, passed to get_export_txt
+        """
         savename = self.get_savename(dir_to_join=dir_to_join)
         with open(savename, "w") as f:
             f.write(self.get_export_txt(keep_nan_columns=keep_nan_columns))
 
     def calculate_fret(self):
+        """
+        Calculates fret value for current trace
+        """
         self.fret = lib.math.calc_E(self.get_intensities())
 
     def calculate_stoi(self):
+        """
+        calculates stoichiometry values for current trace.
+        :return:
+        """
         self.stoi = lib.math.calc_S(self.get_intensities())
 
     def calculate_transitions(self):
+        """
+        Calculates and sets the transition df (self.transitions).
+        Includes lifetime of states and transitions between states.
+        :return:
+        """
         lf = pd.DataFrame()
         lf["state"] = self.hmm_state
         lf["e_fit"] = self.hmm
@@ -489,33 +578,40 @@ class TraceContainer:
         self.transitions = lf
 
 
-class MovieData:
+class VideoData:
     """
     Data wrapper that contains a dict with filenames and associated data.
     """
 
     def __init__(self):
-        self.movies = {}
+        self.videos = {}
         self.traces = {}
         self.currName = None
 
-    def get(self, name) -> ImageContainer:
-        """Shortcut to return the metadata of selected movie."""
+    def get(self, name) -> VideoContainer:
+        """Shortcut to return the metadata of selected video."""
         if self.currName is not None:
-            return self.movies[name]
+            return self.videos[name]
 
-    def _data(self) -> ImageContainer:
+    def getCurrent(self) -> VideoContainer:
         """
-        Shortcut for returning the metadata of movie currently being loaded,
+        Shortcut for returning the metadata of video currently being loaded,
         for internal use.
         Frontend should use get() instead
         """
         if self.currName is not None:
-            return self.movies[self.currName]
+            return self.videos[self.currName]
 
-    def load_img(self, path, name, setup, bg_correction: bool = False):
+    def load_video_data(
+        self,
+        path: str,
+        name: str,
+        donor_is_left: bool = True,
+        donor_is_first: bool = True,
+        bg_correction: bool = False,
+    ):
         """
-        Loads movie and extracts all parameters depending on the number of
+        Loads video and extracts all parameters depending on the number of
         channels
 
         Parameters
@@ -524,8 +620,6 @@ class MovieData:
             Full path of video to be loaded
         name:
             Unique identifier (to prevent videos being loaded in duplicate)
-        setup:
-            Imaging setup from config
         bg_correction:
             Corrects for illumination profile and crops misaligned edges
             slightly
@@ -533,94 +627,91 @@ class MovieData:
         # Instantiate container
         self.currName = name
         self.name = name
-        self.movies[name] = ImageContainer()
-        self._data().traces = {}
+        self.videos[name] = VideoContainer()
+
+        video = self.videos[name]
+
+        video.traces = {}
         # Populate metadata
-        self._data().img = skimage.io.imread(path)
-
-        swapflag = False
-        try:
-            swapflag = (setup != "dual") and (self._data().img.shape[3] > 3)
-        except IndexError as e:
-            pass
-
-        if swapflag:
-            self._data().img = self._data().img.swapaxes(3, 1).swapaxes(2, 1)
-
-        self._data().height = self._data().img.shape[1]
-        self._data().width = self._data().img.shape[2]
-        # Scaling factor for ROI
-        self._data().roi_radius = max(self._data().height, self._data().width) / 80
-        if self._data().height == self._data().width:  # quadratic image
-            if setup == "dual":
-                c1, c2, c3, _ = lib.imgdata.image_channels(4)
-
-                # Acceptor (Dexc-Aem)
-                self._data().acc.raw = self._data().img[c1, :, :]
-                # ALEX (Aexc-Aem)
-                self._data().red.raw = self._data().img[c2, :, :]
-                # Donor (Dexc-Dem)
-                self._data().grn.raw = self._data().img[c3, :, :]
-
-                self._data().channels = self._data().grn, self._data().red
-
-            elif setup == "2-color":
-                top, btm, lft, rgt = lib.imgdata.image_quadrants(
-                    height=self._data().height, width=self._data().width
-                )
-
-                self._data().grn.raw = self._data().img[:, top, lft, 0]
-                self._data().acc.raw = self._data().img[:, top, rgt, 0]
-                self._data().red.raw = self._data().img[:, top, rgt, 1]
-
-                self._data().channels = self._data().grn, self._data().red
-
-            elif setup == "2-color-inv":
-                top, btm, lft, rgt = lib.imgdata.image_quadrants(
-                    height=self._data().height, width=self._data().width
-                )
-
-                if self._data().img.shape[3] == 2:
-                    self._data().grn.raw = self._data().img[:, btm, rgt, 0]
-                    self._data().acc.raw = self._data().img[:, btm, lft, 0]
-                    self._data().red.raw = self._data().img[:, btm, lft, 1]
-
-                    self._data().channels = self._data().grn, self._data().red
-
-                else:
-                    raise ValueError("Format not supported.")
-
-            elif setup == "bypass":
-                self._data().grn.raw = self._data().img[:, :, :, 0]
-                self._data().red.raw = self._data().img[:, :, :, 1]
-
-                self._data().channels = (
-                    self._data().grn,
-                    self._data().red,
-                )
-
-                self._data().red.exists = True
-                self._data().acc.exists = False
-            else:
-                raise ValueError("Format not supported.")
+        ext = path.split(".")[-1]
+        if ext == "fits":
+            array = astropy.io.fits.open(path, memmap=False)[0].data
         else:
-            lft, rgt = lib.imgdata.rectangle_quadrants(
-                h=self._data().height, w=self._data().width
-            )
-            # ALEX (Aexc-Aem)
-            self._data().red.raw = self._data().img[0::2, :, lft]
-            # Acceptor (Dexc-Aem)
-            self._data().acc.raw = self._data().img[1::2, :, lft]
+            array = skimage.io.imread(path)
+
+        video.array = array
+
+        # If video channels are not last, make them so:
+        if len(video.array.shape) == 4:
+            channel_pos = int(np.argmin(video.array.shape))
+            video.array = np.moveaxis(video.array, channel_pos, 3)
+            video.height = video.array.shape[1]
+            video.width = video.array.shape[2]
+
+            # Interleave channels to get rid of the extra dimension
+            video.array = np.hstack((video.array[..., 0], video.array[..., 1]))
+            video.array = video.array.reshape((-1, video.height, video.width))
+
+        else:
+            video.height = video.array.shape[1]
+            video.width = video.array.shape[2]
+
+        # Scaling factor for ROI
+        video.roi_radius = max(video.height, video.width) / 80
+
+        # Support for internal format
+        if self.is_interleaved_dual_cam(path):
+            c1, c2, c3, _ = lib.imgdata.image_channels(4)
+
             # Donor (Dexc-Dem)
-            self._data().grn.raw = self._data().img[1::2, :, rgt]
+            video.grn.raw = video.array[c3, ...]
 
-            self._data().channels = self._data().grn, self._data().red
+            # Acceptor (Dexc-Aem)
+            video.acc.raw = video.array[c1, ...]
 
-            self._data().red.exists = True
-            self._data().acc.exists = True
-            self._data().grn.exists = True
+            # ALEX (Aexc-Aem)
+            video.red.raw = video.array[c2, ...]
 
-        for c in self._data().channels + (self._data().acc,):
+        else:
+            # Does video have 2 channels (T,H,W,C)?
+            top, btm, lft, rgt = lib.imgdata.image_quadrants(
+                height=video.height, width=video.width
+            )
+
+            # If video is quadratic, it was probably recorded by quad view in
+            # top or bottom row
+            if video.height == video.width:
+                # Figure out whether intensity is in top or bottom row, and
+                # keep this only
+                top_mean, btm_mean = [
+                    video.array[:, idx, ...].mean(axis=(0, 1, 2))
+                    for idx in (top, btm)
+                ]
+                if top_mean > btm_mean:
+                    video.array = video.array[:, top, ...]
+                else:
+                    video.array = video.array[:, btm, ...]
+
+            lft, rgt = lib.imgdata.rectangle_quadrants(width=video.width)
+
+            _0, _1 = 0, 1
+            if not donor_is_first:
+                _0, _1 = 1, 0
+            if not donor_is_left:
+                lft, rgt = rgt, lft
+
+            # Donor (Dexc-Dem)
+            video.grn.raw = video.array[_0::2, :, lft]
+
+            # Acceptor (Dexc-Aem)
+            video.acc.raw = video.array[_0::2, :, rgt]
+
+            # ALEX (Aexc-Aem)
+            video.red.raw = video.array[_1::2, :, rgt]
+
+        video.channels = video.grn, video.red
+
+        for c in video.channels + (video.acc,):
             if c.raw is not None:
                 c.raw = np.abs(c.raw)
                 t, h, w = c.raw.shape
@@ -638,7 +729,33 @@ class MovieData:
                 else:
                     c.mean_nobg = c.mean
 
-        if self._data().red.exists:
-            self._data().indices = np.indices(self._data().red.mean.shape)
+        if video.red.exists:
+            video.indices = np.indices(video.red.mean.shape)
         else:
-            self._data().indices = np.indices(self._data().grn.mean.shape)
+            video.indices = np.indices(video.grn.mean.shape)
+
+    @staticmethod
+    def is_interleaved_dual_cam(path):
+        """
+        Detects whether TIFF file is interleaved dual cam video from
+        Hatzakis lab
+        """
+        detected = False
+
+        with PIL.Image.open(path) as img:
+            meta_dict = {
+                PIL.TiffTags.TAGS[key]: img.tag[key] for key in img.tag.keys()
+            }
+
+        # Old Fiji format
+        if (
+            len(meta_dict) == 10
+            and meta_dict["ImageWidth"] == meta_dict["ImageLength"]
+        ):
+            detected = True
+
+        # Newer tifffile.py format
+        elif len(meta_dict) == 16 and meta_dict["Software"][0] == "tifffile.py":
+            detected = True
+
+        return detected

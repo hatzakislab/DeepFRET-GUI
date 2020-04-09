@@ -1,30 +1,68 @@
 import sys
 from main import MainWindow, AppContext, gvars
 
-def setUp(movie_file_path, imgmode):
-    """
-    Set up the essentials for the window to launch
-    """
-    mock_movie_file = movie_file_path
-    MainWindow_ = MainWindow()
-    MainWindow_.data.load_img(mock_movie_file, name = mock_movie_file, setup = imgmode)
-    MainWindow_.currName = MainWindow_.data.currName
-    return MainWindow_
+
+class SetUp(MainWindow):
+    def __init__(self):
+        super(SetUp, self).__init__()
+        self.ui.spotsGrnSpinBox.setValue(100)
+        self.ui.spotsRedSpinBox.setValue(100)
+
+    def setFile(self, path, **kwargs):
+        self.data.load_video_data(path=path, name="", **kwargs)
+        self.currName = self.data.currName
+
+    def testAlexQuadTIFF(self, **kwargs):
+        """
+        Loads and tests ALEX Quad view TIFF
+        """
+        self.setFile(**kwargs)
+        self.refreshPlot()
+        self.show()
+
+    def testAlexDualFITS(self, **kwargs):
+        """
+        Loads and tests ALEX dual view FITS
+        """
+        self.setFile(**kwargs)
+        self.refreshPlot()
+        self.show()
+
+    def testALEXDualInterleavedTIFF(self, **kwargs):
+        """
+        Loads and tests ALEX Dual cam view TIFF with interleaved video.
+        The channel order is assumed to be
+
+        Dexc-Aem -> Aexc-Aem -> Dexc-Dem -> Aexc-Dem (blank)
+
+        Otherwise it might be impossible to auto-detect...
+        """
+        self.setFile(**kwargs)
+        self.refreshPlot()
+        self.show()
+
 
 if __name__ == "__main__":
     ctxt = AppContext()
     ctxt.load_resources()
 
-    # Set the config file imgmode
-    ctxt.config[gvars.key_imgMode] = gvars.key_imgMode2Color
+    cls = SetUp()
 
-    # Initialize mainwindow with the right file and imgmode
-    MainWindow_ = setUp(movie_file_path = "../resources/movies/Test_Quad_2c-mini.tif",
-                        imgmode = gvars.key_imgMode2Color)
+    # cls.testAlexQuadTIFF(
+    #     path="../resources/movies/Test_Quad_2c.tif",
+    #     donor_is_left=True,
+    #     donor_is_first=True,
+    # )
+    #
+    # cls.testAlexDualFITS(
+    #     path="../resources/movies/Antibody_RNAP_KG7_22degrees_667.fits",
+    #     donor_is_left = True,
+    #     donor_is_first = False,
+    # )
 
-    MainWindow_.displaySpotsSingle("green")
-    MainWindow_.displaySpotsSingle("red")
-    MainWindow_.show()
+    cls.testALEXDualInterleavedTIFF(
+        path="/Users/Joh/Desktop/077_078_Combined_20200304.tif"
+    )
 
     exit_code = ctxt.run()
     sys.exit(exit_code)

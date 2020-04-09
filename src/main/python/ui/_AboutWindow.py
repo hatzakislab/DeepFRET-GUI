@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ui/AboutWindow.ui'
 #
-# Created by: PyQt5 UI code generator 5.14.1
+# Created by: PyQt5 UI code generator 5.14.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -14,7 +14,9 @@ class Ui_About(object):
     def setupUi(self, About):
         About.setObjectName("About")
         About.resize(300, 200)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(About.sizePolicy().hasHeightForWidth())
@@ -47,17 +49,28 @@ class Ui_About(object):
         self.label_AUTHORS.setObjectName("label_AUTHORS")
         self.verticalLayout.addWidget(self.label_AUTHORS)
         self.label_LICENSE = QtWidgets.QLabel(About)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Expanding
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.label_LICENSE.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.label_LICENSE.sizePolicy().hasHeightForWidth()
+        )
         self.label_LICENSE.setSizePolicy(sizePolicy)
         self.label_LICENSE.setMinimumSize(QtCore.QSize(0, 100))
-        self.label_LICENSE.setAlignment(QtCore.Qt.AlignHCenter|QtCore.Qt.AlignTop)
+        self.label_LICENSE.setAlignment(
+            QtCore.Qt.AlignHCenter | QtCore.Qt.AlignTop
+        )
         self.label_LICENSE.setWordWrap(True)
         self.label_LICENSE.setObjectName("label_LICENSE")
         self.verticalLayout.addWidget(self.label_LICENSE)
-        spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        spacerItem = QtWidgets.QSpacerItem(
+            20,
+            40,
+            QtWidgets.QSizePolicy.Minimum,
+            QtWidgets.QSizePolicy.Expanding,
+        )
         self.verticalLayout.addItem(spacerItem)
         self.verticalLayout_2.addLayout(self.verticalLayout)
 
@@ -75,6 +88,7 @@ class Ui_About(object):
 
 if __name__ == "__main__":
     import sys
+
     app = QtWidgets.QApplication(sys.argv)
     About = QtWidgets.QWidget()
     ui = Ui_About()

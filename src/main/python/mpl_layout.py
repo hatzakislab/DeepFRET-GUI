@@ -17,28 +17,6 @@ from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
 #  easier to control when creating the window
 
 
-def setupJointGrid(f: Figure, gs: GridSpec):
-    """
-    Sets up JointGrid Setup as in Seaborn, from existing GridSpec.
-    :param f: Figure to plot axes on
-    :param gs: GridSpec to use. Should be square
-    :return axes: Tuple of Axes, order center, top, right
-    Example:
-    for a 4x4 GridSpec, the three axes will be distributed as:
-    tttx
-    cccr
-    cccr
-    cccr
-    where t is the top, c is center, and r is right axis
-    """
-    ax_ctr = f.add_subplot(gs[1:, :-1])
-    ax_rgt = f.add_subplot(gs[1:, -1], sharey=ax_ctr)
-    ax_top = f.add_subplot(gs[0, :-1], sharex=ax_ctr)
-
-    axes = ax_ctr, ax_top, ax_rgt
-    return axes
-
-
 class MatplotlibCanvas(FigureCanvas):
     """
     This is the matplotlib plot inside that controls all the visuals.
@@ -47,13 +25,7 @@ class MatplotlibCanvas(FigureCanvas):
     """
 
     def __init__(
-        self,
-        parent=None,
-        ax_setup=None,
-        ax_window=None,
-        width=6,
-        height=2,
-        dpi=100,
+        self, ax_type, parent=None, width=6, height=2, dpi=100,
     ):
         self.fig = Figure(figsize=(width, height), dpi=dpi,)
         self.fig.set_facecolor(gvars.color_gui_bg)
@@ -65,67 +37,63 @@ class MatplotlibCanvas(FigureCanvas):
         )
         FigureCanvas.updateGeometry(self)
 
-        self.ax_setup = ax_setup
-        self.ax_window = ax_window
+        self.ax_type = ax_type
 
-        if ax_setup == "dual":
-            if ax_window == "img":
-                self.setupTwoColorImageLayout()
-            elif ax_window == "trace":
-                self.setupTwoColorTraceLayout()
-            else:
-                raise ValueError
-
-        if ax_setup == "2-color":
-            if ax_window == "img":
-                self.setupTwoColorImageLayout()
-            elif ax_window == "trace":
-                self.setupTwoColorTraceLayout()
-            else:
-                raise ValueError
-
-        if ax_setup == "2-color-inv":
-            if ax_window == "img":
-                self.setupTwoColorImageLayout()
-            elif ax_window == "trace":
-                self.setupTwoColorTraceLayout()
-            else:
-                raise ValueError
-
-        if ax_setup == "plot":
-            if ax_window == "jointgrid":
-                self.setupJointGridLayout()
-            elif ax_window == "correction":
-                self.setupDoubleAxesPlotLayout()
-            elif ax_window == "single":
-                self.setupSinglePlotLayout()
-            elif ax_window == "dynamic":
-                self.setupDynamicGridLayout()
-            elif ax_window == "histwin":
-                self.setupHistogramWindowPlot()
-            else:
-                raise ValueError
-
-    def setupJointGridLayout(self):
+        if ax_type == "img":
+            self.setupTwoColorImageLayout()
+        elif ax_type == "trace":
+            self.setupTwoColorTraceLayout()
+        elif ax_type == "plot":
+            self.setupSinglePlotLayout()
+        elif ax_type == "jointgrid":
+            self.setupJointGridLayout()
+        elif ax_type == "dynamic":
+            self.setupDynamicPlotLayout()
+        else:
+            raise ValueError
+    
+    def setupJointGrid(f: Figure, gs: GridSpec):
         """
-        Sets up a 2D-histogram layout similar to a seaborn JointGrid,
-        but manually through matplotlib for compatibility reasons.
+        Sets up JointGrid Setup as in Seaborn, from existing GridSpec.
+        :param f: Figure to plot axes on
+        :param gs: GridSpec to use. Should be square
+        :return axes: Tuple of Axes, order center, top, right
+        Example:
+        for a 4x4 GridSpec, the three axes will be distributed as:
+        tttx
+        cccr
+        cccr
+        cccr
+        where t is the top, c is center, and r is right axis
         """
-        space_between = 0  # 0.01
-        left, right = 0.08, 0.7
-        bottom, height = 0.08, 0.7
-        bottom_h = left_h = left + right + space_between
+        ax_ctr = f.add_subplot(gs[1:, :-1])
+        ax_rgt = f.add_subplot(gs[1:, -1], sharey=ax_ctr)
+        ax_top = f.add_subplot(gs[0, :-1], sharex=ax_ctr)
 
-        rect_center = left, bottom, right, height
-        rect_hist_top = left, bottom_h, right, 0.2
-        rect_hist_right = left_h, bottom, 0.2, height
+        axes = ax_ctr, ax_top, ax_rgt
+        return axes
+ 
+  
+ #   def setupJointGridLayout(self):
+ #       """
+ #       Sets up a 2D-histogram layout similar to a seaborn JointGrid,
+ #       but manually through matplotlib for compatibility reasons.
+ #      """
+ #       space_between = 0  # 0.01
+ #       left, right = 0.08, 0.7
+ #       bottom, height = 0.08, 0.7
+ #       bottom_h = left_h = left + right + space_between
 
-        self.ax_ctr = self.fig.add_axes(rect_center)
-        self.ax_top = self.fig.add_axes(rect_hist_top)
-        self.ax_rgt = self.fig.add_axes(rect_hist_right)
+ #       rect_center = left, bottom, right, height
+ #       rect_hist_top = left, bottom_h, right, 0.2
+ #       rect_hist_right = left_h, bottom, 0.2, height
 
-        self.axes = self.ax_ctr, self.ax_top, self.ax_rgt
-        self.axes_marg = self.ax_top, self.ax_rgt
+ #       self.ax_ctr = self.fig.add_axes(rect_center)
+ #       self.ax_top = self.fig.add_axes(rect_hist_top)
+ #       self.ax_rgt = self.fig.add_axes(rect_hist_right)
+
+ #       self.axes = self.ax_ctr, self.ax_top, self.ax_rgt
+ #       self.axes_marg = self.ax_top, self.ax_rgt
 
     def setupHistogramWindowPlot(self):
         """
@@ -213,8 +181,8 @@ class MatplotlibCanvas(FigureCanvas):
         )
 
         self.ax_grn = self.fig.add_subplot(gs[0])  # Green
-        self.ax_red = self.ax_grn.twinx()  # Red
-        self.ax_alx = self.fig.add_subplot(gs[1])  # ALEX
+        self.ax_acc = self.ax_grn.twinx()  # Red
+        self.ax_red = self.fig.add_subplot(gs[1])  # ALEX
         self.ax_fret = self.fig.add_subplot(gs[2])  # FRET
         self.ax_stoi = self.fig.add_subplot(
             gs[3]
@@ -223,14 +191,14 @@ class MatplotlibCanvas(FigureCanvas):
 
         self.axes = (
             self.ax_grn,
+            self.ax_acc,
             self.ax_red,
-            self.ax_alx,
             self.ax_fret,
             self.ax_stoi,
             self.ax_ml,
         )
         self.axes_c = list(
-            zip((self.ax_grn, self.ax_red, self.ax_alx), ("D", "A", "A-direct"))
+            zip((self.ax_grn, self.ax_acc, self.ax_red), ("D", "A", "A-direct"))
         )
 
         self.fig.subplots_adjust(
@@ -238,18 +206,17 @@ class MatplotlibCanvas(FigureCanvas):
         )
         self.traceOutlineColor()
 
-    def setupDynamicGridLayout(self):
+    def setupDynamicPlotLayout(self):
         """
-        Sets up a dynamic grid with post-adjustable number of subplots
+        Setup for a single panel plot.
         """
-        self.gs = GridSpec(1, 1)
-        self.fig.add_subplot(self.gs[0])
-        self.axes = self.figure.axes
+        self.axes = (self.fig.add_subplot(111, aspect="equal"),)
+        for ax in self.axes:
+            ax.set_xticks(())
+            ax.set_yticks(())
 
-        m = 0.08
-        self.fig.subplots_adjust(
-            hspace=0, left=m, right=1 - m, top=1 - m, bottom=m
-        )
+        m = 0.02
+        self.fig.subplots_adjust(left=m, right=1 - m, top=1 - m, bottom=m)
 
     def setupSinglePlotLayout(self):
         """

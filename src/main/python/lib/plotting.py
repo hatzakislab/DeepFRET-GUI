@@ -72,6 +72,7 @@ def set_axis_exp_ylabel(ax, label, values):
     """
     m = np.max(values)
     e = np.floor(np.log10(np.abs(m)))
+
     ax.ticklabel_format(style="sci", scilimits=(0, 0), axis="both")
     ax.yaxis.get_offset_text().set_visible(False)
     ax.yaxis.major.formatter._useMathText = True
@@ -336,7 +337,6 @@ def plot_gaussian(mean, sigma, ax, x, weight=1, color=None):
     y = weight * scipy.stats.norm.pdf(x, mean, sigma)
     ax.plot(x, y, color=color)
     return ax, y
-
 
 def plot_gaussian_mixture_to_ax(
     mixture_params,

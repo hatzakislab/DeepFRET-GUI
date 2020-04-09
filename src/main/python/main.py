@@ -6,7 +6,7 @@ multiprocessing.freeze_support()
 import os
 import sys
 from functools import partial
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Any
 from lib.misc import timeit
 import matplotlib
 from PyQt5.QtCore import *
@@ -34,7 +34,7 @@ import scipy.signal
 import scipy.optimize
 import scipy.special
 import sklearn.preprocessing
-from tensorflow_core.python.keras.models import load_model
+from tensorflow_core.python.keras.models import load_model, Model
 
 from ui._AboutWindow import Ui_About
 from ui._MenuBar import Ui_MenuBar
@@ -56,15 +56,19 @@ from ui.misc import (
     ExportDialog,
 )
 from lib.container import (
-    ImageContainer,
+    VideoContainer,
     ImageChannel,
     TraceChannel,
     TraceContainer,
-    MovieData,
+    VideoData,
 )
 from mpl_layout import PlotWidget
 
 from fbs_runtime.application_context.PyQt5 import ApplicationContext
+
+pd.set_option("display.max_rows", 500)
+pd.set_option("display.max_columns", 500)
+pd.set_option("display.width", 10000)
 
 
 class AboutWindow(QDialog):
@@ -103,12 +107,9 @@ class PreferencesWindow(QDialog):
             self.ui.checkBox_unColocRed,
             self.ui.checkBox_illuCorrect,
             self.ui.checkBox_fitSpots,
-            self.ui.checkBox_hmmLocal,
-        )
-        self.imgModeRadioButtons = (
-            self.ui.radioButton_dual,
-            self.ui.radioButton_2_col,
-            self.ui.radioButton_2_col_inv,
+            self.ui.checkBox_hmm_local,
+            self.ui.checkBox_firstFrameIsDonor,
+            self.ui.checkBox_donorLeft,
         )
 
         self.hmmRadioButtons = (
@@ -116,13 +117,10 @@ class PreferencesWindow(QDialog):
             self.ui.radioButton_hmm_fitDD,
         )
 
-        mismatch_error = (
-            "Make sure widgets have the correct number of keys in gvars"
-        )
         if len(self.globalCheckBoxes) != len(gvars.keys_globalCheckBoxes):
-            raise ValueError(mismatch_error)
-
-        if len(self.imgModeRadioButtons) != len(gvars.keys_ImgModes):
+            mismatch_error = (
+                "Make sure widgets have the correct number of keys in gvars"
+            )
             raise ValueError(mismatch_error)
 
         self.connectUi()
@@ -137,16 +135,7 @@ class PreferencesWindow(QDialog):
         ):
             self.setConfig(key=key, value=checkBox.isChecked())
 
-        # Imaging type radio buttons
-        # Qt makes the radio buttons exclusive so only one can be checked, but
-        # Python doesn't know that, so need to check all of them to find the one
-        # that is checked
-        for imgMode, radioButton in zip(
-            gvars.keys_ImgModes, self.imgModeRadioButtons
-        ):
-            if radioButton.isChecked():
-                self.setConfig(key=gvars.key_imgMode, value=imgMode)
-
+        # HMM radio buttons
         for hmmMode, radioButton in zip(
             gvars.keys_hmmModes, self.hmmRadioButtons
         ):
@@ -181,9 +170,8 @@ class PreferencesWindow(QDialog):
         ):
             checkBox.clicked.connect(self.writeUiToConfig)
 
-        # Imaging type radio buttons
-        for radioButton in self.imgModeRadioButtons:
-            radioButton.clicked.connect(self.writeUiToConfig)
+        # TODO: add that changing the hmmLocal checkbox should change the parameters for all traces
+        #  both existing and new traces
 
         # HMM type radio buttons
         for radioButton in self.hmmRadioButtons:
@@ -247,16 +235,10 @@ class PreferencesWindow(QDialog):
         ):
             checkBox.setChecked(bool(self.getConfig(configKey)))
 
-        for radioButton, imgMode in zip(
-            self.imgModeRadioButtons, gvars.keys_ImgModes
-        ):
-            if self.getConfig(gvars.key_imgMode) == imgMode:
-                radioButton.setChecked(True)
-
         for radioButton, hmmMode in zip(
             self.hmmRadioButtons, gvars.keys_hmmModes
         ):
-            if self.getConfig(gvars.key_imgMode) == hmmMode:
+            if self.getConfig(gvars.key_hmmMode) == hmmMode:
                 radioButton.setChecked(True)
 
         self.ui.toleranceComboBox.setCurrentText(
@@ -323,11 +305,11 @@ class BaseWindow(QMainWindow):
         self.ui.actionClose.triggered.connect(self.close)
         # Exports CHECKED traces
         self.ui.actionExport_Selected_Traces.triggered.connect(
-            partial(self.exportTraces, True)
+            partial(self.exportTracesToAscii, True)
         )
         # Exports ALL traces
         self.ui.actionExport_All_Traces.triggered.connect(
-            partial(self.exportTraces, False)
+            partial(self.exportTracesToAscii, False)
         )
         # Exports colocalized spots
         self.ui.actionExport_Colocalization.triggered.connect(
@@ -349,8 +331,9 @@ class BaseWindow(QMainWindow):
         self.ui.actionRemove_All_Files.triggered.connect(
             self.deleteAllListObjects
         )
-        self.ui.actionSelect_All.triggered.connect(self.checkAll)
-        self.ui.actionDeselect_All.triggered.connect(self.unCheckAll)
+
+        self.ui.actionCheck_All_Traces.triggered.connect(self.checkAll)
+        self.ui.actionUncheck_All_Traces.triggered.connect(self.unCheckAll)
 
         # View
         self.ui.actionFormat_Plot.triggered.connect(self.formatPlotInspector)
@@ -373,10 +356,11 @@ class BaseWindow(QMainWindow):
 
         # Colocalize all spots with current settings
         self.ui.actionColocalize_All.triggered.connect(
-            self.colocalizeSpotsAllMovies
+            self.colocalizeSpotsAllVideos
         )
         self.ui.actionClear_Traces.triggered.connect(self.clearTraces)
         self.ui.actionFind_Show_Traces.triggered.connect(self.findTracesAndShow)
+        self.ui.actionClear_and_Rerun.triggered.connect(self.clearTraceAndRerun)
 
         # ---
         self.ui.actionColor_Red.triggered.connect(self.colorListObjectRed)
@@ -399,27 +383,27 @@ class BaseWindow(QMainWindow):
         self.ui.actionClear_Correction_Factors.triggered.connect(
             self.clearCorrectionFactors
         )
-        self.ui.actionSelect_Bleach_Red_Channel.triggered.connect(
-            partial(self.triggerBleach, "red")
-        )
-        self.ui.actionSelect_Bleach_Green_Channel.triggered.connect(
-            partial(self.triggerBleach, "green")
-        )
+
+        for f in (partial(self.triggerBleach, "red"), self.refreshPlot):
+            self.ui.actionSelect_Bleach_Red_Channel.triggered.connect(f)
+
+        for f in (partial(self.triggerBleach, "green"), self.refreshPlot):
+            self.ui.actionSelect_Bleach_Green_Channel.triggered.connect(f)
+
         # self.ui.actionFit_Hmm_Current.triggered.connect(
         #     partial(self.fitSingleTraceHiddenMarkovModel, True)
         # )
-        self.ui.actionFit_Hmm_Selected.triggered.connect(
-            self.fitCheckedTracesHiddenMarkovModel
-        )
-        self.ui.actionPredict_Selected_Traces.triggered.connect(
-            partial(self.classifyTraces, True)
-        )
-        self.ui.actionPredict_All_traces.triggered.connect(
-            partial(self.classifyTraces, False)
-        )
-        self.ui.actionClear_All_Predictions.triggered.connect(
-            self.clearAllClassifications
-        )
+        for f in (self.fitCheckedTracesHiddenMarkovModel, self.refreshPlot):
+            self.ui.actionFit_Hmm_Selected.triggered.connect(f)
+
+        for f in (partial(self.classifyTraces, True), self.refreshPlot):
+            self.ui.actionPredict_Selected_Traces.triggered.connect(f)
+
+        for f in (partial(self.classifyTraces, False), self.refreshPlot):
+            self.ui.actionPredict_All_traces.triggered.connect(f)
+
+        for f in (self.clearAllClassifications, self.refreshPlot):
+            self.ui.actionClear_All_Predictions.triggered.connect(f)
 
         # Window
         # Minimizes window
@@ -460,8 +444,6 @@ class BaseWindow(QMainWindow):
             self.ui.actionFind_Show_Traces,
             self.ui.actionClear_Traces,
             self.ui.actionClear_and_Rerun,
-            self.ui.actionSelect_All,
-            self.ui.actionDeselect_All,
         )
 
         enableMenus_TraceWindow = (
@@ -491,8 +473,8 @@ class BaseWindow(QMainWindow):
             self.ui.actionPredict_All_traces,
             self.ui.actionClear_All_Predictions,
             self.ui.actionClear_and_Rerun,
-            self.ui.actionSelect_All,
-            self.ui.actionDeselect_All,
+            self.ui.actionCheck_All_Traces,
+            self.ui.actionUncheck_All_Traces,
         )
 
         enableMenus_TransitionDensityWindow = (self.ui.actionFormat_Plot,)
@@ -641,6 +623,11 @@ class BaseWindow(QMainWindow):
     def onChecked(self, index):
         pass
 
+    @pyqtSlot(QListView)
+    def keyPressEvent(self, QKeyEvent):
+        if QKeyEvent.key() in [Qt.UpArrow, Qt.DownArrow]:
+            self.refreshPlot()
+
     def returnCurrentListviewNames(self):
         """
         Creates a list of current objects in ListView, to avoid duplicate
@@ -655,13 +642,13 @@ class BaseWindow(QMainWindow):
 
     def clearTraceAndRerun(self):
         """
-        Clears everything and reruns on selected movies.
+        Clears everything and reruns on selected videos.
         """
         MainWindow_.clearTraces()
 
-        # Load all traces into their respective movies, and generate a list
+        # Load all traces into their respective videos, and generate a list
         # of traces
-        MainWindow_.getTracesAllMovies()
+        MainWindow_.getTracesAllVideos()
 
         # Iterate over all filenames and add to list
         for (name, trace) in MainWindow_.data.traces.items():
@@ -702,7 +689,7 @@ class BaseWindow(QMainWindow):
     def returnContainerInstance(self):
         """Returns appropriate data container for implemented windows"""
         if isinstance(self, MainWindow):
-            container = self.data.movies
+            container = self.data.videos
         elif isinstance(self, TraceWindow):
             container = MainWindow_.data.traces
         else:
@@ -726,7 +713,7 @@ class BaseWindow(QMainWindow):
 
     def deleteAllListObjects(self):
         """
-        Deletes all Example_Files from listview.
+        Deletes all files from listview.
         """
         self.listModel.clear()
         container = self.returnContainerInstance()
@@ -776,8 +763,12 @@ class BaseWindow(QMainWindow):
 
     def unCheckAll(self):
         """
-        Unchecks all list elements.
+        Unchecks all list elements. Attribute check because they override
+        "select", which is normally reserved for text fields
         """
+        if not hasattr(self, "listModel"):
+            return
+
         for index in range(self.listModel.rowCount()):
             item = self.listModel.item(index)
             item.setCheckState(Qt.Unchecked)
@@ -794,6 +785,9 @@ class BaseWindow(QMainWindow):
         """
         Checks all list elements.
         """
+        if not hasattr(self, "listModel"):
+            return
+
         for index in range(self.listModel.rowCount()):
             item = self.listModel.item(index)
             item.setCheckState(Qt.Checked)
@@ -806,15 +800,11 @@ class BaseWindow(QMainWindow):
         if TransitionDensityWindow_.isVisible():
             TransitionDensityWindow_.refreshPlot()
 
-    def setupFigureCanvas(
-        self, ax_setup, ax_window, use_layoutbox=True, **kwargs
-    ):
+    def setupFigureCanvas(self, ax_type, use_layoutbox=True, **kwargs):
         """
         Creates a canvas with a given ax layout.
         """
-        self.plotWidget = PlotWidget(
-            ax_setup=ax_setup, ax_window=ax_window, **kwargs
-        )
+        self.plotWidget = PlotWidget(ax_type=ax_type, **kwargs)
         self.canvas = self.plotWidget.canvas
 
         if use_layoutbox:
@@ -911,7 +901,8 @@ class BaseWindow(QMainWindow):
         """Override in subclass."""
         pass
 
-    def returnInfoHeader(self):
+    @staticmethod
+    def returnInfoHeader():
         """
         Generates boilerplate header text for every exported file.
         """
@@ -920,10 +911,38 @@ class BaseWindow(QMainWindow):
 
         return exp_txt, date_txt
 
+    @staticmethod
+    def traceHeader(
+        trace_df, exp_txt, id_txt, video_filename, bleaches_at, is_simulated
+    ):
+        """Returns the string to use for saving the trace as txt"""
+        date_txt = "Date: {}".format(time.strftime("%Y-%m-%d, %H:%M"))
+        bl_txt = "Bleaches at {}".format(bleaches_at)
+        vid_txt = "Video filename: {}".format(video_filename)
+
+        if is_simulated:
+            exp_txt += " (Simulated)"
+
+        return (
+            "{0}\n"
+            "{1}\n"
+            "{2}\n"
+            "{3}\n"
+            "{4}\n\n"
+            "{5}".format(
+                exp_txt,
+                date_txt,
+                vid_txt,
+                id_txt,
+                bl_txt,
+                trace_df.to_csv(index=False, sep="\t", na_rep="NaN"),
+            )
+        )
+
     def exportColocalization(self):
         """
         Exports colocalized ROI information for all currently colocalized
-        movies. Does not automatically trigger ColocalizeAll beforehand.
+        videos. Does not automatically trigger ColocalizeAll beforehand.
         """
         exp_txt, date_txt = self.returnInfoHeader()
 
@@ -943,12 +962,12 @@ class BaseWindow(QMainWindow):
 
             assert columns[-1] == "filename"
 
-            for name, mov in MainWindow_.movies.items():
+            for name, vid in MainWindow_.videos.items():
 
                 data = (
-                    mov.grn.n_spots,
-                    mov.red.n_spots,
-                    mov.coloc_grn_red.n_spots,
+                    vid.grn.n_spots,
+                    vid.red.n_spots,
+                    vid.coloc_grn_red.n_spots,
                     name,
                 )
 
@@ -968,19 +987,17 @@ class BaseWindow(QMainWindow):
                     )
                 )
 
-    def exportTraces(self, checked_only):
+    def exportTracesToAscii(self, checked_only=False):
         """
-        Exports all traces as ASCII Example_Files to selected directory.
+        Exports all traces as ASCII files to selected directory.
         Maintains compatibility with iSMS and older pySMS scripts.
         """
         if checked_only:
             traces = [
-                trace
-                for trace in MainWindow_.data.traces.values()
-                if trace.is_checked
+                trace for trace in self.data.traces.values() if trace.is_checked
             ]
         else:
-            traces = [trace for trace in MainWindow_.data.traces.values()]
+            traces = [trace for trace in self.data.traces.values()]
 
         diag = ExportDialog(
             init_dir=gvars.key_lastOpenedDir, accept_label="Export"
@@ -988,14 +1005,14 @@ class BaseWindow(QMainWindow):
 
         if diag.exec():
             path = diag.selectedFiles()[0]
-            ctxt.app.processEvents()
+            self.processEvents()
 
             for trace in traces:
                 trace.export_trace_to_txt(dir_to_join=path)
 
     def exportCorrectionFactors(self):
         """
-        Exports all available correction factors for each newTrace to table.
+        Exports all available correction factors for each trace to table.
         """
 
         exp_txt, date_txt = self.returnInfoHeader()
@@ -1128,18 +1145,24 @@ class BaseWindow(QMainWindow):
         if TraceWindow_.isVisible():
             CorrectionFactorInspector_.show()
 
+    """
+    Functions below are not used in the BaseWindow, but they MUST be present
+    in order to be triggered via the menubar. It's also a good way to keep
+    naming consistent
+    """
+
     def clearAllClassifications(self):
         """Override in subclass."""
         pass
 
-    def colocalizeSpotsAllMovies(self):
+    def colocalizeSpotsAllVideos(self):
         """Override in subclass."""
         pass
 
-    def getTrace(self, name):
+    def getTrace(self, name) -> TraceContainer:
         """Override in subclass."""
 
-    def getTracesAllMovies(self):
+    def getTracesAllVideos(self):
         """Override in subclass."""
         pass
 
@@ -1205,9 +1228,12 @@ class MainWindow(BaseWindow):
         self.currRow = None
         self.currDir = None
         self.currRoiSize = gvars.roi_draw_radius
-        self.imgMode = self.getConfig(gvars.key_imgMode)
+        self.donor_first = self.getConfig(gvars.key_firstFrameIsDonor)
+        self.donor_is_left = self.getConfig(gvars.key_donorLeft)
+        self.bg_correction = self.getConfig(gvars.key_illuCorrect)
+
         self.batchLoaded = (
-            False  # If movies have been batchloaded, disable some controls
+            False  # If videos have been batchloaded, disable some controls
         )
 
         # Initialize interface
@@ -1222,9 +1248,7 @@ class MainWindow(BaseWindow):
         )
 
         self.setupListView(use_layoutbox=False)
-        self.setupFigureCanvas(
-            ax_setup=self.imgMode, ax_window="img", use_layoutbox=False
-        )
+        self.setupFigureCanvas(ax_type="img", use_layoutbox=False)
         self.setupPlot()
         self.setupSplitter(layout=self.ui.LayoutBox)
 
@@ -1257,39 +1281,39 @@ class MainWindow(BaseWindow):
         )
 
         # Initialize DataHolder class
-        self.data = MovieData()
+        self.data = VideoData()
         TraceWindow.data = self.data
 
         self.show()
 
-    def currentMovie(self) -> ImageContainer:
+    def currentVideo(self) -> VideoContainer:
         """
         Quick interface to obtain file data (or names will be extremely long).
         Add type hinting in metadata to improve autocomplete.
         """
         return self.data.get(self.currName)
 
-    def newTrace(self, n) -> TraceContainer:
+    def newTraceFromVideo(self, n) -> TraceContainer:
         """
-        Shortcut to obtain newTrace, and create a new one if it doesn't exist.
+        Shortcut to obtain trace, and create a new one if it doesn't exist.
         """
         tracename = self.currName + "_" + str(n)
         if tracename not in self.data.traces:
             self.data.traces[tracename] = TraceContainer(
-                filename=tracename, movie=self.currName, n=n
+                filename=tracename, video=self.currName, n=n
             )
         return self.data.traces[tracename]
 
     def trace_c(self, n, channel) -> TraceChannel:
         """
-        Shortcut to obtain trace channel. See newTrace().
+        Shortcut to obtain trace channel. See newTraceFromVideo().
         """
         if channel == "green":
-            return self.newTrace(n).grn
+            return self.newTraceFromVideo(n).grn
         elif channel == "red":
-            return self.newTrace(n).red
+            return self.newTraceFromVideo(n).red
         elif channel == "acc":
-            return self.newTrace(n).acc
+            return self.newTraceFromVideo(n).acc
         else:
             raise ValueError("Invalid channel")
 
@@ -1308,7 +1332,7 @@ class MainWindow(BaseWindow):
             filenames, selectedFilter = QFileDialog.getOpenFileNames(
                 self,
                 caption="Open File",
-                filter="Movie files (*.tif)",
+                filter="Video files (*.tif *fits)",
                 directory=directory,
             )
 
@@ -1321,14 +1345,15 @@ class MainWindow(BaseWindow):
                     # Make sure name is unique
                     uniqueName = lib.misc.generate_unique_name(
                         full_filename=full_filename,
-                        array=self.data.movies.keys(),
+                        array=self.data.videos.keys(),
                     )
 
-                    self.data.load_img(
+                    self.data.load_video_data(
                         path=full_filename,
                         name=uniqueName,
-                        setup=self.imgMode,
-                        bg_correction=self.getConfig(gvars.key_illuCorrect),
+                        donor_is_first=self.donor_first,
+                        donor_is_left=self.donor_is_left,
+                        bg_correction=self.bg_correction,
                     )
 
                     item = QStandardItem(uniqueName)
@@ -1341,7 +1366,7 @@ class MainWindow(BaseWindow):
                     self.listView.repaint()
                     progressbar.increment()
 
-                # Select first movie if loading into an empty listView
+                # Select first video if loading into an empty listView
                 if self.currRow is None:
                     self.currRow = 0
                     self.selectListViewTopRow()
@@ -1357,8 +1382,8 @@ class MainWindow(BaseWindow):
             self.batchOpen()
 
     def batchOpen(self):
-        """Loads one movie at a time and extracts traces, then clears the
-        movie from memory afterwards"""
+        """Loads one video at a time and extracts traces, then clears the
+        video from memory afterwards"""
         # TraceWindow_.traces.clear()
         if self.getConfig(gvars.key_lastOpenedDir) == "None":
             directory = os.path.join(
@@ -1371,14 +1396,12 @@ class MainWindow(BaseWindow):
             self,
             caption="Open File",
             directory=directory,
-            filter="Movie files (*.tif)",
+            filter="Video files (*.tif *.fits)",
         )
 
         if len(filenames) > 0:
             ctxt.app.processEvents()
-            progressbar = ProgressBar(
-                loop_len=len(filenames), parent=MainWindow_
-            )
+            progressbar = ProgressBar(loop_len=len(filenames), parent=self)
             for i, full_filename in enumerate(filenames):
                 if progressbar.wasCanceled():
                     break
@@ -1386,30 +1409,31 @@ class MainWindow(BaseWindow):
                     progressbar.increment()
 
                 self.currName = os.path.basename(full_filename)
-                if self.currName in self.data.movies:
+                if self.currName in self.data.videos:
                     continue
 
-                self.data.load_img(
+                self.data.load_video_data(
                     path=full_filename,
                     name=os.path.basename(full_filename),
-                    setup=self.imgMode,
-                    bg_correction=self.getConfig(gvars.key_illuCorrect),
+                    donor_is_first=self.donor_first,
+                    donor_is_left=self.donor_is_left,
+                    bg_correction=self.bg_correction,
                 )
 
                 channels = ("green", "red")
                 for c in channels:
-                    if self.currentMovie().acc.exists:
-                        self.colocalizeSpotsSingleMovie(
+                    if self.currentVideo().acc.exists:
+                        self.colocalizeSpotsSingleVideo(
                             channel=c, find_npairs="auto"
                         )
                     else:
-                        self.colocalizeSpotsSingleMovie(
+                        self.colocalizeSpotsSingleVideo(
                             channel=c, find_npairs="spinbox"
                         )
-                self.getTracesSingleMovie()
-                self.currentMovie().img = None
-                for c in self.currentMovie().channels + (
-                    self.currentMovie().acc,
+                self.getTracesSingleVideo()
+                self.currentVideo().vid = None
+                for c in self.currentVideo().channels + (
+                    self.currentVideo().acc,
                 ):
                     c.raw = None
 
@@ -1440,25 +1464,25 @@ class MainWindow(BaseWindow):
             self.selectListViewTopRow()
             self.refreshPlot()
 
-    def colocalizeSpotsSingleMovie(self, channel, find_npairs="spinbox"):
+    def colocalizeSpotsSingleVideo(self, channel, find_npairs="spinbox"):
         """
-        Find and colocalize spots for a single currentMovie (not displayed).
+        Find and colocalize spots for a single currentVideo (not displayed).
         """
-        mov = self.currentMovie()
+        vid = self.currentVideo()
         tolerance_type = self.getConfig(gvars.key_colocTolerance)
         tolerance_value = gvars.roi_coloc_tolerances[tolerance_type]
 
         if channel == "green":
-            channel = mov.grn
+            channel = vid.grn
             spinBox = self.ui.spotsGrnSpinBox
-            pairs = ((mov.grn, mov.red),)
-            colocs = (mov.coloc_grn_red,)
+            pairs = ((vid.grn, vid.red),)
+            colocs = (vid.coloc_grn_red,)
 
         elif channel == "red":
-            channel = mov.red
+            channel = vid.red
             spinBox = self.ui.spotsRedSpinBox
-            pairs = ((mov.grn, mov.red),)
-            colocs = (mov.coloc_grn_red,)
+            pairs = ((vid.grn, vid.red),)
+            colocs = (vid.coloc_grn_red,)
         else:
             raise ValueError("Invalid color")
 
@@ -1481,7 +1505,7 @@ class MainWindow(BaseWindow):
                 real_spots = []
                 for spot in spots:
                     masks = lib.imgdata.circle_mask(
-                        yx=spot, indices=mov.indices, **gvars.cmask_p
+                        yx=spot, indices=vid.indices, **gvars.cmask_p
                     )
                     intensity, bg = lib.imgdata.tiff_stack_intensity(
                         channel.mean_nobg, *masks, raw=True
@@ -1502,10 +1526,10 @@ class MainWindow(BaseWindow):
                 channel.n_spots = len(channel.spots)
 
         if channel == "red" and self.getConfig(gvars.key_unColocRed):
-            mov.grn.spots = mov.red.spots
-            mov.acc.spots = mov.red.spots
-            mov.grn.n_spots = mov.red.n_spots
-            mov.acc.n_spots = mov.red.n_spots
+            vid.grn.spots = vid.red.spots
+            vid.acc.spots = vid.red.spots
+            vid.grn.n_spots = vid.red.n_spots
+            vid.acc.n_spots = vid.red.n_spots
 
         for (c1, c2), coloc in zip(pairs, colocs):
             if all((c1.n_spots, c2.n_spots)) > 0:
@@ -1518,83 +1542,83 @@ class MainWindow(BaseWindow):
                 )
                 coloc.n_spots = len(coloc.spots)
 
-        mov.coloc_all.spots = mov.coloc_grn_red.spots
-        mov.coloc_all.n_spots = mov.coloc_grn_red.n_spots
+        vid.coloc_all.spots = vid.coloc_grn_red.spots
+        vid.coloc_all.n_spots = vid.coloc_grn_red.n_spots
 
     def displaySpotsSingle(self, channel):
         """
-        Displays colocalized spot for a single movie.
+        Displays colocalized spot for a single video.
         """
         self.getCurrentListObject()
-        print(self.currName)
+
         if self.currName is not None:
-            self.colocalizeSpotsSingleMovie(channel)
+            self.colocalizeSpotsSingleVideo(channel)
             self.refreshPlot()
 
-    def colocalizeSpotsAllMovies(self):
+    def colocalizeSpotsAllVideos(self):
         """
-        Colocalizes spots for all movies, with the same threshold. Use this
+        Colocalizes spots for all videos, with the same threshold. Use this
         method instead for progress bar.
         """
         progressbar = ProgressBar(
-            loop_len=len(self.data.movies.keys()), parent=self
+            loop_len=len(self.data.videos.keys()), parent=self
         )
-        for name in self.data.movies.keys():
+        for name in self.data.videos.keys():
             self.currName = name
             for c in "green", "red":
-                self.colocalizeSpotsSingleMovie(c)
+                self.colocalizeSpotsSingleVideo(c)
             progressbar.increment()
 
         self.resetCurrentName()
         self.refreshPlot()
 
-    def getTracesSingleMovie(self):
+    def getTracesSingleVideo(self):
         """
-        Gets traces from colocalized ROIs, for a single movie.
+        Gets traces from colocalized ROIs, for a single video.
         """
         if self.currName is None:
             return
-        mov = self.currentMovie()
+        vid = self.currentVideo()
 
         # Clear all traces previously held traces whenever this is called
-        mov.traces = {}
+        vid.traces = {}
 
-        if mov.coloc_grn_red.spots is None:
+        if vid.coloc_grn_red.spots is None:
             for c in "green", "red":
-                self.colocalizeSpotsSingleMovie(c)
+                self.colocalizeSpotsSingleVideo(c)
         else:
-            for n, *row in mov.coloc_grn_red.spots.itertuples():
+            for n, *row in vid.coloc_grn_red.spots.itertuples():
                 yx_grn, yx_red = lib.misc.pairwise(row)
 
-                trace = self.newTrace(n)
+                trace = self.newTraceFromVideo(n)
 
                 # Green
-                if mov.grn.exists and yx_grn is not None:
+                if vid.grn.exists and yx_grn is not None:
                     masks_grn = lib.imgdata.circle_mask(
-                        yx=yx_grn, indices=mov.indices, **gvars.cmask_p
+                        yx=yx_grn, indices=vid.indices, **gvars.cmask_p
                     )
                     (
                         trace.grn.int,
                         trace.grn.bg,
                     ) = lib.imgdata.tiff_stack_intensity(
-                        mov.grn.raw, *masks_grn, raw=True
+                        vid.grn.raw, *masks_grn, raw=True
                     )
 
                 # Red
                 masks_red = lib.imgdata.circle_mask(
-                    yx=yx_red, indices=mov.indices, **gvars.cmask_p
+                    yx=yx_red, indices=vid.indices, **gvars.cmask_p
                 )
                 trace.red.int, trace.red.bg = lib.imgdata.tiff_stack_intensity(
-                    mov.red.raw, *masks_red, raw=True
+                    vid.red.raw, *masks_red, raw=True
                 )
 
                 # Acceptor (if FRET)
-                if mov.acc.exists:
+                if vid.acc.exists:
                     (
                         trace.acc.int,
                         trace.acc.bg,
                     ) = lib.imgdata.tiff_stack_intensity(
-                        mov.acc.raw, *masks_red, raw=True
+                        vid.acc.raw, *masks_red, raw=True
                     )
                     trace.fret = lib.math.calc_E(trace.get_intensities())
                     trace.stoi = lib.math.calc_S(trace.get_intensities())
@@ -1602,16 +1626,16 @@ class MainWindow(BaseWindow):
                 trace.frames = np.arange(1, len(trace.red.int) + 1)
                 trace.frames_max = max(trace.frames)
 
-    def getTracesAllMovies(self):
+    def getTracesAllVideos(self):
         """
         Gets the traces from all videos that have colocalized ROIs.
         """
-        for name in self.data.movies.keys():
+        for name in self.data.videos.keys():
             self.currName = name
             for c in "green", "red":
-                self.colocalizeSpotsSingleMovie(c)
+                self.colocalizeSpotsSingleVideo(c)
 
-            self.getTracesSingleMovie()
+            self.getTracesSingleVideo()
 
         self.resetCurrentName()
 
@@ -1661,8 +1685,8 @@ class MainWindow(BaseWindow):
             ax.clear()
 
         if self.currName is not None:
-            mov = self.currentMovie()
-            roi_radius = mov.roi_radius
+            vid = self.currentVideo()
+            roi_radius = vid.roi_radius
 
             contrast_lo = (
                 self.ui.contrastBoxLoGreen,
@@ -1678,10 +1702,10 @@ class MainWindow(BaseWindow):
             )
             # Rescale values according to UI first
             # might break image if too high
-            sensitivity = 100 if self.imgMode == "bypass" else 250
+            sensitivity = 250
 
             for c, lo, hi in zip(
-                mov.channels, contrast_lo, contrast_hi
+                vid.channels, contrast_lo, contrast_hi
             ):  # type: ImageChannel, QDoubleSpinBox, QDoubleSpinBox
                 clip_lo = float(lo.value() / sensitivity)
                 clip_hi = float(hi.value() / sensitivity)
@@ -1694,7 +1718,7 @@ class MainWindow(BaseWindow):
                 self.setConfig(cfg, hi.value())
 
             # Single channels
-            for img, ax in zip(mov.channels, self.canvas.axes_single):
+            for img, ax in zip(vid.channels, self.canvas.axes_single):
                 if img.rgba is not None:
                     # Avoid imshow showing blank if clipped too much
                     if np.isnan(img.rgba).any():
@@ -1703,7 +1727,7 @@ class MainWindow(BaseWindow):
                 else:
                     lib.plotting.empty_imshow(ax)
 
-            c1, c2 = mov.grn, mov.red
+            c1, c2 = vid.grn, vid.red
             if c1.rgba is not None and c2.rgba is not None:
                 self.canvas.ax_grn_red.imshow(
                     lib.imgdata.light_blend(
@@ -1719,27 +1743,27 @@ class MainWindow(BaseWindow):
                 ax.set_yticks(())
 
             # Green spots
-            if mov.grn.n_spots > 0:
+            if vid.grn.n_spots > 0:
                 lib.plotting.plot_rois(
-                    mov.grn.spots,
+                    vid.grn.spots,
                     self.canvas.ax_grn,
                     color=gvars.color_white,
                     radius=roi_radius,
                 )
 
             # Red spots
-            if mov.red.n_spots > 0:
+            if vid.red.n_spots > 0:
                 lib.plotting.plot_rois(
-                    mov.red.spots,
+                    vid.red.spots,
                     self.canvas.ax_red,
                     color=gvars.color_white,
                     radius=roi_radius,
                 )
 
             # Colocalized spots
-            if mov.coloc_grn_red.spots is not None:
+            if vid.coloc_grn_red.spots is not None:
                 lib.plotting.plot_roi_coloc(
-                    mov.coloc_grn_red.spots,
+                    vid.coloc_grn_red.spots,
                     img_ax=self.canvas.ax_grn_red,
                     color1=gvars.color_green,
                     color2=gvars.color_red,
@@ -1758,20 +1782,19 @@ class MainWindow(BaseWindow):
         Repaints UI labels to match the current plot shown.
         """
         if self.currName is not None:
-            mov = self.currentMovie()
+            vid = self.currentVideo()
 
             channels = (
-                mov.coloc_grn_red,
-                mov.grn,
-                mov.red,
+                vid.coloc_grn_red,
+                vid.grn,
+                vid.red,
             )
 
             for channel, label in zip(channels, self.labels):
                 label.setText(str(channel.n_spots))
 
-            # self.ui.spotsBluSpinBox.setDisabled(not mov.blu.exists)
-            self.ui.spotsGrnSpinBox.setDisabled(not mov.grn.exists)
-            self.ui.spotsRedSpinBox.setDisabled(not mov.red.exists)
+            self.ui.spotsGrnSpinBox.setDisabled(not vid.grn.exists)
+            self.ui.spotsRedSpinBox.setDisabled(not vid.red.exists)
 
             if self.batchLoaded:
                 self.disableSpinBoxes(("green", "red",))
@@ -1790,9 +1813,9 @@ class MainWindow(BaseWindow):
         trace listView.
         """
         if len(self.data.traces) == 0:
-            # Load all traces into their respective movies, and generate a
+            # Load all traces into their respective videos, and generate a
             # list of traces
-            self.getTracesAllMovies()
+            self.getTracesAllVideos()
             currently_loaded = self.returnCurrentListviewNames()
             # Iterate over all filenames and add to list
             for (name, trace) in self.data.traces.items():
@@ -1811,17 +1834,17 @@ class MainWindow(BaseWindow):
 
     def newTraceFromContainer(self, trace, n):
         """
-        Creates an empty movie object to load traces into by transplanting a
+        Creates an empty video object to load traces into by transplanting a
         list of loaded TraceContainers
         """
         tracename = self.currName + "_" + str(n)
 
-        trace.currentMovie = self.currName
+        trace.currentVideo = self.currName
         trace.name = tracename
         trace.n = n
 
-        if tracename not in self.data.movies[self.currName].traces:
-            self.data.movies[self.currName].traces[tracename] = trace
+        if tracename not in self.data.videos[self.currName].traces:
+            self.data.videos[self.currName].traces[tracename] = trace
 
     def disableSpinBoxes(self, channel):
         """
@@ -1865,14 +1888,10 @@ class TraceWindow(BaseWindow):
         self.ui.setupUi(self)
         self.setupListView(use_layoutbox=False)
         self.setupFigureCanvas(
-            ax_setup=self.getConfig(gvars.key_imgMode),
-            ax_window="trace",
-            use_layoutbox=False,
+            ax_type="trace", use_layoutbox=False,
         )
         self.setupPlot()
         self.setupSplitter(layout=self.ui.layoutBox)
-
-        # self.data = MainWindow_.data
 
         # Canvas event handler
         self.cid = self.canvas.mpl_connect(
@@ -1934,7 +1953,9 @@ class TraceWindow(BaseWindow):
 
                 self.currDir = os.path.dirname(full_filename)
                 try:
-                    newTrace = TraceContainer(filename=full_filename)
+                    newTrace = TraceContainer(
+                        filename=full_filename, loaded_from_ascii=True
+                    )
                 except AttributeError:  # if a non-trace file was selected
                     warnings.warn(
                         f"This file could not be read: \n{full_filename}",
@@ -1990,19 +2011,17 @@ class TraceWindow(BaseWindow):
         """
         Fits all selected traces with a Hidden Markov Model (HMM)
         """
-        ctxt.app.processEvents()
+        self.processEvents()
         traces = [
             trace for trace in self.data.traces.values() if trace.is_checked
         ]
-        if traces == []:
+        if not traces:
             warnings.warn("No traces were selected!", UserWarning)
-            pass
         print(
             "Fitting HMM with {} setting".format(
                 self.getConfig(gvars.key_hmmMode)
             )
         )
-
         lDD, lDA, lAA, lE, llengths = [], [], [], [], []
         for trace in traces:
             _, I_DD, I_DA, I_AA = lib.math.correct_DA(trace.get_intensities())
@@ -2047,20 +2066,17 @@ class TraceWindow(BaseWindow):
 
         state_dict = {}
         for i, state in enumerate(self.hmmModel.states):
-            if self.getConfig(gvars.key_hmmMode) == "DA":
-                try:
+            try:
+                if self.getConfig(gvars.key_hmmMode) == "DA":
                     state_dict[
                         f"{state.name}".replace("s", "")
                     ] = state.distribution.parameters[0][-1].parameters
-                except AttributeError:
-                    continue
-            else:  # this is if we use E as X
-                try:
+                else:
                     state_dict[
                         f"{state.name}".replace("s", "")
                     ] = state.distribution.parameters
-                except AttributeError:
-                    continue
+            except AttributeError:
+                continue
         means = np.array([v[0] for v in state_dict.values()])
         sigs = np.array([v[1] for v in state_dict.values()])
 
@@ -2099,8 +2115,6 @@ class TraceWindow(BaseWindow):
 
             trace.calculate_transitions()
 
-        self.refreshPlot()
-
         if TransitionDensityWindow_.isVisible():
             TransitionDensityWindow_.refreshPlot()
 
@@ -2121,7 +2135,7 @@ class TraceWindow(BaseWindow):
         """
         Classifies checked traces with deep learning model.
         """
-        ctxt.app.processEvents()
+        self.processEvents()
 
         alpha = self.getConfig(gvars.key_alphaFactor)
         delta = self.getConfig(gvars.key_deltaFactor)
@@ -2142,7 +2156,7 @@ class TraceWindow(BaseWindow):
         if len(traces) > 0:
             batch_size = 256
             batches = (len(traces) // batch_size) + 1
-            progressbar = ProgressBar(loop_len=batches, parent=TraceWindow_)
+            progressbar = ProgressBar(loop_len=batches, parent=self)
 
             if not single:
                 all_lengths_eq = lib.math.all_equal(
@@ -2183,9 +2197,9 @@ class TraceWindow(BaseWindow):
                     X = X[np.newaxis, :, :]
 
                 model = (
-                    ctxt.keras_2c_model
+                    self.keras_two_channel_model
                     if X.shape[-1] == 2
-                    else ctxt.keras_3c_model
+                    else self.keras_three_channel_model
                 )
 
                 Y = lib.math.predict_batch(
@@ -2202,15 +2216,15 @@ class TraceWindow(BaseWindow):
                             trace.get_intensities(), alpha=alpha, delta=delta
                         )
                     )
-
                     if lib.math.contains_nan(xi[..., -1]):
-                        model = ctxt.keras_2c_model
+                        model = self.keras_two_channel_model
                         xi = xi[..., [1, 2]]
                     else:
-                        model = ctxt.keras_3c_model
+                        model = self.keras_three_channel_model
                         xi = xi[..., [1, 2, 3]]
 
                     xi = lib.math.sample_max_normalize_3d(X=xi)
+
                     yi = lib.math.predict_single(xi=xi, model=model)
                     Y.append(yi)
                     if n % batch_size == 0:
@@ -2220,7 +2234,6 @@ class TraceWindow(BaseWindow):
                 self.setClassifications(trace=trace, yi_pred=Y[n])
 
             self.resetCurrentName()
-            self.refreshPlot()
 
     def clearAllClassifications(self):
         """
@@ -2234,7 +2247,6 @@ class TraceWindow(BaseWindow):
             trace.first_bleach = None
             for c in trace.channels:
                 c.bleach = None
-        self.refreshPlot()
 
     def triggerBleach(self, color):
         """
@@ -2287,9 +2299,9 @@ class TraceWindow(BaseWindow):
         self.listModel.removeRows(0, self.listModel.rowCount())
         self.data.traces = []
 
-    def returnTracenamesAllMovies(self, names_only=True):
+    def returnTracenamesAllVideos(self, names_only=True):
         """
-        Obtains all available tracenames from movies and returns them as a list.
+        Obtains all available tracenames from videos and returns them as a list.
         """
         if names_only:
             tracenames = [trace for trace in self.data.traces.keys()]
@@ -2403,11 +2415,11 @@ class TraceWindow(BaseWindow):
         Generates a pretty, readable generatePrettyTracename.
         """
 
-        if trace.movie is None:
+        if trace.video is None:
             name = "Trace_pair{}.txt".format(trace.n)
         else:
             name = "Trace_{}_pair{}.txt".format(
-                trace.movie.replace(".", "_"), trace.n
+                trace.video.replace(".", "_"), trace.n
             )
 
         # Scrub mysterious \n if they appear due to filenames
@@ -2458,9 +2470,7 @@ class TraceWindow(BaseWindow):
                 spine.set_edgecolor(gvars.color_gui_text)
                 spine.set_linewidth(0.5)
 
-        if self.getConfig(gvars.key_imgMode) != "bypass":
-            # only for FRET red axis (right side)
-            self.canvas.ax_red.yaxis.set_label_coords(1.05, 0.5)
+        self.canvas.ax_acc.yaxis.set_label_coords(1.05, 0.5)
 
     def getCorrectionFactors(self, factor):
         """
@@ -2554,33 +2564,20 @@ class TraceWindow(BaseWindow):
                 else:
                     ax.set_xlim(1, trace.frames_max)
 
-            # Canvas setup
-            if self.canvas.ax_setup in (
-                "dual",
-                "2-color",
-                "2-color-inv",
-                "3-color",
-            ):
-                channels = [trace.grn, trace.acc, trace.red]
-                colors = [gvars.color_green, gvars.color_red, gvars.color_red]
-
-            elif self.canvas.ax_setup == "bypass":
-                channels = trace.grn, trace.red
-                colors = gvars.color_green, gvars.color_red
-            else:
-                raise ValueError("Setup is not valid. Corrupted config.ini?")
+            channels = [trace.grn, trace.acc, trace.red]
+            colors = [gvars.color_green, gvars.color_red, gvars.color_red]
 
             for (ax, label), channel, color in zip(
                 self.canvas.axes_c, channels, colors
             ):
                 if label == "A":
-                    int_ = F_DA
-                    ax = self.canvas.ax_red
+                    signal = F_DA
+                    ax = self.canvas.ax_acc
                 elif label == "A-direct":
-                    int_ = I_AA
-                    ax = self.canvas.ax_alx
+                    signal = I_AA
+                    ax = self.canvas.ax_red
                 elif label == "D":
-                    int_ = I_DD
+                    signal = I_DD
                     ax = self.canvas.ax_grn
 
                     af = (
@@ -2600,8 +2597,8 @@ class TraceWindow(BaseWindow):
                         color=gvars.color_grey,
                     )
                 else:
-                    int_ = channel.int
-                if int_ is None:
+                    signal = channel.int
+                if signal is None:
                     continue
 
                 if label != "A":
@@ -2616,79 +2613,89 @@ class TraceWindow(BaseWindow):
                         zorder=0,
                     )
 
-                ax.plot(trace.frames, int_, color=color)
+                ax.plot(trace.frames, signal, color=color)
+
+                # Try to make both signals land on top of each other, and zero
                 try:
-                    ax.set_ylim(0 - int_.max() * 0.1, int_.max() * 1.1)
+                    ax.set_ylim(0 - signal.max() * 0.1, signal.max() * 1.1)
                 except ValueError:
                     ax.set_ylim(0, 1.1)
                 ax.yaxis.label.set_color(gvars.color_gui_text)
-                lib.plotting.set_axis_exp_ylabel(
-                    ax=ax, label=label, values=int_
-                )
+
+                if not lib.math.contains_nan(signal):
+                    lib.plotting.set_axis_exp_ylabel(
+                        ax=ax, label=label, values=signal
+                    )
+                else:
+                    ax.set_ylabel("")
+                    ax.set_yticks(())
 
             # Continue drawing FRET specifics
-            if self.canvas.ax_setup != "bypass":
-                fret = lib.math.calc_E(trace.get_intensities(), *factors)
-                stoi = lib.math.calc_S(trace.get_intensities(), *factors)
+            fret = lib.math.calc_E(trace.get_intensities(), *factors)
+            stoi = lib.math.calc_S(trace.get_intensities(), *factors)
 
-                ax_E = self.canvas.ax_fret
-                ax_S = self.canvas.ax_stoi
-
-                for signal, ax, color, label in zip(
-                    (fret, stoi),
-                    (ax_E, ax_S),
-                    (gvars.color_orange, gvars.color_purple),
-                    ("E", "S"),
-                ):
-                    ax.plot(trace.frames, signal, color=color)
-                    ax.axvspan(
-                        trace.first_bleach,
-                        trace.frames_max,
-                        color="darkgrey",
-                        alpha=0.4,
-                        zorder=0,
-                    )
-                    ax.set_ylabel(label)
-
-                if trace.hmm is not None:
-                    ax_E.plot(
-                        trace.hmm_idx,
-                        trace.hmm,
-                        color=gvars.color_blue,
-                        zorder=3,
-                    )
-
-                ax_E.set_ylim(-0.1, 1.1)
-                ax_S.set_ylim(0, 1)
-                ax_S.set_yticks([0.5])
-                ax_S.axhline(
-                    0.5, color="black", alpha=0.3, lw=0.5, ls="--", zorder=2
+            for signal, ax, color, label in zip(
+                (fret, stoi),
+                (self.canvas.ax_fret, self.canvas.ax_stoi),
+                (gvars.color_orange, gvars.color_purple),
+                ("E", "S"),
+            ):
+                ax.plot(trace.frames, signal, color=color)
+                ax.axvspan(
+                    trace.first_bleach,
+                    trace.frames_max,
+                    color="darkgrey",
+                    alpha=0.4,
+                    zorder=0,
                 )
 
-                # If clicking on the trace
-                if len(trace.xdata) == 1:
-                    self.canvas.ax_grn.axvline(
-                        trace.xdata[0],
-                        ls="-",
-                        alpha=0.2,
-                        zorder=10,
-                        color=gvars.color_red,
-                    )
-                    self.canvas.ax_alx.axvline(
-                        trace.xdata[0],
-                        ls="-",
-                        alpha=0.2,
-                        zorder=10,
-                        color=gvars.color_red,
-                    )
-                elif len(trace.xdata) == 2:
-                    xmin, xmax = sorted(trace.xdata)
-                    self.canvas.ax_grn.axvline(
-                        xmin, color=gvars.color_red, zorder=10, lw=30, alpha=0.2
-                    )
-                    self.canvas.ax_grn.axvline(
-                        xmax, color=gvars.color_red, zorder=10, lw=30, alpha=0.2
-                    )
+                ax.set_ylim(-0.1, 1.1)
+                ax.set_ylabel(label)
+                ax.set_yticks([0.5])
+                ax.axhline(
+                    0.5, color="black", alpha=0.3, lw=0.5, ls="--", zorder=2,
+                )
+
+            if trace.hmm is not None:
+                self.canvas.ax_fret.plot(
+                    trace.hmm_idx, trace.hmm, color=gvars.color_blue, zorder=3,
+                )
+
+            # If clicking on the trace
+            if len(trace.xdata) == 1:
+                self.canvas.ax_grn.axvline(
+                    trace.xdata[0],
+                    ls="-",
+                    alpha=0.2,
+                    zorder=10,
+                    color=gvars.color_red,
+                )
+                self.canvas.ax_red.axvline(
+                    trace.xdata[0],
+                    ls="-",
+                    alpha=0.2,
+                    zorder=10,
+                    color=gvars.color_red,
+                )
+            elif len(trace.xdata) == 2:
+                xmin, xmax = sorted(trace.xdata)
+
+                for ax in self.canvas.axes:
+                    if ax != self.canvas.ax_acc:
+                        ax.axvline(
+                            xmin,
+                            color=gvars.color_red,
+                            zorder=10,
+                            lw=30,
+                            alpha=0.2,
+                        )
+                        ax.axvline(
+                            xmax,
+                            color=gvars.color_red,
+                            zorder=10,
+                            lw=30,
+                            alpha=0.2,
+                        )
 
             if hasattr(self.canvas, "ax_ml") and trace.y_pred is not None:
                 lib.plotting.plot_predictions(
@@ -2696,7 +2703,6 @@ class TraceWindow(BaseWindow):
                     fig=self.canvas.fig,
                     ax=self.canvas.ax_ml,
                 )
-
         else:
             for ax in self.canvas.axes:
                 ax.clear()
@@ -2736,31 +2742,27 @@ class HistogramWindow(BaseWindow):
         self.setupFigureCanvas(
             ax_setup="plot", ax_window="histwin", width=10, height=10,
         )
+
         self.setupPlot()
         self.connectUi()
 
         self.data = MainWindow_.data
 
     def connectUi(self):
-        [
+        for f in (
+            partial(self.fitGaussians, "auto"),
+            partial(self.refreshPlot, True),
+        ):
             self.ui.gaussianAutoButton.clicked.connect(f)
-            for f in (
-                partial(self.fitGaussians, "auto"),
-                partial(self.refreshPlot, True),
-            )
-        ]
-        [
+
+        for f in (self.fitGaussians, self.refreshPlot):
             self.ui.gaussianSpinBox.valueChanged.connect(f)
-            for f in (self.fitGaussians, self.refreshPlot)
-        ]
-        [
+
+        for f in (self.fitGaussians, self.refreshPlot):
             self.ui.applyCorrectionsCheckBox.clicked.connect(f)
-            for f in (self.fitGaussians, self.refreshPlot)
-        ]
-        [
+
+        for f in (self.fitGaussians, self.refreshPlot):
             self.ui.framesSpinBox.valueChanged.connect(f)
-            for f in (self.fitGaussians, self.refreshPlot)
-        ]
 
     def savePlot(self):
         """
@@ -3323,9 +3325,7 @@ class TransitionDensityWindow(BaseWindow):
         self.ui.setupUi(self)
         self.ui.nClustersSpinBox.valueChanged.connect(self.refreshPlot)
 
-        self.setupFigureCanvas(
-            ax_setup="plot", ax_window="dynamic", width=2, height=2
-        )
+        self.setupFigureCanvas(ax_type="plot", width=2, height=2)
         self.setupPlot()
 
     def savePlot(self):
@@ -3834,27 +3834,45 @@ class SimulatorWindow(BaseWindow):
     smFRET trace simulator window
     """
 
+    class Data:
+        traces = {}
+        examples = {}
+
     def __init__(self):
         super().__init__()
+        self.data = self.Data()
+        self.df = pd.DataFrame()
         self.ui = Ui_SimulatorWindow()
         self.ui.setupUi(self)
 
-        self.setupFigureCanvas(
-            ax_setup="plot", ax_window="single", use_layoutbox=True
-        )
+        self.setupFigureCanvas(ax_type="dynamic", use_layoutbox=True)
         self.connectUi()
 
     def connectUi(self):
         """Connect interface"""
         # Find and connect all checkboxes dynamically
-        [
-            getattr(self.ui, c).clicked.connect(self.refreshUi)
-            for c in dir(self.ui)
-            if c.startswith("checkBox")
-        ]
-        self.ui.pushButtonRefresh.clicked.connect(self.refreshPlot)
+
+        for c in dir(self.ui):
+            if c.startswith("checkBox"):
+                [
+                    getattr(self.ui, c).clicked.connect(f)
+                    for f in (self.refreshUi, self.refreshPlot)
+                ]
+
+        self.ui.inputFretStateMeans.returnPressed.connect(self.refreshPlot)
+
+        for i in dir(self.ui):
+            if i.startswith("input") and not i.startswith("inputFret"):
+                getattr(self.ui, i).textChanged.connect(self.refreshPlot)
+
         self.ui.examplesComboBox.currentTextChanged.connect(self.refreshPlot)
-        self.ui.pushButtonExport.clicked.connect(self.exportTracesToAscii)
+
+        for f in (
+            self.valuesFromGUI,
+            partial(self.generateTraces, False),
+            self.exportTracesToAscii,
+        ):
+            self.ui.pushButtonExport.clicked.connect(f)
 
     def savePlot(self):
         """
@@ -3914,9 +3932,19 @@ class SimulatorWindow(BaseWindow):
         if self.ui.checkBoxRandomState.isChecked():
             self.fret_means = "random"
         else:
-            self.fret_means = lib.misc.numstring_to_ls(
-                self.ui.inputFretStateMeans.text()
+            if hasattr(self, "fret_means"):
+                old_fret_means = self.fret_means
+            else:
+                old_fret_means = float(self.ui.inputFretStateMeans.text())
+
+            new_fret_means = sorted(
+                lib.misc.numstring_to_ls(self.ui.inputFretStateMeans.text())
             )
+            if not new_fret_means:
+                self.fret_means = 0
+
+            if new_fret_means != old_fret_means:
+                self.fret_means = new_fret_means
 
         # Max number of random states
         self.max_random_states = int(self.ui.inputMaxRandomStates.value())
@@ -3985,9 +4013,17 @@ class SimulatorWindow(BaseWindow):
                 float(self.ui.inputScalerHi.value()),
             )
 
-    def generateTraces(self, n_traces):
-        """Generate traces to show in the GUI or export"""
+    def getTrace(self, idx) -> TraceContainer:
+        """Returns a trace, given assigned index from df"""
+        return self.data.traces[idx]
+
+    def generateTraces(self, examples: bool):
+        """Generate traces to show in the GUI (examples) or for export"""
+        n_traces = self.n_examples if examples else self.n_traces
+
         if n_traces > 50:
+            # every number of traces gets 20 updates in total
+            # but closes if less
             update_every_nth = n_traces // 20
             progressbar = ProgressBar(
                 parent=self, loop_len=n_traces / update_every_nth
@@ -3996,7 +4032,12 @@ class SimulatorWindow(BaseWindow):
             update_every_nth = None
             progressbar = None
 
-        self.traces = lib.math.generate_traces(
+        if examples:
+            self.data.examples.clear()
+        else:
+            self.data.traces.clear()
+
+        df = lib.math.generate_traces(
             n_traces=n_traces,
             aa_mismatch=self.aa_mismatch,
             state_means=self.fret_means,
@@ -4020,21 +4061,34 @@ class SimulatorWindow(BaseWindow):
             callback_every=update_every_nth,
         )
 
+        df.index = np.arange(0, len(df), 1) // int(self.trace_len)
+        for n, (idx, trace_df) in enumerate(df.groupby(df.index)):
+            self.data.traces[idx] = TraceContainer(
+                filename="trace_{}.txt".format(idx),
+                loaded_from_ascii=False,
+                n=idx,
+            )
+
+            self.getTrace(idx).set_from_df(df=trace_df)
+
         if progressbar is not None:
             progressbar.close()
 
     def refreshPlot(self):
         """Refreshes preview plots"""
-        self.canvas.flush_events()
-        self.canvas.fig.clear()
-
         self.valuesFromGUI()
+
+        try:
+            for ax in self.canvas.axes:
+                self.canvas.fig.delaxes(ax)
+        except KeyError:
+            pass
 
         # generate at least enough traces to show required number of examples
         if self.n_traces < self.n_examples:
             self.n_traces = self.n_examples
 
-        self.generateTraces(self.n_examples)
+        self.generateTraces(examples=True)
 
         n_subplots = self.n_examples
         nrows = int(self.n_examples ** (1 / 2))
@@ -4043,8 +4097,10 @@ class SimulatorWindow(BaseWindow):
             nrows, ncols, wspace=0.1, hspace=0.1
         )  # 2x2 grid
 
+        self.canvas.axes = []
+
         for i in range(n_subplots):
-            trace = self.traces[self.traces["name"] == i]
+            trace = self.getTrace(i)
             inner_subplot = matplotlib.gridspec.GridSpecFromSubplotSpec(
                 nrows=5,
                 ncols=1,
@@ -4056,25 +4112,29 @@ class SimulatorWindow(BaseWindow):
             axes = [
                 plt.Subplot(self.canvas.fig, inner_subplot[n]) for n in range(5)
             ]
+            self.canvas.axes.extend(axes)
+
             ax_g_r, ax_red, ax_frt, ax_sto, ax_lbl = axes
-            bleach = trace["_bleaches_at"].values[0]
-            tmax = trace["frame"].max()
-            fret_states = np.unique(trace["E_true"])
+            bleach = trace.first_bleach
+            tmax = len(trace.grn.int)
+            fret_states = np.unique(trace.fret_true)
             fret_states = fret_states[fret_states != -1]
 
-            ax_g_r.plot(trace["DD"], color="seagreen")
-            ax_g_r.plot(trace["DA"], color="salmon")
-            ax_red.plot(trace["AA"], color="red")
-            ax_frt.plot(trace["E"], color="orange")
-            ax_frt.plot(trace["E_true"], color="black", ls="-", alpha=0.3)
+            ax_g_r.plot(trace.grn.int, color="seagreen")
+            ax_g_r.plot(trace.acc.int, color="salmon")
+            ax_red.plot(trace.red.int, color="red")
+            ax_frt.plot(trace.fret, color="orange")
+            ax_frt.plot(
+                trace.fret_true, color="black", ls="-", alpha=0.3
+            )  # TODO: fix in init
 
             for state in fret_states:
                 ax_frt.plot([0, bleach], [state, state], color="red", alpha=0.2)
 
-            ax_sto.plot(trace["S"], color="purple")
+            ax_sto.plot(trace.stoi, color="purple")
 
             lib.plotting.plot_simulation_category(
-                y=trace["label"],
+                y=trace.y_class,  # TODO: fix in init
                 ax=ax_lbl,
                 alpha=0.4,
                 fontsize=max(10, 36 // self.n_examples),
@@ -4083,7 +4143,7 @@ class SimulatorWindow(BaseWindow):
             for ax in ax_frt, ax_sto:
                 ax.set_ylim(-0.15, 1.15)
 
-            for ax, s in zip((ax_g_r, ax_red), (trace["DD"], trace["AA"])):
+            for ax, s in zip((ax_g_r, ax_red), (trace.grn.int, trace.red.int)):
                 ax.set_ylim(s.max() * -0.15)
                 ax.plot([0] * len(s), color="black", ls="--", alpha=0.5)
 
@@ -4099,76 +4159,8 @@ class SimulatorWindow(BaseWindow):
                 ax.set_xlim(0, tmax)
                 self.canvas.fig.add_subplot(ax)
 
+        # self.canvas.flush_events()
         self.canvas.draw()
-
-    # TODO: consolidate this with the general trace exporter to cut down duplicate?
-    def exportTracesToAscii(self):
-        """
-        Opens a folder dialog to save traces to ASCII .txt files
-        """
-        self.generateTraces(n_traces=int(self.ui.inputNumberOfTraces.value()))
-        df = self.traces
-
-        diag = ExportDialog(init_dir="~/Desktop/", accept_label="Export")
-
-        outdir = diag.selectedFiles()[0] if diag.exec() else None
-        df.index = np.arange(0, len(df), 1) // int(
-            self.ui.inputTraceLength.value()
-        )
-
-        if outdir is not None:
-            update_every_nth = self.n_traces // 20
-            progressbar = ProgressBar(
-                parent=self, loop_len=self.n_traces / update_every_nth
-            )
-
-            for n, (idx, trace) in enumerate(df.groupby(df.index)):
-                bg = np.zeros(len(trace))
-                path = os.path.join(
-                    outdir,
-                    "trace_{}_{}.txt".format(idx, time.strftime("%Y%m%d_%H%M")),
-                )
-
-                df = pd.DataFrame(
-                    {
-                        "D-Dexc-bg": bg,
-                        "A-Dexc-bg": bg,
-                        "A-Aexc-bg": bg,
-                        "D-Dexc-rw": trace["DD"],
-                        "A-Dexc-rw": trace["DA"],
-                        "A-Aexc-rw": trace["AA"],
-                        "S": trace["S"],
-                        "E": trace["E"],
-                    }
-                ).round(4)
-
-                date_txt = "Date: {}".format(time.strftime("%Y-%m-%d, %H:%M"))
-                mov_txt = "Movie filename: {}".format(None)
-                id_txt = "FRET pair #{}".format(idx)
-                bl_txt = "Bleaches at {}".format(
-                    trace["_bleaches_at"].values[0]
-                )
-
-                with open(path, "w") as f:
-                    exp_txt = "Simulated trace exported by DeepFRET"
-                    f.write(
-                        "{0}\n"
-                        "{1}\n"
-                        "{2}\n"
-                        "{3}\n"
-                        "{4}\n\n"
-                        "{5}".format(
-                            exp_txt,
-                            date_txt,
-                            mov_txt,
-                            id_txt,
-                            bl_txt,
-                            df.to_csv(index=False, sep="\t"),
-                        )
-                    )
-
-                if n % update_every_nth == 0:
-                    progressbar.increment()
 
 
 class AppContext(ApplicationContext):
@@ -4179,26 +4171,46 @@ class AppContext(ApplicationContext):
 
     def __init__(self):
         super().__init__()
-        self.keras_2c_model = None
-        self.keras_3c_model = None
+
+        self.keras_two_channel_model = None
+        self.keras_three_channel_model = None
         self.config = None
         self.app_version = None
         self.load_resources()
+        self.assign()
 
     def load_resources(self):
         """
         Loads initial resources from disk to application
         """
         # model_experimental is better but undocumented
-        self.keras_2c_model = load_model(
+        self.keras_two_channel_model = load_model(
             self.get_resource("FRET_2C_experimental.h5")
-        )
-        self.keras_3c_model = load_model(
+        )  # type: Model
+        self.keras_three_channel_model = load_model(
             self.get_resource("FRET_3C_experimental.h5")
-        )
+        )  # type: Model
         self.config = ConfigObj(self.get_resource("config.ini"))
+
+    def assign(self):
+        """
+        Assigns resources and functions to the right windows
+        """
         PreferencesWindow.config = self.config
         AboutWindow.app_version = self.config["appVersion"]
+        TraceWindow.keras_two_channel_model = self.keras_two_channel_model
+        TraceWindow.keras_three_channel_model = self.keras_three_channel_model
+
+        # Assigns processEvents to fix short-term lockups due to progress.
+        # Add more windows if needed. Use sparingly!
+        for window in (
+            MainWindow,
+            TraceWindow,
+            HistogramWindow,
+            TransitionDensityWindow,
+            SimulatorWindow,
+        ):
+            window.processEvents = self.app.processEvents
 
     def run(self):
         """

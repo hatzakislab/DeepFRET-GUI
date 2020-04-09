@@ -49,14 +49,19 @@ def merge_tuples(*t):
     return tuple(j for i in (t) for j in (i if isinstance(i, tuple) else (i,)))
 
 
-def timeit(method):
+def print_elapsed(start, end, name=""):
+    """Print the time elapsed given start and end time() points"""
+    print("'{}' {:.2f} ms".format(name, (end - start) * 1e3))
+
+
+def timeit(method, *args, **kwargs):
     """Decorator to time functions and methods for optimization"""
 
     def timed(*args, **kwargs):
         ts = time.time()
         result = method(*args, **kwargs)
         te = time.time()
-        print("'{}' {:.2f} ms".format(method.__name__, (te - ts) * 1e3))
+        print_elapsed(name=method.__name__, start=ts, end=te)
         return result
 
     return timed
@@ -189,7 +194,7 @@ def sim_to_ascii(df, trace_len, outdir):
         ).round(4)
 
         date_txt = "Date: {}".format(time.strftime("%Y-%m-%d, %H:%M"))
-        mov_txt = "Movie filename: {}".format(None)
+        vid_txt = "Video filename: {}".format(None)
         id_txt = "FRET pair #{}".format(idx)
         bl_txt = "Bleaches at {}".format(trace["fb"].values[0])
 
@@ -203,7 +208,7 @@ def sim_to_ascii(df, trace_len, outdir):
                 "{5}".format(
                     exp_txt,
                     date_txt,
-                    mov_txt,
+                    vid_txt,
                     id_txt,
                     bl_txt,
                     df.to_csv(index=False, sep="\t"),
@@ -215,9 +220,14 @@ def sim_to_ascii(df, trace_len, outdir):
 
 
 def numstring_to_ls(s):
-    """Transforms any string of numbers into a list of floats, regardless of separators"""
+    """
+    Transforms any string of numbers into a list of floats,
+    regardless of separators
+
+    Zero is ignored!
+    """
     num_s = re.findall(r"\d+(\.\d+)?\s*", s)
-    return [float(s) for s in num_s]
+    return [float(s) for s in num_s if s != ""]
 
 
 def random_seed_mp(verbose=False):
@@ -284,7 +294,6 @@ def nice_string_output(
         )
     return string[:-2]
 
-
 @FuncFormatter
 def format_string_to_k(x, pos):
     """
@@ -299,3 +308,9 @@ def format_string_to_k(x, pos):
     if s.endswith("000"):
         s = s[:-3] + "k"
     return s
+
+def remove_newlines(s) -> str:
+    """
+    Removes all newlines from string
+    """
+    return "".join(s.splitlines(keepends=False))

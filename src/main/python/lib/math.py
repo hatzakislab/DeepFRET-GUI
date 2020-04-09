@@ -208,7 +208,7 @@ def trim_ES(E: list, S: list):
     E, S = np.array(E), np.array(S)
     if contains_nan(S):
         # Use E only
-        E = E[(E > -0.3) & (E < 1.3)]
+        E = E[(E > -0.3) & (E < 1.3)]  # original line
     else:
         idx = (S > -0.3) & (S < 1.3)
         E, S = E[idx], S[idx]
@@ -525,6 +525,7 @@ def contour_2d(
     shade_lowest=False,
     resolution=100,
     cbins="auto",
+    diagonal: bool = False,
 ):
     """
     Calculates the 2D kernel density estimate for a dataset.
@@ -547,7 +548,7 @@ def contour_2d(
     For optional colorbar, add fig.colorbar(c)
     """
 
-    if kernel == "epa":
+    if kernel.startswith("epa"):
         kernel = "epanechnikov"
 
     if bandwidth == "auto":
@@ -559,10 +560,21 @@ def contour_2d(
     meany = np.mean(ydata) * extend_grid
 
     # Create a grid for KDE
-    x, y = np.mgrid[
-        min(xdata) - meanx : max(xdata) + meanx : complex(resolution),
-        min(ydata) - meany : max(ydata) + meany : complex(resolution),
-    ]
+    if diagonal:
+        vmin = min(min(xdata), min(ydata))
+        vmax = max(max(xdata), max(ydata))
+
+        mean = np.mean(np.concatenate([xdata, ydata])) * extend_grid
+
+        x, y = np.mgrid[
+            vmin - mean : vmax + mean : complex(resolution),
+            vmin - mean : vmax + mean : complex(resolution),
+        ]
+    else:
+        x, y = np.mgrid[
+            min(xdata) - meanx : max(xdata) + meanx : complex(resolution),
+            min(ydata) - meany : max(ydata) + meany : complex(resolution),
+        ]
 
     positions = np.vstack([x.ravel(), y.ravel()])
     values = np.vstack([xdata, ydata])
@@ -1341,3 +1353,38 @@ def fit_and_compare_exp_funcs(
     out["DOUBLE_ERRS"] = errs2
 
     return out
+
+
+def corrcoef_lags(x, y, n_lags: int = 5):
+    if not isinstance(n_lags, int):
+        n_lags = int(n_lags)
+    if n_lags > len(x):
+        n_lags = len(x) - 1
+    cs = np.zeros(2 * n_lags + 1)
+    for i in range(2 * n_lags + 1):
+        if i <= n_lags:  # 0,1,2,3,4
+            _x = np.pad(x, (0, n_lags), mode="constant")  # , 'edge')
+            _y = np.pad(y, (n_lags - i, i), mode="constant")  # , 'edge')
+        else:  # 5,6,7,8,9
+            _x = np.pad(x, (i - n_lags, 2 * n_lags - i), mode="constant")
+            _y = np.pad(y, (0, n_lags), mode="constant")
+        cs[i], _ = scipy.stats.pearsonr(_x, _y)
+    return cs
+
+
+def correct_corrs(corrs):
+    maxlen = max([len(arr) for arr in corrs])
+    _corrs = np.zeros((len(corrs), maxlen))
+    for j, corr in enumerate(corrs):
+        _l = len(corr)
+        if _l == maxlen:
+            _corrs[j] = corr
+        else:
+            missing_per_side = int(int(maxlen - _l) / 2)
+            _corrs[j] = np.pad(
+                corr,
+                (missing_per_side, missing_per_side),
+                "constant",
+                constant_values=(np.nan, np.nan),
+            )
+    return _corrs

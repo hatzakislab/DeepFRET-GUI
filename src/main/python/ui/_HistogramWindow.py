@@ -13,7 +13,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_HistogramWindow(object):
     def setupUi(self, HistogramWindow):
         HistogramWindow.setObjectName("HistogramWindow")
-        HistogramWindow.resize(700, 700)
+        HistogramWindow.resize(1000, 1000)
         sizePolicy = QtWidgets.QSizePolicy(
             QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum
         )
@@ -40,6 +40,7 @@ class Ui_HistogramWindow(object):
         self.mpl_LayoutBox = QtWidgets.QVBoxLayout()
         self.mpl_LayoutBox.setSizeConstraint(QtWidgets.QLayout.SetNoConstraint)
         self.mpl_LayoutBox.setContentsMargins(0, 0, 0, 0)
+        self.mpl_LayoutBox.setSpacing(6)
         self.mpl_LayoutBox.setObjectName("mpl_LayoutBox")
         self.gridLayout_2.addLayout(self.mpl_LayoutBox, 2, 0, 1, 1)
         self.gridLayout = QtWidgets.QGridLayout()

@@ -337,3 +337,41 @@ def plot_gaussian(mean, sigma, ax, x, weight=1, color=None):
     y = weight * scipy.stats.norm.pdf(x, mean, sigma)
     ax.plot(x, y, color=color)
     return ax, y
+
+def plot_gaussian_mixture_to_ax(
+    mixture_params,
+    ax: plt.Axes,
+    xpts=None,
+    color_means=None,
+    color_joint=None,
+    plot_sum=True,
+    plot_means=True,
+):
+    sum_ = []
+    if xpts is None:
+        xpts = np.linspace(0, 1, 2000)
+    for i, gauss_params in enumerate(mixture_params):
+        m, s, w = gauss_params
+        ax.plot(xpts, w * scipy.stats.norm.pdf(xpts, m, s))
+        sum_.append(np.array(w * scipy.stats.norm.pdf(xpts, m, s)))
+        if plot_means:
+            ax.axvline(
+                m,
+                ls="--",
+                lw=0.5,
+                c="xkcd:dark pink" if color_means is None else color_means,
+                # label=rf'{m:.2f}',
+                # label=rf'$\mu_{i} = {m:.2f}$',
+            )
+    if plot_sum:
+        joint = np.sum(sum_, axis=0)
+        ax.plot(
+            xpts,
+            joint,
+            color="grey" if color_joint is None else color_joint,
+            alpha=1,
+            zorder=10,
+            ls="--",
+        )
+
+    pass

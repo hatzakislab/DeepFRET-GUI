@@ -2,6 +2,8 @@ import itertools
 import multiprocessing
 import re
 
+from matplotlib.ticker import FuncFormatter
+
 multiprocessing.freeze_support()
 
 import time
@@ -269,6 +271,18 @@ def count_adjacent_values(arr):
 def nice_string_output(
     names: List[str], values: List[str], extra_spacing: int = 0,
 ):
+    """
+    Makes a single multiline string of names and values, for plotting
+    :param names: List of strings with names
+    :param values: List of strings with values
+    :param extra_spacing: spacing between names and values, for wider plots
+    :return string: formatted string
+    Example:
+    ---------
+    >>>In:nice_string_output(["Carrots","Peas"], ["Many", "Few"])
+    >>>Carrots Many
+    >>>Peas     Few
+    """
     max_values = len(max(values, key=len))
     max_names = len(max(names, key=len))
     string = ""
@@ -280,6 +294,20 @@ def nice_string_output(
         )
     return string[:-2]
 
+@FuncFormatter
+def format_string_to_k(x, pos):
+    """
+    Matplotlib tick formatter.
+    Removes 3 0s from end and appends a k.
+    for example, 3000 -> 3k
+    :param x: tick string
+    :param pos: tick position, not used
+    :return s: formatted string
+    """
+    s = f"{int(x):d}"
+    if s.endswith("000"):
+        s = s[:-3] + "k"
+    return s
 
 def remove_newlines(s) -> str:
     """

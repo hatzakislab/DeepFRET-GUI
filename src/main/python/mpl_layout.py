@@ -8,8 +8,10 @@ from matplotlib.backends.backend_qt5agg import (
     NavigationToolbar2QT as NavigationToolbar,
 )
 from matplotlib.figure import Figure
+from matplotlib.ticker import FuncFormatter
 from PyQt5.QtWidgets import *
-from matplotlib.gridspec import GridSpec
+from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
+
 
 # TODO: subplots_adjust should be part of the init to clean up and make it
 #  easier to control when creating the window
@@ -49,6 +51,111 @@ class MatplotlibCanvas(FigureCanvas):
             self.setupDynamicPlotLayout()
         else:
             raise ValueError
+    
+    def setupJointGrid(f: Figure, gs: GridSpec):
+        """
+        Sets up JointGrid Setup as in Seaborn, from existing GridSpec.
+        :param f: Figure to plot axes on
+        :param gs: GridSpec to use. Should be square
+        :return axes: Tuple of Axes, order center, top, right
+        Example:
+        for a 4x4 GridSpec, the three axes will be distributed as:
+        tttx
+        cccr
+        cccr
+        cccr
+        where t is the top, c is center, and r is right axis
+        """
+        ax_ctr = f.add_subplot(gs[1:, :-1])
+        ax_rgt = f.add_subplot(gs[1:, -1], sharey=ax_ctr)
+        ax_top = f.add_subplot(gs[0, :-1], sharex=ax_ctr)
+
+        axes = ax_ctr, ax_top, ax_rgt
+        return axes
+ 
+  
+ #   def setupJointGridLayout(self):
+ #       """
+ #       Sets up a 2D-histogram layout similar to a seaborn JointGrid,
+ #       but manually through matplotlib for compatibility reasons.
+ #      """
+ #       space_between = 0  # 0.01
+ #       left, right = 0.08, 0.7
+ #       bottom, height = 0.08, 0.7
+ #       bottom_h = left_h = left + right + space_between
+
+ #       rect_center = left, bottom, right, height
+ #       rect_hist_top = left, bottom_h, right, 0.2
+ #       rect_hist_right = left_h, bottom, 0.2, height
+
+ #       self.ax_ctr = self.fig.add_axes(rect_center)
+ #       self.ax_top = self.fig.add_axes(rect_hist_top)
+ #       self.ax_rgt = self.fig.add_axes(rect_hist_right)
+
+ #       self.axes = self.ax_ctr, self.ax_top, self.ax_rgt
+ #       self.axes_marg = self.ax_top, self.ax_rgt
+
+    def setupHistogramWindowPlot(self):
+        """
+        Sets up plot for HistogramWindow using nested GridSpec.
+        Outer grid is a 2x2 grid, and the inner grids are from top left, clockwise:
+        6x6, 6x6, 2x1, 1x1
+        """
+        outer_grid = GridSpec(
+            nrows=2,
+            ncols=2,  # 2x2 grid
+            wspace=0.15,
+            hspace=0.15,
+            figure=self.fig,
+        )
+
+        gs_top_lft = GridSpecFromSubplotSpec(
+            nrows=6, ncols=6, subplot_spec=outer_grid[0, 0], wspace=0, hspace=0,
+        )
+
+        gs_top_rgt = GridSpecFromSubplotSpec(
+            nrows=6, ncols=6, subplot_spec=outer_grid[0, 1], wspace=0, hspace=0,
+        )
+
+        gs_btm_lft = GridSpecFromSubplotSpec(
+            nrows=2,
+            ncols=1,
+            subplot_spec=outer_grid[1, 0],
+            wspace=0,
+            hspace=0.15,
+        )
+        gs_btm_rgt = GridSpecFromSubplotSpec(
+            nrows=1, ncols=1, subplot_spec=outer_grid[1, 1], wspace=0, hspace=0,
+        )
+
+        self.tl_ax_ctr, self.tl_ax_top, self.tl_ax_rgt = setupJointGrid(
+            self.fig, gs_top_lft
+        )
+        self.tr_ax_ctr, self.tr_ax_top, self.tr_ax_rgt = setupJointGrid(
+            self.fig, gs_top_rgt
+        )
+
+        self.bl_ax_t = self.fig.add_subplot(gs_btm_lft[0])
+        self.bl_ax_b = self.fig.add_subplot(gs_btm_lft[1], sharex=self.bl_ax_t)
+        self.br_ax = self.fig.add_subplot(gs_btm_rgt[0])
+
+        self.axes = (
+            self.tl_ax_ctr,
+            self.tl_ax_top,
+            self.tl_ax_rgt,
+            self.tr_ax_ctr,
+            self.tr_ax_top,
+            self.tr_ax_rgt,
+            self.bl_ax_b,
+            self.bl_ax_t,
+            self.br_ax,
+        )
+        self.axes_marg = (
+            self.tl_ax_top,
+            self.tl_ax_rgt,
+            self.tr_ax_top,
+            self.tr_ax_rgt,
+        )
 
     def setupTwoColorImageLayout(self):
         """
@@ -143,27 +250,6 @@ class MatplotlibCanvas(FigureCanvas):
         self.fig.subplots_adjust(
             hspace=0.30, wspace=0, left=0.02, right=0.98, bottom=0.09, top=0.98
         )
-
-    def setupJointGridLayout(self):
-        """
-        Sets up a 2D-histogram layout similar to a seaborn JointGrid,
-        but manually through matplotlib for compatibility reasons.
-        """
-        space_between = 0  # 0.01
-        left, right = 0.08, 0.7
-        bottom, height = 0.08, 0.7
-        bottom_h = left_h = left + right + space_between
-
-        rect_center = left, bottom, right, height
-        rect_hist_top = left, bottom_h, right, 0.2
-        rect_hist_right = left_h, bottom, 0.2, height
-
-        self.ax_ctr = self.fig.add_axes(rect_center)
-        self.ax_top = self.fig.add_axes(rect_hist_top)
-        self.ax_rgt = self.fig.add_axes(rect_hist_right)
-
-        self.axes = self.ax_ctr, self.ax_top, self.ax_rgt
-        self.axes_marg = self.ax_top, self.ax_rgt
 
     def traceOutlineColor(self):
         """

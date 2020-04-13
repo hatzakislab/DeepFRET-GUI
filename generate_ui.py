@@ -6,7 +6,7 @@ from os.path import join, dirname, basename
 def generatePyFromUi(verbose=True):
     """Add Qt .interface Example_Files here to dynamically convert to .py on
     launch"""
-    ui_files = glob.glob("ui/*.ui")
+    ui_files = glob.glob("**/*.ui", recursive=True)
 
     for filename in ui_files:
         if os.path.exists(filename):

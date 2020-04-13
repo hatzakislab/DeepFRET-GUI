@@ -13,7 +13,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_HistogramWindow(object):
     def setupUi(self, HistogramWindow):
         HistogramWindow.setObjectName("HistogramWindow")
-        HistogramWindow.resize(1000, 1000)
+        HistogramWindow.resize(1200, 1200)
         sizePolicy = QtWidgets.QSizePolicy(
             QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum
         )
@@ -23,9 +23,9 @@ class Ui_HistogramWindow(object):
             HistogramWindow.sizePolicy().hasHeightForWidth()
         )
         HistogramWindow.setSizePolicy(sizePolicy)
-        HistogramWindow.setMinimumSize(QtCore.QSize(700, 700))
+        HistogramWindow.setMinimumSize(QtCore.QSize(1200, 1200))
         HistogramWindow.setMaximumSize(QtCore.QSize(5000, 2000))
-        HistogramWindow.setBaseSize(QtCore.QSize(700, 700))
+        HistogramWindow.setBaseSize(QtCore.QSize(1200, 1200))
         HistogramWindow.setWindowOpacity(1.0)
         HistogramWindow.setAutoFillBackground(False)
         HistogramWindow.setDocumentMode(False)

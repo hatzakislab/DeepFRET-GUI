@@ -294,6 +294,7 @@ def nice_string_output(
         )
     return string[:-2]
 
+
 @FuncFormatter
 def format_string_to_k(x, pos):
     """
@@ -308,6 +309,7 @@ def format_string_to_k(x, pos):
     if s.endswith("000"):
         s = s[:-3] + "k"
     return s
+
 
 def remove_newlines(s) -> str:
     """

@@ -24,7 +24,7 @@ import astropy.io.fits
 
 class VideoContainer:
     """
-    Class for storing individual image information.
+    Class for storing individual video information.
     """
 
     def __init__(self):
@@ -578,12 +578,14 @@ class TraceContainer:
         self.transitions = lf
 
 
-class VideoData:
+class DataContainer:
     """
     Data wrapper that contains a dict with filenames and associated data.
     """
 
     def __init__(self):
+        self.example_traces = {}
+        self.simulated_traces = {}
         self.videos = {}
         self.traces = {}
         self.currName = None

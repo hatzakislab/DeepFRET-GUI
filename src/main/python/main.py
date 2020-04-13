@@ -275,7 +275,6 @@ class BaseWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.data = self.Data()
         self.config = None
         self.inspector = None
 
@@ -662,6 +661,7 @@ class BaseWindow(QMainWindow):
         # Load all traces into their respective videos, and generate a list
         # of traces
         MainWindow_.getTracesAllVideos()
+        MainWindow_.refreshPlot()
 
         # Iterate over all filenames and add to list
         for (name, trace) in MainWindow_.data.traces.items():
@@ -1164,6 +1164,10 @@ class BaseWindow(QMainWindow):
     naming consistent
     """
 
+    def processEvents(self):
+        """Set by ApplicationContext before any windows are initialized"""
+        pass
+
     def clearAllClassifications(self):
         """Override in subclass."""
         pass
@@ -1417,7 +1421,7 @@ class MainWindow(BaseWindow):
         )
 
         if len(filenames) > 0:
-            ctxt.app.processEvents()
+            self.processEvents()
             progressbar = ProgressBar(loop_len=len(filenames), parent=self)
             for i, full_filename in enumerate(filenames):
                 if progressbar.wasCanceled():
@@ -2828,17 +2832,17 @@ class HistogramWindow(BaseWindow):
 
         # TODO: we might use this inline more often, but keep self.attr = None
         # TODO: in the init, to keep PyCharm inspections
-        for attr in ("E", "S", "DD", "DA", "corrs", "E_un", "S_un"):
-            setattr(self, attr, None)
-        # self.E, self.S, self.DD, self.DA, self.corrs, self.E_un, self.S_un = (
-        #     None,
-        #     None,
-        #     None,
-        #     None,
-        #     None,
-        #     None,
-        #     None,
-        # )
+        # for attr in ("E", "S", "DD", "DA", "corrs", "E_un", "S_un"):
+        #     setattr(self, attr, None)
+        self.E, self.S, self.DD, self.DA, self.corrs, self.E_un, self.S_un = (
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
 
         checkedTraces = [
             trace for trace in self.data.traces.values() if trace.is_checked
@@ -4210,14 +4214,7 @@ class AppContext(ApplicationContext):
 
         # Assigns processEvents to fix short-term lockups due to progress.
         # Add more windows if needed. Use sparingly!
-        for window in (
-            MainWindow,
-            TraceWindow,
-            HistogramWindow,
-            TransitionDensityWindow,
-            SimulatorWindow,
-        ):
-            window.processEvents = self.app.processEvents
+        BaseWindow.processEvents = self.app.processEvents
 
     def run(self):
         """

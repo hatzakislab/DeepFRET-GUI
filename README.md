@@ -1,3 +1,5 @@
+<img src="screenshots/window_images.png" height="300">
+
 ## DeepFRET
 A fully open-source, all-inclusive software platform for doing total internal reflection microscopy (TIRFm) single
 molecule FRET (smFRET) fast and efficiently. The key feature is reverse-loading of ASCII traces, and
@@ -18,13 +20,13 @@ https://github.com/komodovaran/DeepFRET-Model
 *Publication coming soon!*
 
 ## 1. Installing and running the software
-### 1.1 Launching the DeepFRET GUI from executable
+### Launching the DeepFRET GUI from executable
 Download the pre-compiled version
 [here](https://drive.google.com/open?id=1jwTls9Yf2hwd1JHfd31-d6NvUVzrOXtJ).
 
 (Note: currently only available for MacOS)
 
-### 1.2 Launching DeepFRET GUI from Python source code.
+### Launching DeepFRET GUI from Python source code.
 1. Install Python 3.7.0. Other versions *might* work, but this is not
 guaranteed.
 
@@ -40,17 +42,6 @@ environment with `python3 -m venv venv` in the current directory.
 `pip install -r requirements.txt`
 
 6. Launch the GUI with `python3 src/main/python/main.py`
-
-### 1.3 Modifying and compiling the DeepFRET GUI to a standalone executable:
-1. Follow all steps for launching DeepFRET, above.
-2. Unzip the `hooks.zip` and overwrite the files in `venv/lib/python3.7/site-packages/PyInstaller/hooks/`.
-3. Run `compile.py` and wait until the script finishes.
-
-If the above steps worked, you can now edit any part of the code, and re-compile it
-(or just run it from the main.py script, if desired).
-
-Most interface elements are arranged in the `.ui` files, and can be edited through
-[Qt Creator](https://www.qt.io/offline-installers) and then converted to Python files with `generate_ui.py`.
 
 
 ## 2. Loading data
@@ -78,7 +69,8 @@ for each trace, which tells you how certain the model is that this is a true smF
 ![Classification](screenshots/classification.png)
  
 2. To sort traces by different things, go to the View menu. The option "advanced sort" includes, among other things,
-a lower confidence threshold. ![Sorting](screenshots/sorting.png)
+a lower confidence threshold.
+![Sorting](screenshots/sorting.png)
  
 ## 4. Statistical analysis
 1. To get an overview of data distributions, go to Windows &rightarrow; Histogram. This also allows to fit the FRET
@@ -95,3 +87,16 @@ FRET signal (though this is less accurate)
 ## 5. Export options
 Export plot automatically exports the current plot for each window. If desired, one can also export the data present
 in each window such as traces, histogram datapoints, etc. available from the File menu.
+
+## 6. Modifying and compiling DeepFRET from source
+Note that this is not necessary to make changes. You can still run the source without compiling it. This step is only
+to create a portable, standalone executable.
+
+1. Follow all steps for launching DeepFRET, above.
+2. Unzip the `hooks.zip` and overwrite the files in `venv/lib/python3.7/site-packages/PyInstaller/hooks/`.
+3. Run `compile.py` and wait until the script finishes.
+
+If the above steps worked, you can now edit any part of the code, and re-compile it.
+
+Most interface elements are arranged in the `.ui` files, and can be edited through
+[Qt Creator](https://www.qt.io/offline-installers) and then converted to Python files with `generate_ui.py`.

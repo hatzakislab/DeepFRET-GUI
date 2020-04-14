@@ -60,7 +60,7 @@ from lib.container import (
     ImageChannel,
     TraceChannel,
     TraceContainer,
-    VideoData,
+    DataContainer,
 )
 from mpl_layout import PlotWidget
 
@@ -268,15 +268,17 @@ class BaseWindow(QMainWindow):
     Superclass for shared window functions.
     """
 
-    class Data:
-        """self.data placeholder for windows that need it, for PyCharm"""
+    # Place here to share state between all windows
+    data = DataContainer()
 
-        traces = {}
+    keras_two_channel_model = None
+    keras_three_channel_model = None
+    config = None
 
     def __init__(self):
         super().__init__()
-        self.data = self.Data()
-        self.config = None
+
+        # Other states are individual
         self.inspector = None
 
         self.ui = Ui_MenuBar()
@@ -662,6 +664,7 @@ class BaseWindow(QMainWindow):
         # Load all traces into their respective videos, and generate a list
         # of traces
         MainWindow_.getTracesAllVideos()
+        MainWindow_.refreshPlot()
 
         # Iterate over all filenames and add to list
         for (name, trace) in MainWindow_.data.traces.items():
@@ -1005,12 +1008,15 @@ class BaseWindow(QMainWindow):
         Exports all traces as ASCII files to selected directory.
         Maintains compatibility with iSMS and older pySMS scripts.
         """
-        if checked_only:
-            traces = [
-                trace for trace in self.data.traces.values() if trace.is_checked
-            ]
+        if isinstance(self, SimulatorWindow):
+            traces = self.data.simulated_traces
         else:
-            traces = [trace for trace in self.data.traces.values()]
+            traces = self.data.traces
+
+        if checked_only:
+            selected = [trace for trace in traces.values() if trace.is_checked]
+        else:
+            selected = [trace for trace in traces.values()]
 
         diag = ExportDialog(
             init_dir=gvars.key_lastOpenedDir, accept_label="Export"
@@ -1020,7 +1026,7 @@ class BaseWindow(QMainWindow):
             path = diag.selectedFiles()[0]
             self.processEvents()
 
-            for trace in traces:
+            for trace in selected:
                 trace.export_trace_to_txt(dir_to_join=path)
 
     def exportCorrectionFactors(self):
@@ -1164,6 +1170,10 @@ class BaseWindow(QMainWindow):
     naming consistent
     """
 
+    def processEvents(self):
+        """Set by ApplicationContext before any windows are initialized"""
+        pass
+
     def clearAllClassifications(self):
         """Override in subclass."""
         pass
@@ -1293,14 +1303,6 @@ class MainWindow(BaseWindow):
             self.getConfig(gvars.key_contrastBoxHiRedVal)
         )
 
-        # Initialize DataHolder class
-        self.data = VideoData()
-
-        # Delegate access to data
-        TraceWindow.data = self.data
-        HistogramWindow.data = self.data
-        TransitionDensityWindow.data = self.data
-
         self.show()
 
     def currentVideo(self) -> VideoContainer:
@@ -1417,7 +1419,7 @@ class MainWindow(BaseWindow):
         )
 
         if len(filenames) > 0:
-            ctxt.app.processEvents()
+            self.processEvents()
             progressbar = ProgressBar(loop_len=len(filenames), parent=self)
             for i, full_filename in enumerate(filenames):
                 if progressbar.wasCanceled():
@@ -2828,17 +2830,17 @@ class HistogramWindow(BaseWindow):
 
         # TODO: we might use this inline more often, but keep self.attr = None
         # TODO: in the init, to keep PyCharm inspections
-        for attr in ("E", "S", "DD", "DA", "corrs", "E_un", "S_un"):
-            setattr(self, attr, None)
-        # self.E, self.S, self.DD, self.DA, self.corrs, self.E_un, self.S_un = (
-        #     None,
-        #     None,
-        #     None,
-        #     None,
-        #     None,
-        #     None,
-        #     None,
-        # )
+        # for attr in ("E", "S", "DD", "DA", "corrs", "E_un", "S_un"):
+        #     setattr(self, attr, None)
+        self.E, self.S, self.DD, self.DA, self.corrs, self.E_un, self.S_un = (
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
 
         checkedTraces = [
             trace for trace in self.data.traces.values() if trace.is_checked
@@ -3846,7 +3848,7 @@ class SimulatorWindow(BaseWindow):
 
     def __init__(self):
         super().__init__()
-        self.data.examples = {}
+        # self.data.examples = {}
         self.df = pd.DataFrame()
         self.ui = Ui_SimulatorWindow()
         self.ui.setupUi(self)
@@ -4021,7 +4023,7 @@ class SimulatorWindow(BaseWindow):
 
     def getTrace(self, idx) -> TraceContainer:
         """Returns a trace, given assigned index from df"""
-        return self.data.traces[idx]
+        return self.data.simulated_traces[idx]
 
     def generateTraces(self, examples: bool):
         """Generate traces to show in the GUI (examples) or for export"""
@@ -4039,9 +4041,9 @@ class SimulatorWindow(BaseWindow):
             progressbar = None
 
         if examples:
-            self.data.examples.clear()
+            self.data.example_traces.clear()
         else:
-            self.data.traces.clear()
+            self.data.simulated_traces.clear()
 
         df = lib.math.generate_traces(
             n_traces=n_traces,
@@ -4069,7 +4071,7 @@ class SimulatorWindow(BaseWindow):
 
         df.index = np.arange(0, len(df), 1) // int(self.trace_len)
         for n, (idx, trace_df) in enumerate(df.groupby(df.index)):
-            self.data.traces[idx] = TraceContainer(
+            self.data.simulated_traces[idx] = TraceContainer(
                 filename="trace_{}.txt".format(idx),
                 loaded_from_ascii=False,
                 n=idx,
@@ -4165,7 +4167,6 @@ class SimulatorWindow(BaseWindow):
                 ax.set_xlim(0, tmax)
                 self.canvas.fig.add_subplot(ax)
 
-        # self.canvas.flush_events()
         self.canvas.draw()
 
 
@@ -4183,7 +4184,6 @@ class AppContext(ApplicationContext):
         self.config = None
         self.app_version = None
         self.load_resources()
-        self.assign()
 
     def load_resources(self):
         """
@@ -4210,14 +4210,7 @@ class AppContext(ApplicationContext):
 
         # Assigns processEvents to fix short-term lockups due to progress.
         # Add more windows if needed. Use sparingly!
-        for window in (
-            MainWindow,
-            TraceWindow,
-            HistogramWindow,
-            TransitionDensityWindow,
-            SimulatorWindow,
-        ):
-            window.processEvents = self.app.processEvents
+        BaseWindow.processEvents = self.app.processEvents
 
     def run(self):
         """
@@ -4232,7 +4225,7 @@ if __name__ == "__main__":
 
     # Load app
     ctxt = AppContext()
-    ctxt.load_resources()
+    ctxt.assign()
 
     # Windows
     MainWindow_ = MainWindow()

@@ -634,6 +634,7 @@ class DataContainer:
         video = self.videos[name]
 
         video.traces = {}
+
         # Populate metadata
         ext = path.split(".")[-1]
         if ext == "fits":
@@ -661,28 +662,32 @@ class DataContainer:
         # Scaling factor for ROI
         video.roi_radius = max(video.height, video.width) / 80
 
-        # Support for internal format
-        if self.is_interleaved_dual_cam(path):
-            c1, c2, c3, _ = lib.imgdata.image_channels(4)
+        try:
+            # This is an internally used video format, so it gets a special test
+            # not used elsewhere
+            interleaved_dual_cam_video = self.is_interleaved_dual_cam(path)
+            if interleaved_dual_cam_video:
+                c1, c2, c3, _ = lib.imgdata.image_channels(4)
 
-            # Donor (Dexc-Dem)
-            video.grn.raw = video.array[c3, ...]
+                # Donor (Dexc-Dem)
+                video.grn.raw = video.array[c3, ...]
 
-            # Acceptor (Dexc-Aem)
-            video.acc.raw = video.array[c1, ...]
+                # Acceptor (Dexc-Aem)
+                video.acc.raw = video.array[c1, ...]
 
-            # ALEX (Aexc-Aem)
-            video.red.raw = video.array[c2, ...]
+                # ALEX (Aexc-Aem)
+                video.red.raw = video.array[c2, ...]
+        except AttributeError:
+            interleaved_dual_cam_video = False
 
-        else:
-            # Does video have 2 channels (T,H,W,C)?
-            top, btm, lft, rgt = lib.imgdata.image_quadrants(
-                height=video.height, width=video.width
-            )
-
+        # Every other video should end up here
+        if not interleaved_dual_cam_video:
             # If video is quadratic, it was probably recorded by quad view in
-            # top or bottom row
+            # the top or bottom row
             if video.height == video.width:
+                top, btm, lft, rgt = lib.imgdata.image_quadrants(
+                    height=video.height, width=video.width
+                )
                 # Figure out whether intensity is in top or bottom row, and
                 # keep this only
                 top_mean, btm_mean = [
@@ -739,8 +744,8 @@ class DataContainer:
     @staticmethod
     def is_interleaved_dual_cam(path):
         """
-        Detects whether TIFF file is interleaved dual cam video from
-        Hatzakis lab
+        Detects whether TIFF file is interleaved dual cam video from Hatzakis
+        lab
         """
         detected = False
 

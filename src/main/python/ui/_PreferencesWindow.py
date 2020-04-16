@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'ui/PreferencesWindow.ui'
+# Form implementation generated from reading ui file 'src/main/python/ui/PreferencesWindow.ui'
 #
-# Created by: PyQt5 UI code generator 5.14.2
+# Created by: PyQt5 UI code generator 5.14.1
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -13,7 +13,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_Preferences(object):
     def setupUi(self, Preferences):
         Preferences.setObjectName("Preferences")
-        Preferences.resize(491, 748)
+        Preferences.resize(491, 773)
         sizePolicy = QtWidgets.QSizePolicy(
             QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred
         )
@@ -42,21 +42,28 @@ class Ui_Preferences(object):
         self.gridLayout_2 = QtWidgets.QGridLayout(self.generalGroup)
         self.gridLayout_2.setContentsMargins(-1, 12, -1, -1)
         self.gridLayout_2.setObjectName("gridLayout_2")
-        self.checkBox_unColocRed = QtWidgets.QCheckBox(self.generalGroup)
-        self.checkBox_unColocRed.setObjectName("checkBox_unColocRed")
-        self.gridLayout_2.addWidget(self.checkBox_unColocRed, 7, 0, 1, 1)
-        self.label_5 = QtWidgets.QLabel(self.generalGroup)
+        self.label = QtWidgets.QLabel(self.generalGroup)
         font = QtGui.QFont()
         font.setPointSize(11)
-        self.label_5.setFont(font)
-        self.label_5.setObjectName("label_5")
-        self.gridLayout_2.addWidget(self.label_5, 12, 0, 1, 1)
+        self.label.setFont(font)
+        self.label.setObjectName("label")
+        self.gridLayout_2.addWidget(self.label, 8, 0, 1, 1)
+        self.checkBox_medianPearsonCorr = QtWidgets.QCheckBox(self.generalGroup)
+        self.checkBox_medianPearsonCorr.setObjectName(
+            "checkBox_medianPearsonCorr"
+        )
+        self.gridLayout_2.addWidget(
+            self.checkBox_medianPearsonCorr, 13, 0, 1, 1
+        )
         self.label_4 = QtWidgets.QLabel(self.generalGroup)
         font = QtGui.QFont()
         font.setPointSize(11)
         self.label_4.setFont(font)
         self.label_4.setObjectName("label_4")
         self.gridLayout_2.addWidget(self.label_4, 3, 0, 1, 1)
+        self.checkBox_fitSpots = QtWidgets.QCheckBox(self.generalGroup)
+        self.checkBox_fitSpots.setObjectName("checkBox_fitSpots")
+        self.gridLayout_2.addWidget(self.checkBox_fitSpots, 11, 0, 1, 1)
         self.label_2 = QtWidgets.QLabel(self.generalGroup)
         font = QtGui.QFont()
         font.setPointSize(11)
@@ -68,18 +75,24 @@ class Ui_Preferences(object):
             "checkBox_batchLoadingMode"
         )
         self.gridLayout_2.addWidget(self.checkBox_batchLoadingMode, 1, 0, 1, 1)
-        self.label = QtWidgets.QLabel(self.generalGroup)
-        font = QtGui.QFont()
-        font.setPointSize(11)
-        self.label.setFont(font)
-        self.label.setObjectName("label")
-        self.gridLayout_2.addWidget(self.label, 8, 0, 1, 1)
-        self.checkBox_fitSpots = QtWidgets.QCheckBox(self.generalGroup)
-        self.checkBox_fitSpots.setObjectName("checkBox_fitSpots")
-        self.gridLayout_2.addWidget(self.checkBox_fitSpots, 11, 0, 1, 1)
         self.checkBox_illuCorrect = QtWidgets.QCheckBox(self.generalGroup)
         self.checkBox_illuCorrect.setObjectName("checkBox_illuCorrect")
         self.gridLayout_2.addWidget(self.checkBox_illuCorrect, 9, 0, 1, 1)
+        self.checkBox_unColocRed = QtWidgets.QCheckBox(self.generalGroup)
+        self.checkBox_unColocRed.setObjectName("checkBox_unColocRed")
+        self.gridLayout_2.addWidget(self.checkBox_unColocRed, 7, 0, 1, 1)
+        self.label_5 = QtWidgets.QLabel(self.generalGroup)
+        font = QtGui.QFont()
+        font.setPointSize(11)
+        self.label_5.setFont(font)
+        self.label_5.setObjectName("label_5")
+        self.gridLayout_2.addWidget(self.label_5, 12, 0, 1, 1)
+        self.label_3 = QtWidgets.QLabel(self.generalGroup)
+        font = QtGui.QFont()
+        font.setPointSize(11)
+        self.label_3.setFont(font)
+        self.label_3.setObjectName("label_3")
+        self.gridLayout_2.addWidget(self.label_3, 14, 0, 1, 1)
         self.verticalLayout.addWidget(self.generalGroup)
         self.imagingGroup = QtWidgets.QGroupBox(Preferences)
         font = QtGui.QFont()
@@ -213,7 +226,10 @@ class Ui_Preferences(object):
             self.checkBox_illuCorrect, self.checkBox_fitSpots
         )
         Preferences.setTabOrder(
-            self.checkBox_fitSpots, self.checkBox_firstFrameIsDonor
+            self.checkBox_fitSpots, self.checkBox_medianPearsonCorr
+        )
+        Preferences.setTabOrder(
+            self.checkBox_medianPearsonCorr, self.checkBox_firstFrameIsDonor
         )
         Preferences.setTabOrder(
             self.checkBox_firstFrameIsDonor, self.checkBox_donorLeft
@@ -236,18 +252,27 @@ class Ui_Preferences(object):
     def retranslateUi(self, Preferences):
         _translate = QtCore.QCoreApplication.translate
         self.generalGroup.setTitle(_translate("Preferences", "General"))
-        self.checkBox_unColocRed.setText(
-            _translate("Preferences", "Detect uncolocalized red")
-        )
-        self.label_5.setText(
+        self.label.setText(
             _translate(
-                "Preferences", "      Leave off for local maxima detection"
+                "Preferences", "      For determining acceptor bleedthrough"
+            )
+        )
+        self.checkBox_medianPearsonCorr.setText(
+            _translate(
+                "Preferences",
+                "Use Median Trace Length for plotting Pearson Correlations (std. 30)",
             )
         )
         self.label_4.setText(
             _translate(
                 "Preferences",
                 "      Disables interactivity to avoid consuming memory",
+            )
+        )
+        self.checkBox_fitSpots.setText(
+            _translate(
+                "Preferences",
+                "Detect spots using Laplacian of Gaussian fitting",
             )
         )
         self.label_2.setText(
@@ -259,19 +284,19 @@ class Ui_Preferences(object):
         self.checkBox_batchLoadingMode.setText(
             _translate("Preferences", "Batch loading mode")
         )
-        self.label.setText(
-            _translate(
-                "Preferences", "      For determining acceptor bleedthrough"
-            )
-        )
-        self.checkBox_fitSpots.setText(
-            _translate(
-                "Preferences",
-                "Detect spots using Laplacian of Gaussian fitting",
-            )
-        )
         self.checkBox_illuCorrect.setText(
             _translate("Preferences", "Correct for illumination background")
+        )
+        self.checkBox_unColocRed.setText(
+            _translate("Preferences", "Detect uncolocalized red")
+        )
+        self.label_5.setText(
+            _translate(
+                "Preferences", "      Leave off for local maxima detection"
+            )
+        )
+        self.label_3.setText(
+            _translate("Preferences", "     Makes Histogram Window load slower")
         )
         self.imagingGroup.setTitle(
             _translate("Preferences", "Imaging Setup (restart required!)")

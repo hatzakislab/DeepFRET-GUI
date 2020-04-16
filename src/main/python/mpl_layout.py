@@ -124,7 +124,7 @@ class MatplotlibCanvas(FigureCanvas):
         """
         outer_grid = GridSpec(nrows=2, ncols=2, figure=self.fig,)  # 2x2 grid
         self.adjust_margins(
-            fig=outer_grid, margin=0.05, hspace=0.10, wspace=0.10
+            fig=outer_grid, margin=0.10, hspace=0.10, wspace=0.10,
         )
 
         gs_top_lft = GridSpecFromSubplotSpec(
@@ -154,7 +154,7 @@ class MatplotlibCanvas(FigureCanvas):
         )
 
         self.bl_ax_t = self.fig.add_subplot(gs_btm_lft[0])
-        self.bl_ax_b = self.fig.add_subplot(gs_btm_lft[1], sharex=self.bl_ax_t)
+        self.bl_ax_b = self.fig.add_subplot(gs_btm_lft[1])
         self.br_ax = self.fig.add_subplot(gs_btm_rgt[0])
 
         self.axes = (

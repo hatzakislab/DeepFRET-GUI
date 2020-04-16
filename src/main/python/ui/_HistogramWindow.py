@@ -23,7 +23,7 @@ class Ui_HistogramWindow(object):
             HistogramWindow.sizePolicy().hasHeightForWidth()
         )
         HistogramWindow.setSizePolicy(sizePolicy)
-        HistogramWindow.setMinimumSize(QtCore.QSize(1200, 1200))
+        HistogramWindow.setMinimumSize(QtCore.QSize(800, 800))
         HistogramWindow.setMaximumSize(QtCore.QSize(5000, 2000))
         HistogramWindow.setBaseSize(QtCore.QSize(1200, 1200))
         HistogramWindow.setWindowOpacity(1.0)

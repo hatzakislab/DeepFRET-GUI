@@ -2742,6 +2742,9 @@ class HistogramWindow(BaseWindow):
         self.S = None
         self.S_un = None
         self.DD, self.DA, self.corrs, = None, None, None
+
+        self.plotStoichiometry: bool = False
+
         self.trace_median_len = None
         self.marg_bins = np.arange(-0.3, 1.3, 0.02)
         self.xpts = np.linspace(-0.3, 1.3, 300)
@@ -2918,8 +2921,10 @@ class HistogramWindow(BaseWindow):
                 self.E, self.S = lib.math.trim_ES(E_real, S_real)
                 self.beta = beta
                 self.gamma = gamma
+                self.plotStoichiometry = True
         else:
             self.E = self.E_un
+            self.plotStoichiometry = False
 
         self.alpha = alpha
         self.delta = delta
@@ -2976,6 +2981,20 @@ class HistogramWindow(BaseWindow):
         self.canvas.bl_ax_b.axhline(
             y=0, xmin=0, xmax=max_dur_plot, ls="--", color="black", alpha=0.3
         )
+        self.canvas.tr_ax_top.set_xlabel(self.dd_label)
+        self.canvas.tr_ax_top.xaxis.set_label_position("top")
+
+        self.canvas.tr_ax_rgt.set_ylabel(self.da_label)
+        self.canvas.tr_ax_rgt.yaxis.set_label_position("right")
+
+        self.canvas.tl_ax_top.set_xlabel(r"$\mathbf{E}_{FRET}$")
+        self.canvas.tl_ax_top.xaxis.set_label_position("top")
+
+        self.canvas.tl_ax_rgt.set_ylabel(r"$\mathbf{S}$")
+        self.canvas.tl_ax_rgt.yaxis.set_label_position("right")
+
+        self.canvas.bl_ax_b.set_xlabel("Frames")
+        self.canvas.bl_ax_b.set_ylabel(r"$\operatorname{{E}}[\rho_{{DD, DA}}]$")
 
     def plotTopLeft_TopMarginal(self, corrected):
         """
@@ -3137,9 +3156,6 @@ class HistogramWindow(BaseWindow):
                 color=gvars.color_green,
             )
 
-        self.canvas.tr_ax_top.set_xlabel(self.dd_label)
-        self.canvas.tr_ax_top.xaxis.set_label_position("top")
-
     def plotTopRight_CenterContour(self):
         da_contour_x = self.DD
         if da_contour_x is not None:
@@ -3270,9 +3286,10 @@ class HistogramWindow(BaseWindow):
         self.plotBottomLeft_Pearson()
 
     def plotTopLeft(self, corrected):
-        self.plotTopLeft_CenterContour(corrected)
         self.plotTopLeft_TopMarginal(corrected)
-        self.plotTopLeft_RightMarginal(corrected)
+        if self.plotStoichiometry:
+            self.plotTopLeft_CenterContour(corrected)
+            self.plotTopLeft_RightMarginal(corrected)
 
     def plotTopRight(self):
         self.plotTopRight_CenterContour()
@@ -3294,15 +3311,16 @@ class HistogramWindow(BaseWindow):
         corrected = self.ui.applyCorrectionsCheckBox.isChecked()
         try:
             self.getPooledData()
+            for ax in self.canvas.axes:
+                ax.clear()
             if self.E is not None:
                 # Force unchecked
                 if self.S is None:
                     self.ui.applyCorrectionsCheckBox.setChecked(False)
                     corrected = False
+                self.plotDefaultElements()
                 self.plotAll(corrected)
             else:
-                for ax in self.canvas.axes:
-                    ax.clear()
                 self.plotDefaultElements()
         except (AttributeError, ValueError):
             pass

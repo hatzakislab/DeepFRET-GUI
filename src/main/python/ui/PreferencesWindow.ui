@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>491</width>
-    <height>748</height>
+    <height>773</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -59,22 +59,22 @@
       <property name="topMargin">
        <number>12</number>
       </property>
-      <item row="7" column="0">
-       <widget class="QCheckBox" name="checkBox_unColocRed">
-        <property name="text">
-         <string>Detect uncolocalized red</string>
-        </property>
-       </widget>
-      </item>
-      <item row="12" column="0">
-       <widget class="QLabel" name="label_5">
+      <item row="8" column="0">
+       <widget class="QLabel" name="label">
         <property name="font">
          <font>
           <pointsize>11</pointsize>
          </font>
         </property>
         <property name="text">
-         <string>      Leave off for local maxima detection</string>
+         <string>      For determining acceptor bleedthrough</string>
+        </property>
+       </widget>
+      </item>
+      <item row="13" column="0">
+       <widget class="QCheckBox" name="checkBox_medianPearsonCorr">
+        <property name="text">
+         <string>Use Median Trace Length for plotting Pearson Correlations (std. 30)</string>
         </property>
        </widget>
       </item>
@@ -87,6 +87,13 @@
         </property>
         <property name="text">
          <string>      Disables interactivity to avoid consuming memory</string>
+        </property>
+       </widget>
+      </item>
+      <item row="11" column="0">
+       <widget class="QCheckBox" name="checkBox_fitSpots">
+        <property name="text">
+         <string>Detect spots using Laplacian of Gaussian fitting</string>
         </property>
        </widget>
       </item>
@@ -109,29 +116,41 @@
         </property>
        </widget>
       </item>
-      <item row="8" column="0">
-       <widget class="QLabel" name="label">
+      <item row="9" column="0">
+       <widget class="QCheckBox" name="checkBox_illuCorrect">
+        <property name="text">
+         <string>Correct for illumination background</string>
+        </property>
+       </widget>
+      </item>
+      <item row="7" column="0">
+       <widget class="QCheckBox" name="checkBox_unColocRed">
+        <property name="text">
+         <string>Detect uncolocalized red</string>
+        </property>
+       </widget>
+      </item>
+      <item row="12" column="0">
+       <widget class="QLabel" name="label_5">
         <property name="font">
          <font>
           <pointsize>11</pointsize>
          </font>
         </property>
         <property name="text">
-         <string>      For determining acceptor bleedthrough</string>
+         <string>      Leave off for local maxima detection</string>
         </property>
        </widget>
       </item>
-      <item row="11" column="0">
-       <widget class="QCheckBox" name="checkBox_fitSpots">
-        <property name="text">
-         <string>Detect spots using Laplacian of Gaussian fitting</string>
+      <item row="14" column="0">
+       <widget class="QLabel" name="label_3">
+        <property name="font">
+         <font>
+          <pointsize>11</pointsize>
+         </font>
         </property>
-       </widget>
-      </item>
-      <item row="9" column="0">
-       <widget class="QCheckBox" name="checkBox_illuCorrect">
         <property name="text">
-         <string>Correct for illumination background</string>
+         <string>     Makes Histogram Window load slower</string>
         </property>
        </widget>
       </item>
@@ -378,6 +397,7 @@
   <tabstop>checkBox_unColocRed</tabstop>
   <tabstop>checkBox_illuCorrect</tabstop>
   <tabstop>checkBox_fitSpots</tabstop>
+  <tabstop>checkBox_medianPearsonCorr</tabstop>
   <tabstop>checkBox_firstFrameIsDonor</tabstop>
   <tabstop>checkBox_donorLeft</tabstop>
   <tabstop>radioButton_hmm_fitE</tabstop>

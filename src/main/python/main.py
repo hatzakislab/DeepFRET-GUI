@@ -114,6 +114,7 @@ class PreferencesWindow(QDialog):
             self.ui.checkBox_hmm_local,
             self.ui.checkBox_firstFrameIsDonor,
             self.ui.checkBox_donorLeft,
+            self.ui.checkBox_medianPearsonCorr,
         )
 
         self.hmmRadioButtons = (
@@ -2742,6 +2743,7 @@ class HistogramWindow(BaseWindow):
         self.S = None
         self.S_un = None
         self.DD, self.DA, self.corrs, = None, None, None
+
         self.trace_median_len = None
         self.marg_bins = np.arange(-0.3, 1.3, 0.02)
         self.xpts = np.linspace(-0.3, 1.3, 300)
@@ -2816,9 +2818,9 @@ class HistogramWindow(BaseWindow):
 
     def getPooledData(self, n_first_frames="spinbox"):
         """
-        Returns pooled E and S_app data before bleaching, for each trace. The
-        loops take approx. 0.1 ms per trace, and it's too much trouble to
-        lower it further.
+        Returns pooled E and S_app data before bleaching, for each trace.
+        The loops take approx. 0.1 ms per trace, and it's too much trouble
+        to lower it further.
         Also return DD, DA, and Pearson correlation data.
         """
         if n_first_frames == "all":
@@ -2877,11 +2879,17 @@ class HistogramWindow(BaseWindow):
             DD.append(I_DD[: trace.first_bleach])
             DA.append(I_DA[: trace.first_bleach])
             lengths.append(len(trace.fret[: trace.first_bleach]))
+            if self.getConfig(gvars.key_medianPearsonCorr):
+                n_lags_pcorr = self.trace_median_len
+            else:
+                n_lags_pcorr = self.getConfig(gvars.key_lagsPearsonCorr)
+
+            n_lags_pcorr = int(n_lags_pcorr)
 
             c = lib.math.corrcoef_lags(
                 I_DD[: trace.first_bleach],
                 I_DA[: trace.first_bleach],
-                n_lags=self.trace_median_len,
+                n_lags=n_lags_pcorr,
             )
             corrs.append(c)
 
@@ -2969,13 +2977,27 @@ class HistogramWindow(BaseWindow):
         )
         self.canvas.br_ax.xaxis.set_major_formatter(lib.misc.format_string_to_k)
 
-        max_dur_plot = max(
-            max(self.canvas.bl_ax_b.get_xlim()),
-            max(self.canvas.bl_ax_t.get_xlim()),
-        )
         self.canvas.bl_ax_b.axhline(
-            y=0, xmin=0, xmax=max_dur_plot, ls="--", color="black", alpha=0.3
+            0,
+            *self.canvas.bl_ax_b.get_xlim(),
+            ls="--",
+            color="black",
+            alpha=0.3,
         )
+        self.canvas.tr_ax_top.set_xlabel(self.dd_label)
+        self.canvas.tr_ax_top.xaxis.set_label_position("top")
+
+        self.canvas.tr_ax_rgt.set_ylabel(self.da_label)
+        self.canvas.tr_ax_rgt.yaxis.set_label_position("right")
+
+        self.canvas.tl_ax_top.set_xlabel(r"$\mathbf{E}_{FRET}$")
+        self.canvas.tl_ax_top.xaxis.set_label_position("top")
+
+        self.canvas.tl_ax_rgt.set_ylabel(r"$\mathbf{S}$")
+        self.canvas.tl_ax_rgt.yaxis.set_label_position("right")
+
+        self.canvas.bl_ax_b.set_xlabel("Frames")
+        self.canvas.bl_ax_b.set_ylabel(r"$\operatorname{{E}}[\rho_{{DD, DA}}]$")
 
     def plotTopLeft_TopMarginal(self, corrected):
         """
@@ -3137,9 +3159,6 @@ class HistogramWindow(BaseWindow):
                 color=gvars.color_green,
             )
 
-        self.canvas.tr_ax_top.set_xlabel(self.dd_label)
-        self.canvas.tr_ax_top.xaxis.set_label_position("top")
-
     def plotTopRight_CenterContour(self):
         da_contour_x = self.DD
         if da_contour_x is not None:
@@ -3163,23 +3182,17 @@ class HistogramWindow(BaseWindow):
         """
         Plots the bottom left top half Histogram, as well as an exponential fit of lifetimes.
         """
-
         lengths = self.lengths
         if lengths is not None:
             self.canvas.bl_ax_t.clear()
             self.canvas.bl_ax_t.hist(
-                lengths,
-                histtype="step",
-                density=True,
-                bins=20,
-                # label=rf"Duration: $\mu={np.mean(lengths):.1f}$r",
+                lengths, histtype="step", density=True, bins=20,
             )
             lifetime_dict = lib.math.fit_and_compare_exp_funcs(lengths, x0=None)
             xlim = self.canvas.bl_ax_t.get_xlim()
             xarr = np.linspace(0.1, xlim[1], 1000)
 
             single_param = lifetime_dict["SINGLE_PARAM"]
-            single_errs = lifetime_dict["SINGLE_ERRS"]  # TODO: unused var?
             yarr_1 = lib.math.func_exp(xarr, single_param)
             self.canvas.bl_ax_t.plot(
                 xarr,
@@ -3187,23 +3200,13 @@ class HistogramWindow(BaseWindow):
                 c="r",
                 label=f"Lifetimes \n"
                 + lib.misc.nice_string_output(
-                    [
-                        # "lambda",
-                        r"$\tau$"
-                    ],
-                    [
-                        # f"{single_param[0]:.2f}+{single_errs[0]:.3f}",
-                        f"{1. / single_param[0]:.2f}",
-                    ],
+                    [r"$\tau$"], [f"{1. / single_param[0]:.2f}",],
                 ),
                 alpha=0.5,
             )
             self.canvas.bl_ax_t.legend()
-            # self.canvas.bl_ax_t.set_xlabel(rf"Duration: $\tau={1. / single_param[0]:.2f}$")
 
         for tk in self.canvas.bl_ax_t.get_yticklabels():
-            tk.set_visible(False)
-        for tk in self.canvas.bl_ax_t.get_xticklabels():
             tk.set_visible(False)
 
     def plotBottomLeft_Pearson(self, plot_errors=False):
@@ -3211,31 +3214,28 @@ class HistogramWindow(BaseWindow):
         Plots Mean Pearson Correlation Coefficients in bottom left bottom as an errorbar plot.
         """
 
-        if self.corrs is None:
-            return
-        self.canvas.bl_ax_b.clear()
-        maxlen = len(self.corrs[0])
-        pr_xs = np.arange(maxlen // 2 + 1)
-        pr_ys = np.zeros(len(pr_xs))
-        pr_er = np.zeros_like(pr_ys)
-        for i in range(maxlen):
-            idx = i - maxlen // 2
-            if idx < 0:
-                continue
+        if self.corrs is not None:
+            self.canvas.bl_ax_b.clear()
+            maxlen = len(self.corrs[0])
+            pr_xs = np.arange(maxlen // 2 + 1)
+            pr_ys = np.zeros(len(pr_xs))
+            pr_er = np.zeros_like(pr_ys)
+            for i in range(maxlen):
+                idx = i - maxlen // 2
+                if idx < 0:
+                    continue
+                else:
+                    _corr = self.corrs[:, i]
+                    pr_ys[idx] = np.nanmean(_corr)
+                    pr_er[idx] = np.nanstd(_corr)
 
-            _corr = self.corrs[:, i]
-            pr_ys[idx] = np.nanmean(_corr)
-            pr_er[idx] = np.nanstd(_corr)
-
-        self.canvas.bl_ax_b.errorbar(
-            x=pr_xs,
-            y=pr_ys,
-            yerr=pr_er if plot_errors else 0,
-            label=r"$\operatorname{{E}}[\rho_{{DD, DA}}]$",
-        )
-        self.canvas.bl_ax_b.legend()
-        # self.canvas.bl_ax_b.set_xlabel("Frames")
-        # self.canvas.bl_ax_b.set_ylabel(r"$\operatorname{{E}}[\rho_{{DD, DA}}]$")
+            self.canvas.bl_ax_b.errorbar(
+                x=pr_xs,
+                y=pr_ys,
+                yerr=pr_er if plot_errors else 0,
+                label=r"$\operatorname{{E}}[\rho_{{DD, DA}}]$",
+            )
+            self.canvas.bl_ax_b.legend()
 
     def plotBottomRight(self):
         """
@@ -3270,9 +3270,10 @@ class HistogramWindow(BaseWindow):
         self.plotBottomLeft_Pearson()
 
     def plotTopLeft(self, corrected):
-        self.plotTopLeft_CenterContour(corrected)
         self.plotTopLeft_TopMarginal(corrected)
-        self.plotTopLeft_RightMarginal(corrected)
+        if self.S is not None:
+            self.plotTopLeft_CenterContour(corrected)
+            self.plotTopLeft_RightMarginal(corrected)
 
     def plotTopRight(self):
         self.plotTopRight_CenterContour()
@@ -3294,15 +3295,16 @@ class HistogramWindow(BaseWindow):
         corrected = self.ui.applyCorrectionsCheckBox.isChecked()
         try:
             self.getPooledData()
+            for ax in self.canvas.axes:
+                ax.clear()
             if self.E is not None:
                 # Force unchecked
                 if self.S is None:
                     self.ui.applyCorrectionsCheckBox.setChecked(False)
                     corrected = False
+                self.plotDefaultElements()
                 self.plotAll(corrected)
             else:
-                for ax in self.canvas.axes:
-                    ax.clear()
                 self.plotDefaultElements()
         except (AttributeError, ValueError):
             pass

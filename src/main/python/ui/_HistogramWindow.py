@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'ui/HistogramWindow.ui'
+# Form implementation generated from reading ui file 'src/main/python/ui/HistogramWindow.ui'
 #
-# Created by: PyQt5 UI code generator 5.14.2
+# Created by: PyQt5 UI code generator 5.14.1
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -23,7 +23,7 @@ class Ui_HistogramWindow(object):
             HistogramWindow.sizePolicy().hasHeightForWidth()
         )
         HistogramWindow.setSizePolicy(sizePolicy)
-        HistogramWindow.setMinimumSize(QtCore.QSize(1200, 1200))
+        HistogramWindow.setMinimumSize(QtCore.QSize(800, 800))
         HistogramWindow.setMaximumSize(QtCore.QSize(5000, 2000))
         HistogramWindow.setBaseSize(QtCore.QSize(1200, 1200))
         HistogramWindow.setWindowOpacity(1.0)

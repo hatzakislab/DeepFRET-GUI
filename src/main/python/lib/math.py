@@ -21,7 +21,7 @@ import numpy as np
 import pomegranate as pg
 from retrying import retry, RetryError
 from tqdm import tqdm
-
+from lib.misc import timeit
 
 pd.options.mode.chained_assignment = None
 
@@ -1363,8 +1363,8 @@ def corrcoef_lags(x, y, n_lags: int = 5):
     cs = np.zeros(2 * n_lags + 1)
     for i in range(2 * n_lags + 1):
         if i <= n_lags:  # 0,1,2,3,4
-            _x = np.pad(x, (0, n_lags), mode="constant")  # , 'edge')
-            _y = np.pad(y, (n_lags - i, i), mode="constant")  # , 'edge')
+            _x = np.pad(x, (0, n_lags), mode="constant")
+            _y = np.pad(y, (n_lags - i, i), mode="constant")  # "edge" flag?
         else:  # 5,6,7,8,9
             _x = np.pad(x, (i - n_lags, 2 * n_lags - i), mode="constant")
             _y = np.pad(y, (0, n_lags), mode="constant")

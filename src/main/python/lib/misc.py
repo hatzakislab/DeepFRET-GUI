@@ -308,6 +308,8 @@ def format_string_to_k(x, pos):
     s = f"{int(x):d}"
     if s.endswith("000"):
         s = s[:-3] + "k"
+    elif s.endswith("500"):
+        s = s[:-3] + ".5k"
     return s
 
 

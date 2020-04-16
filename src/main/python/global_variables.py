@@ -29,6 +29,8 @@ class GlobalVariables:
 
     key_firstFrameIsDonor = "firstFrameIsDonor"
     key_donorLeft = "donorLeft"
+    key_medianPearsonCorr = "medianPearsonCorr"
+    key_lagsPearsonCorr = "lagsPearsonCorr"
 
     keys_globalCheckBoxes = (
         key_batchLoadingMode,
@@ -38,6 +40,7 @@ class GlobalVariables:
         key_hmmLocal,
         key_firstFrameIsDonor,
         key_donorLeft,
+        key_medianPearsonCorr,
     )
 
     key_hmmMode = "hmmMode"

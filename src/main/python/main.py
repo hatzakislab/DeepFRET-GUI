@@ -96,7 +96,7 @@ class PreferencesWindow(QDialog):
     color styles), set them in GLOBALs class.
     """
 
-    config = None  # This definition is overridden by AppContext
+    # config = None  # This definition is overridden by AppContext
 
     def __init__(self):
         super().__init__()
@@ -196,38 +196,6 @@ class PreferencesWindow(QDialog):
         # Close modal window with Ctrl+W
         QShortcut(QKeySequence("Ctrl+W"), self, self.close)
 
-    def getConfig(self, key: str) -> Union[bool, str, float]:
-        """
-        Shortcut for reading config from file and returning key
-        """
-        self.config.reload()
-
-        value = self.config.get(key)
-
-        if value is None:
-            qWarning(
-                "{} = {} returned NoneType. Ensure that the correct value is "
-                "set in the GUI".format(key, value)
-            )
-            return 0
-
-        # To handle 0/1/True/False as ints
-        if value in gvars.boolMaps:
-            value = gvars.boolMaps[value]
-        else:
-            try:
-                value = float(value)
-            except ValueError:
-                value = str(value)
-        return value
-
-    def setConfig(self, key, value):
-        """
-        Shortcut for writing config to file.
-        """
-        self.config[key] = value
-        self.config.write()
-
     def loadConfigToGUI(self):
         """
         Read settings from the config file every time window is opened,
@@ -274,7 +242,7 @@ class BaseWindow(QMainWindow):
 
     keras_two_channel_model = None
     keras_three_channel_model = None
-    config = None
+    config = None  # Overidden by AppContext
 
     def __init__(self):
         super().__init__()
@@ -293,8 +261,6 @@ class BaseWindow(QMainWindow):
         self.enablePerWindow()
 
         self.PreferencesWindow_ = PreferencesWindow()
-        self.getConfig = self.PreferencesWindow_.getConfig
-        self.setConfig = self.PreferencesWindow_.setConfig
 
         self.AboutWindow_ = AboutWindow()
 
@@ -521,15 +487,16 @@ class BaseWindow(QMainWindow):
         if isinstance(self, MainWindow):
             self.ui.actionClose.setEnabled(False)
 
-    def disableOpenFileMenu(self):
-        """
-        Disables the Open menu to prevent loading additional videos if
-        setting has been changed
-        """
-        self.ui: Ui_MenuBar
-
-        if isinstance(self, MainWindow):
-            self.ui.actionOpen.setEnabled(False)
+    # not used fcn, uncommented to make sure this holds
+    # def disableOpenFileMenu(self):
+    #     """
+    #     Disables the Open menu to prevent loading additional videos if
+    #     setting has been changed
+    #     """
+    #     self.ui: Ui_MenuBar
+    #
+    #     if isinstance(self, MainWindow):
+    #         self.ui.actionOpen.setEnabled(False)
 
     @staticmethod
     def focusWindow(window):
@@ -3214,28 +3181,29 @@ class HistogramWindow(BaseWindow):
         Plots Mean Pearson Correlation Coefficients in bottom left bottom as an errorbar plot.
         """
 
-        if self.corrs is not None:
-            self.canvas.bl_ax_b.clear()
-            maxlen = len(self.corrs[0])
-            pr_xs = np.arange(maxlen // 2 + 1)
-            pr_ys = np.zeros(len(pr_xs))
-            pr_er = np.zeros_like(pr_ys)
-            for i in range(maxlen):
-                idx = i - maxlen // 2
-                if idx < 0:
-                    continue
-                else:
-                    _corr = self.corrs[:, i]
-                    pr_ys[idx] = np.nanmean(_corr)
-                    pr_er[idx] = np.nanstd(_corr)
+        if self.corrs is None:
+            return
+        self.canvas.bl_ax_b.clear()
+        maxlen = len(self.corrs[0])
+        pr_xs = np.arange(maxlen // 2 + 1)
+        pr_ys = np.zeros(len(pr_xs))
+        pr_er = np.zeros_like(pr_ys)
+        for i in range(maxlen):
+            idx = i - maxlen // 2
+            if idx < 0:
+                continue
+            else:
+                _corr = self.corrs[:, i]
+                pr_ys[idx] = np.nanmean(_corr)
+                pr_er[idx] = np.nanstd(_corr)
 
-            self.canvas.bl_ax_b.errorbar(
-                x=pr_xs,
-                y=pr_ys,
-                yerr=pr_er if plot_errors else 0,
-                label=r"$\operatorname{{E}}[\rho_{{DD, DA}}]$",
-            )
-            self.canvas.bl_ax_b.legend()
+        self.canvas.bl_ax_b.errorbar(
+            x=pr_xs,
+            y=pr_ys,
+            yerr=pr_er if plot_errors else 0,
+            label=r"$\operatorname{{E}}[\rho_{{DD, DA}}]$",
+        )
+        self.canvas.bl_ax_b.legend()
 
     def plotBottomRight(self):
         """
@@ -4200,19 +4168,54 @@ class AppContext(ApplicationContext):
         )  # type: Model
         self.config = ConfigObj(self.get_resource("config.ini"))
 
+    def getConfig(self, key: str) -> Union[bool, str, float]:
+        """
+        Shortcut for reading config from file and returning key
+        """
+        self.config.reload()
+
+        value = self.config.get(key)
+
+        if value is None:
+            qWarning(
+                "{} = {} returned NoneType. Ensure that the correct value is "
+                "set in the GUI".format(key, value)
+            )
+            return 0
+
+        # To handle 0/1/True/False as ints
+        if value in gvars.boolMaps:
+            value = gvars.boolMaps[value]
+        else:
+            try:
+                value = float(value)
+            except ValueError:
+                value = str(value)
+        return value
+
+    def setConfig(self, key, value):
+        """
+        Shortcut for writing config to file.
+        """
+        self.config[key] = value
+        self.config.write()
+
     def assign(self):
         """
         Assigns resources and functions to the right windows
         before they're instantiated
         """
-        PreferencesWindow.config = self.config
-        AboutWindow.app_version = self.config["appVersion"]
-        TraceWindow.keras_two_channel_model = self.keras_two_channel_model
-        TraceWindow.keras_three_channel_model = self.keras_three_channel_model
+        # Assigns global config variables to BaseWindow and PreferencesWindow
+        # so they both point to the base functions in AppContext
+        for Window in (BaseWindow, PreferencesWindow):
+            Window.config = self.config
+            Window.processEvents = self.app.processEvents
+            Window.getConfig = self.getConfig
+            Window.setConfig = self.setConfig
 
-        # Assigns processEvents to fix short-term lockups due to progress.
-        # Add more windows if needed. Use sparingly!
-        BaseWindow.processEvents = self.app.processEvents
+        AboutWindow.app_version = self.config["appVersion"]
+        BaseWindow.keras_two_channel_model = self.keras_two_channel_model
+        BaseWindow.keras_three_channel_model = self.keras_three_channel_model
 
     def run(self):
         """

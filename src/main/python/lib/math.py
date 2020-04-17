@@ -357,13 +357,13 @@ def fit_hmm(
 
 def get_hmm_model(X, n_components=5, name=None):
     return pg.HiddenMarkovModel.from_samples(
-            pg.NormalDistribution,
-            name=name,
-            n_components=n_components,
-            X=X,
-            n_jobs=-1,
-            # callbacks=[pgc.ModelCheckpoint(name=name)],
-        )
+        pg.NormalDistribution,
+        name=name,
+        n_components=n_components,
+        X=X,
+        n_jobs=-1,
+        # callbacks=[pgc.ModelCheckpoint(name=name)],
+    )
 
 
 def find_transitions(states, fret):
@@ -1329,15 +1329,15 @@ def fit_and_compare_exp_funcs(
         print(f"BIC : {bic_2:.6f}")
 
     return {
-        'BEST': 'SINGLE' if bic_1 < bic_2 else 'DOUBLE',
-        'SINGLE_LLH': llh_1,
-        'SINGLE_BIC': bic_1,
-        'SINGLE_PARAM': res1.x,
-        'SINGLE_ERRS': errs1,
-        'DOUBLE_LLH': llh_2,
-        'DOUBLE_BIC': bic_2,
-        'DOUBLE_PARAM': res2.x,
-        'DOUBLE_ERRS': errs2,
+        "BEST": "SINGLE" if bic_1 < bic_2 else "DOUBLE",
+        "SINGLE_LLH": llh_1,
+        "SINGLE_BIC": bic_1,
+        "SINGLE_PARAM": res1.x,
+        "SINGLE_ERRS": errs1,
+        "DOUBLE_LLH": llh_2,
+        "DOUBLE_BIC": bic_2,
+        "DOUBLE_PARAM": res2.x,
+        "DOUBLE_ERRS": errs2,
     }
 
 

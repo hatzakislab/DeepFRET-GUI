@@ -609,7 +609,7 @@ class HistogramData:
 
 class TDPData:
     def __init__(self):
-        self.tdp_df = None
+        self.df = None
         self.state_lifetime = None
         self.state_before = None
         self.state_after = None

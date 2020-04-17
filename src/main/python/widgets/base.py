@@ -6,9 +6,22 @@ import matplotlib
 import numpy as np
 import pandas as pd
 from PyQt5.QtCore import pyqtSlot, QModelIndex, Qt, qWarning, QUrl
-from PyQt5.QtGui import QStandardItemModel, QStandardItem, QDesktopServices, QKeySequence
-from PyQt5.QtWidgets import QMainWindow, QSplitter, QAbstractItemView, QListView, QMessageBox, QFileDialog, QDialog, \
-    QShortcut
+from PyQt5.QtGui import (
+    QStandardItemModel,
+    QStandardItem,
+    QDesktopServices,
+    QKeySequence,
+)
+from PyQt5.QtWidgets import (
+    QMainWindow,
+    QSplitter,
+    QAbstractItemView,
+    QListView,
+    QMessageBox,
+    QFileDialog,
+    QDialog,
+    QShortcut,
+)
 
 from global_variables import GlobalVariables as gvars
 from lib.container import DataContainer, TraceContainer
@@ -208,8 +221,6 @@ class BaseWindow(QMainWindow):
     #
     #     if isinstance(self, MainWindow):
     #         self.ui.actionOpen.setEnabled(False)
-
-
 
     def resetCurrentName(self):
         """
@@ -425,7 +436,6 @@ class BaseWindow(QMainWindow):
             trace = self.getTrace(item)
             trace.is_checked = False
 
-
     def checkAll(self):
         """
         Checks all list elements.
@@ -438,7 +448,6 @@ class BaseWindow(QMainWindow):
             item.setCheckState(Qt.Checked)
             trace = self.getTrace(item)
             trace.is_checked = True
-
 
     # noinspection PyAttributeOutsideInit
     def setupFigureCanvas(self, ax_type, use_layoutbox=True, **kwargs):
@@ -771,7 +780,7 @@ class BaseWindow(QMainWindow):
                 path += ".txt"
 
             with open(path, "w") as f:
-                df = self.data.tdpData.tdp_df
+                df = self.data.tdpData.df
 
                 f.write(
                     "{0}\n"
@@ -801,7 +810,6 @@ class BaseWindow(QMainWindow):
         """
         if self.isVisible() and self.inspector is not None:
             self.inspector.show()
-
 
     def correctionFactorInspector(self):
         """

@@ -1,12 +1,22 @@
+# coding=utf-8
 import multiprocessing
 import warnings
+
+from PyQt5.QtCore import Qt, qWarning
+from PyQt5.QtGui import QStandardItem
+from PyQt5.QtWidgets import (
+    QFileDialog)
+
+from ui._MenuBar import Ui_MenuBar
+from widgets.base import BaseWindow, AboutWindow, PreferencesWindow
+from widgets.simulator import SimulatorWindow
 
 multiprocessing.freeze_support()
 
 import os
 import sys
 from functools import partial
-from typing import Dict, List, Union, Any
+from typing import Union
 from lib.misc import timeit
 import matplotlib
 from PyQt5.QtCore import *
@@ -28,7 +38,6 @@ import matplotlib.gridspec
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
-import time
 import scipy.stats
 import scipy.signal
 import scipy.optimize
@@ -36,1174 +45,29 @@ import scipy.special
 import sklearn.preprocessing
 from tensorflow_core.python.keras.models import load_model, Model
 
-from ui._AboutWindow import Ui_About
-from ui._MenuBar import Ui_MenuBar
 from ui._MainWindow import Ui_MainWindow
 from ui._TraceWindow import Ui_TraceWindow
-from ui._PreferencesWindow import Ui_Preferences
 from ui._HistogramWindow import Ui_HistogramWindow
 from ui._TransitionDensityWindow import Ui_TransitionDensityWindow
 from ui._CorrectionFactorInspector import Ui_CorrectionFactorInspector
 from ui._DensityWindowInspector import Ui_DensityWindowInspector
 from ui._TraceWindowInspector import Ui_TraceWindowInspector
-from ui._SimulatorWindow import Ui_SimulatorWindow
 
 from ui.misc import (
     ProgressBar,
-    RestartDialog,
-    SheetInspector,
-    ListView,
-    ExportDialog,
-)
+    SheetInspector)
 from lib.container import (
     VideoContainer,
     ImageChannel,
     TraceChannel,
     TraceContainer,
-    DataContainer,
-)
-from mpl_layout import PlotWidget
+    HistogramData)
 
 from fbs_runtime.application_context.PyQt5 import ApplicationContext
 
 pd.set_option("display.max_rows", 500)
 pd.set_option("display.max_columns", 500)
 pd.set_option("display.width", 10000)
-
-
-class AboutWindow(QDialog):
-    """
-    'About this application' window with version numbering.
-    """
-
-    app_version = None  # This definition is overridden by AppContext
-
-    def __init__(self):
-        super().__init__()
-        self.ui = Ui_About()
-        self.ui.setupUi(self)
-        self.setWindowTitle("")
-
-        self.ui.label_APPNAME.setText(gvars.APPNAME)
-        self.ui.label_APPVER.setText("version {}".format(self.app_version))
-        self.ui.label_AUTHORS.setText(gvars.AUTHORS)
-        self.ui.label_LICENSE.setText(gvars.LICENSE)
-
-
-class PreferencesWindow(QDialog):
-    """
-    Editable preferences. If preferences shouldn't be editable (e.g. global
-    color styles), set them in GLOBALs class.
-    """
-
-    # config = None  # This definition is overridden by AppContext
-
-    def __init__(self):
-        super().__init__()
-        self.config.reload()
-        self.setModal(True)
-        self.ui = Ui_Preferences()
-        self.ui.setupUi(self)
-        self.restartDialog = RestartDialog(self)
-
-        self.globalCheckBoxes = (
-            self.ui.checkBox_batchLoadingMode,
-            self.ui.checkBox_unColocRed,
-            self.ui.checkBox_illuCorrect,
-            self.ui.checkBox_fitSpots,
-            self.ui.checkBox_hmm_local,
-            self.ui.checkBox_firstFrameIsDonor,
-            self.ui.checkBox_donorLeft,
-            self.ui.checkBox_medianPearsonCorr,
-        )
-
-        self.hmmRadioButtons = (
-            self.ui.radioButton_hmm_fitE,
-            self.ui.radioButton_hmm_fitDD,
-        )
-
-        if len(self.globalCheckBoxes) != len(gvars.keys_globalCheckBoxes):
-            mismatch_error = (
-                "Make sure widgets have the correct number of keys in gvars"
-            )
-            raise ValueError(mismatch_error)
-
-        self.connectUi()
-
-    def writeUiToConfig(self):
-        """
-        Checks all UI elements and writes their state to config
-        """
-        # All checkboxes
-        for key, checkBox in zip(
-            gvars.keys_globalCheckBoxes, self.globalCheckBoxes
-        ):
-            self.setConfig(key=key, value=checkBox.isChecked())
-
-        # HMM radio buttons
-        for hmmMode, radioButton in zip(
-            gvars.keys_hmmModes, self.hmmRadioButtons
-        ):
-            if radioButton.isChecked():
-                self.setConfig(key=gvars.key_hmmMode, value=hmmMode)
-
-        # ROI detection tolerance
-        self.setConfig(
-            key=gvars.key_colocTolerance,
-            value=self.ui.toleranceComboBox.currentText().lower(),
-        )
-
-        # Number of pairs to autodetect
-        self.setConfig(
-            key=gvars.key_autoDetectPairs,
-            value=self.ui.spinBox_autoDetect.value(),
-        )
-
-        # BIC Strictness
-        self.setConfig(
-            key=gvars.key_hmmBICStrictness,
-            value=self.ui.doubleSpinBox_hmm_BIC.value(),
-        )
-
-    def connectUi(self):
-        """
-        Connect widgets to config write functions
-        """
-        # All checkboxes
-        for configKey, checkBox in zip(
-            gvars.keys_globalCheckBoxes, self.globalCheckBoxes
-        ):
-            checkBox.clicked.connect(self.writeUiToConfig)
-
-        # TODO: add that changing the hmmLocal checkbox should change the parameters for all traces
-        #  both existing and new traces
-
-        # HMM type radio buttons
-        for radioButton in self.hmmRadioButtons:
-            radioButton.clicked.connect(self.writeUiToConfig)
-
-        # ROI detection tolerance
-        self.ui.toleranceComboBox.currentTextChanged.connect(
-            self.writeUiToConfig
-        )
-
-        # BIC strictness
-        self.ui.doubleSpinBox_hmm_BIC.valueChanged.connect(self.writeUiToConfig)
-
-        # Number of pairs to autodetect
-        self.ui.spinBox_autoDetect.valueChanged.connect(self.writeUiToConfig)
-
-        # Close modal window with Ctrl+W
-        QShortcut(QKeySequence("Ctrl+W"), self, self.close)
-
-    def loadConfigToGUI(self):
-        """
-        Read settings from the config file every time window is opened,
-        and adjust UI elements accordingly.
-        """
-        self.config.reload()
-
-        for configKey, checkBox in zip(
-            gvars.keys_globalCheckBoxes, self.globalCheckBoxes
-        ):
-            checkBox.setChecked(bool(self.getConfig(configKey)))
-
-        for radioButton, hmmMode in zip(
-            self.hmmRadioButtons, gvars.keys_hmmModes
-        ):
-            if self.getConfig(gvars.key_hmmMode) == hmmMode:
-                radioButton.setChecked(True)
-
-        self.ui.toleranceComboBox.setCurrentText(
-            self.getConfig(gvars.key_colocTolerance)
-        )
-        self.ui.spinBox_autoDetect.setValue(
-            self.getConfig(gvars.key_autoDetectPairs)
-        )
-        self.ui.doubleSpinBox_hmm_BIC.setValue(
-            self.getConfig(gvars.key_hmmBICStrictness)
-        )
-
-    def showEvent(self, QShowEvent):
-        """
-        Read settings on show.
-        """
-        self.loadConfigToGUI()
-        self.show()
-
-
-class BaseWindow(QMainWindow):
-    """
-    Superclass for shared window functions.
-    """
-
-    # Place here to share state between all windows
-    data = DataContainer()
-
-    keras_two_channel_model = None
-    keras_three_channel_model = None
-    config = None  # Overidden by AppContext
-
-    def __init__(self):
-        super().__init__()
-
-        # Other states are individual
-        self.inspector = None
-
-        self.ui = Ui_MenuBar()
-        self.ui.setupUi(self)
-
-        self.currName = None
-        self.currRow = None
-        self.batchLoaded = False
-
-        self.setupMenuBarActions()
-        self.enablePerWindow()
-
-        self.PreferencesWindow_ = PreferencesWindow()
-
-        self.AboutWindow_ = AboutWindow()
-
-    def setupMenuBarActions(self):
-        """
-        Setup menubar actions to be inherited (and thus shared) between all
-        windows. Override BaseWindow methods to override action, or disable
-        for certain windows with isinstance(self, WindowType).
-        """
-
-        # Special (macOS only)
-        self.ui.actionAbout.triggered.connect(self.showAboutWindow)
-
-        # This will show up correctly under the application name on MacOS,
-        # as  long as the key is Cmd+,
-        self.ui.actionPreferences.triggered.connect(self.showPreferenceWindow)
-
-        # File
-        # Open file
-        self.ui.actionOpen.triggered.connect(self.openFile)
-        # Save plot
-        self.ui.actionSave.triggered.connect(self.savePlot)
-        # Close window
-        self.ui.actionClose.triggered.connect(self.close)
-        # Exports CHECKED traces
-        self.ui.actionExport_Selected_Traces.triggered.connect(
-            partial(self.exportTracesToAscii, True)
-        )
-        # Exports ALL traces
-        self.ui.actionExport_All_Traces.triggered.connect(
-            partial(self.exportTracesToAscii, False)
-        )
-        # Exports colocalized spots
-        self.ui.actionExport_Colocalization.triggered.connect(
-            self.exportColocalization
-        )
-        self.ui.actionExport_Correction_Factors.triggered.connect(
-            self.exportCorrectionFactors
-        )
-        self.ui.actionExport_ES_Histogram_Data.triggered.connect(
-            self.exportHistogramData
-        )
-        self.ui.actionExport_Transition_Density_Data.triggered.connect(
-            self.exportTransitionDensityData
-        )
-
-        # Edit
-        # Delete from listView
-        self.ui.actionRemove_File.triggered.connect(self.deleteSingleListObject)
-        self.ui.actionRemove_All_Files.triggered.connect(
-            self.deleteAllListObjects
-        )
-
-        self.ui.actionCheck_All_Traces.triggered.connect(self.checkAll)
-        self.ui.actionUncheck_All_Traces.triggered.connect(self.unCheckAll)
-
-        # View
-        self.ui.actionFormat_Plot.triggered.connect(self.formatPlotInspector)
-        # ---
-        self.ui.actionAdvanced_Sort.triggered.connect(self.configInspector)
-        self.ui.actionSort_by_Ascending.triggered.connect(
-            self.sortListAscending
-        )
-        self.ui.actionSort_by_Red_Bleach.triggered.connect(
-            partial(self.sortListByCondition, "red")
-        )
-        self.ui.actionSort_by_Green_Bleach.triggered.connect(
-            partial(self.sortListByCondition, "green")
-        )
-        self.ui.actionSort_by_Equal_Stoichiometry.triggered.connect(
-            partial(self.sortListByCondition, "S")
-        )
-
-        # Analyze
-
-        # Colocalize all spots with current settings
-        self.ui.actionColocalize_All.triggered.connect(
-            self.colocalizeSpotsAllVideos
-        )
-        self.ui.actionClear_Traces.triggered.connect(self.clearTraces)
-        self.ui.actionFind_Show_Traces.triggered.connect(self.findTracesAndShow)
-        self.ui.actionClear_and_Rerun.triggered.connect(self.clearTraceAndRerun)
-
-        # ---
-        self.ui.actionColor_Red.triggered.connect(self.colorListObjectRed)
-        self.ui.actionColor_Yellow.triggered.connect(self.colorListObjectYellow)
-        self.ui.actionColor_Green.triggered.connect(self.colorListObjectGreen)
-        self.ui.actionClear_Color.triggered.connect(self.resetListObjectColor)
-        self.ui.actionClear_All_Colors.triggered.connect(
-            self.resetListObjectColorAll
-        )
-        # ---
-        self.ui.actionCorrectionFactorsWindow.triggered.connect(
-            self.correctionFactorInspector
-        )
-        self.ui.actionGet_alphaFactor.triggered.connect(
-            partial(self.getCorrectionFactors, "alpha")
-        )
-        self.ui.actionGet_deltaFactor.triggered.connect(
-            partial(self.getCorrectionFactors, "delta")
-        )
-        self.ui.actionClear_Correction_Factors.triggered.connect(
-            self.clearCorrectionFactors
-        )
-
-        for f in (partial(self.triggerBleach, "red"), self.refreshPlot):
-            self.ui.actionSelect_Bleach_Red_Channel.triggered.connect(f)
-
-        for f in (partial(self.triggerBleach, "green"), self.refreshPlot):
-            self.ui.actionSelect_Bleach_Green_Channel.triggered.connect(f)
-
-        # self.ui.actionFit_Hmm_Current.triggered.connect(
-        #     partial(self.fitSingleTraceHiddenMarkovModel, True)
-        # )
-        for f in (self.fitCheckedTracesHiddenMarkovModel, self.refreshPlot):
-            self.ui.actionFit_Hmm_Selected.triggered.connect(f)
-
-        for f in (partial(self.classifyTraces, True), self.refreshPlot):
-            self.ui.actionPredict_Selected_Traces.triggered.connect(f)
-
-        for f in (partial(self.classifyTraces, False), self.refreshPlot):
-            self.ui.actionPredict_All_traces.triggered.connect(f)
-
-        for f in (self.clearAllClassifications, self.refreshPlot):
-            self.ui.actionClear_All_Predictions.triggered.connect(f)
-
-        # Window
-        # Minimizes window
-        self.ui.actionMinimize.triggered.connect(self.showMinimized)
-        self.ui.actionMainWindow.triggered.connect(
-            partial(self.bringToFront, "MainWindow")
-        )
-        self.ui.actionTraceWindow.triggered.connect(
-            partial(self.bringToFront, "TraceWindow")
-        )
-        self.ui.actionHistogramWindow.triggered.connect(
-            partial(self.bringToFront, "HistogramWindow")
-        )
-        self.ui.actionTransitionDensityWindow.triggered.connect(
-            partial(self.bringToFront, "TransitionDensityWindow")
-        )
-        self.ui.actionTraceSimulatorWindow.triggered.connect(
-            partial(self.bringToFront, "SimulatorWindow")
-        )
-
-        # Help
-        # Open URL in help menu
-        self.ui.actionGet_Help_Online.triggered.connect(self.openUrl)
-        self.ui.actionDebug.triggered.connect(self._debug)
-
-    def enablePerWindow(self):
-        """
-        Disables specific commands that should be unavailable for certain
-        window types. Export commands should be accessible from all windows
-        (no implicit behavior).
-        """
-        self.ui: Ui_MenuBar
-
-        enableMenus_MainWindow = (
-            self.ui.actionRemove_File,
-            self.ui.actionRemove_All_Files,
-            self.ui.actionColocalize_All,
-            self.ui.actionFind_Show_Traces,
-            self.ui.actionClear_Traces,
-            self.ui.actionClear_and_Rerun,
-        )
-
-        enableMenus_TraceWindow = (
-            self.ui.actionRemove_File,
-            self.ui.actionRemove_All_Files,
-            self.ui.actionClear_Traces,
-            self.ui.actionAdvanced_Sort,
-            self.ui.actionSort_by_Ascending,
-            self.ui.actionSort_by_Green_Bleach,
-            self.ui.actionSort_by_Red_Bleach,
-            self.ui.actionSort_by_Equal_Stoichiometry,
-            self.ui.actionUncheck_All,
-            self.ui.actionCheck_All,
-            self.ui.actionGet_alphaFactor,
-            self.ui.actionGet_deltaFactor,
-            self.ui.actionColor_Red,
-            self.ui.actionColor_Yellow,
-            self.ui.actionColor_Green,
-            self.ui.actionClear_Color,
-            self.ui.actionClear_All_Colors,
-            self.ui.actionCorrectionFactorsWindow,
-            self.ui.actionClear_Correction_Factors,
-            self.ui.actionSelect_Bleach_Red_Channel,
-            self.ui.actionSelect_Bleach_Green_Channel,
-            self.ui.actionFit_Hmm_Selected,
-            self.ui.actionPredict_Selected_Traces,
-            self.ui.actionPredict_All_traces,
-            self.ui.actionClear_All_Predictions,
-            self.ui.actionClear_and_Rerun,
-            self.ui.actionCheck_All_Traces,
-            self.ui.actionUncheck_All_Traces,
-        )
-
-        enableMenus_TransitionDensityWindow = (self.ui.actionFormat_Plot,)
-        enableMenus_HistogramWindow = (self.ui.actionFormat_Plot,)
-
-        instances = (
-            MainWindow,
-            TraceWindow,
-            TransitionDensityWindow,
-            HistogramWindow,
-        )
-        menus = (
-            enableMenus_MainWindow,
-            enableMenus_TraceWindow,
-            enableMenus_TransitionDensityWindow,
-            enableMenus_HistogramWindow,
-        )
-
-        if len(instances) != len(menus):
-            raise ValueError("Make sure each window has an enableMenu list")
-
-        # enable menus set above
-        for instance, menulist in zip(instances, menus):
-            if isinstance(self, instance):
-                for menu in menulist:
-                    menu.setEnabled(True)
-
-        if isinstance(self, MainWindow):
-            self.ui.actionClose.setEnabled(False)
-
-    # not used fcn, uncommented to make sure this holds
-    # def disableOpenFileMenu(self):
-    #     """
-    #     Disables the Open menu to prevent loading additional videos if
-    #     setting has been changed
-    #     """
-    #     self.ui: Ui_MenuBar
-    #
-    #     if isinstance(self, MainWindow):
-    #         self.ui.actionOpen.setEnabled(False)
-
-    @staticmethod
-    def focusWindow(window):
-        """
-        Focuses selected window and brings it to front.
-        """
-        window.show()
-        window.setWindowState(
-            window.windowState() & ~Qt.WindowMinimized | Qt.WindowActive
-        )
-        window.raise_()
-        window.activateWindow()
-
-    def bringToFront(self, window):
-        """
-        Select which windows to focus and bring to front
-        """
-        if window == "MainWindow":
-            self.focusWindow(MainWindow_)
-
-        elif window == "TraceWindow":
-            TraceWindow_.refreshPlot()
-            self.focusWindow(TraceWindow_)
-
-        elif window == "HistogramWindow":
-            HistogramWindow_.refreshPlot()
-            self.focusWindow(HistogramWindow_)
-
-        elif window == "TransitionDensityWindow":
-            TransitionDensityWindow_.refreshPlot()
-            self.focusWindow(TransitionDensityWindow_)
-
-        elif window == "SimulatorWindow":
-            SimulatorWindow_.refreshPlot()
-            self.focusWindow(SimulatorWindow_)
-
-        else:
-            raise ValueError("Window doesn't exist")
-
-    def resetCurrentName(self):
-        """
-        Resets the current index that was used for currName object() iteration.
-        """
-        item = self.listModel.itemFromIndex(self.listView.currentIndex())
-
-        self.currName = item.text() if item is not None else None
-
-    def setSavefigrcParams(self):
-        """
-        Sets up some global matplotlib savefig rcParams. See individual
-        savePlot() methods for further customization.
-        """
-        try:
-            current_dir = self.currDir
-        except AttributeError:
-            current_dir = self.getConfig(gvars.key_lastOpenedDir)
-
-        matplotlib.rcParams["savefig.directory"] = current_dir
-        matplotlib.rcParams["savefig.facecolor"] = "white"
-        matplotlib.rcParams["savefig.edgecolor"] = gvars.color_hud_black
-        matplotlib.rcParams["savefig.transparent"] = True
-
-    def setupSplitter(self, layout, width_left=300, width_right=1400):
-        """
-        Sets up a splitter between the listView and the plotWidget to make
-        the list resizable. This has to be set up AFTER listView and
-        plotWidget have been created, to place them in the layout
-        """
-        self.splitter = QSplitter()
-        self.splitter.addWidget(self.listView)
-        self.splitter.addWidget(self.plotWidget)
-        self.splitter.setSizes((width_left, width_right))
-        layout.addWidget(self.splitter)
-
-    def setupListView(self, use_layoutbox=True):
-        """
-        Sets up the left-hand listview.
-        """
-        # This is the underlying container of the listView. Deals with
-        # handling the data labels.
-        self.listModel = QStandardItemModel()
-
-        # override old listview
-        self.listView = ListView(self)
-        self.listView.setEditTriggers(QAbstractItemView.NoEditTriggers)
-
-        if use_layoutbox:
-            self.ui.list_LayoutBox.addWidget(self.listView)
-
-        # This is the UI part of the listView. Deals with the
-        # user-interaction (e.g. clicking, deleting)
-        self.listView.setModel(self.listModel)
-        self.listView.checked.connect(self.onChecked)
-
-        # Listview triggers
-        # Need to grab the selection model inside the listview (which is
-        # singleselect here)
-        self.listViewSelectionModel = self.listView.selectionModel()
-        # to connect it to the selection
-        self.listViewSelectionModel.currentChanged.connect(
-            self.getCurrentListObject
-        )
-        # Don't connect listview twice!
-        self.listView.clicked.connect(self.getCurrentListObject)
-
-    @pyqtSlot(QModelIndex)
-    def onChecked(self, index):
-        pass
-
-    @pyqtSlot(QListView)
-    def keyPressEvent(self, QKeyEvent):
-        if QKeyEvent.key() in [Qt.UpArrow, Qt.DownArrow]:
-            self.refreshPlot()
-
-    def returnCurrentListviewNames(self):
-        """
-        Creates a list of current objects in ListView, to avoid duplicate
-        loading
-        """
-        in_listModel = []
-        for index in range(self.listModel.rowCount()):
-            item = self.listModel.item(index)
-            name = item.text()
-            in_listModel.append(name)
-        return in_listModel
-
-    def clearTraceAndRerun(self):
-        """
-        Clears everything and reruns on selected videos.
-        """
-        MainWindow_.clearTraces()
-
-        # Load all traces into their respective videos, and generate a list
-        # of traces
-        MainWindow_.getTracesAllVideos()
-        MainWindow_.refreshPlot()
-
-        # Iterate over all filenames and add to list
-        for (name, trace) in MainWindow_.data.traces.items():
-            item = QStandardItem(trace.name)
-            TraceWindow_.listModel.appendRow(item)
-            TraceWindow_.currName = trace.name
-            item.setCheckable(True)
-
-        TraceWindow_.selectListViewTopRow()
-        TraceWindow_.refreshPlot()
-        TraceWindow_.show()
-
-    def getCurrentListObject(self):
-        """
-        Obtains single list object details.
-        """
-        container = self.returnContainerInstance()
-        currentIndex = self.listView.selectedIndexes()
-
-        try:
-            for obj_index in currentIndex:
-                item = self.listModel.itemFromIndex(obj_index)
-                row = item.row()
-                index = self.listModel.index(row, 0)
-                name = self.listModel.data(index)
-                self.currName = name
-                self.currRow = row
-
-            if len(container) == 0:
-                self.currName = None
-                self.currRow = None
-
-            self.refreshPlot()
-
-        except AttributeError:
-            pass
-
-    def returnContainerInstance(self):
-        """Returns appropriate data container for implemented windows"""
-        if isinstance(self, MainWindow):
-            container = self.data.videos
-        elif isinstance(self, TraceWindow):
-            container = MainWindow_.data.traces
-        else:
-            raise NotImplementedError
-        return container
-
-    def deleteSingleListObject(self):
-        """
-        Deletes single list object.
-        """
-        container = self.returnContainerInstance()
-
-        if len(container) != 0:
-            container.pop(self.currName)
-
-            if len(container) == 0:
-                self.currName = None
-
-            self.listModel.removeRow(self.currRow)
-            self.getCurrentListObject()
-
-    def deleteAllListObjects(self):
-        """
-        Deletes all files from listview.
-        """
-        self.listModel.clear()
-        container = self.returnContainerInstance()
-        container.clear()
-
-        self.currName = None
-        self.currRow = None
-        self.batchLoaded = False
-
-        self.refreshPlot()
-        self.refreshInterface()
-
-    def sortListByChecked(self):
-        """
-        Sorts the listModel with checked objects on top.
-        Only works with checkable elements.
-        """
-        self.listModel.setSortRole(Qt.CheckStateRole)
-        self.listModel.sort(Qt.Unchecked, Qt.DescendingOrder)
-
-    def sortListAscending(self):
-        """
-        Sorts the listModel in ascending order.
-        """
-        self.listModel.setSortRole(Qt.AscendingOrder)
-        self.listModel.sort(Qt.AscendingOrder)
-
-    def clearListModel(self):
-        """
-        Clears the internal data of the listModel. Call this before total
-        refresh of interface.listView.
-        """
-        self.listModel.removeRows(0, self.listModel.rowCount())
-
-    def selectListViewTopRow(self):
-        """
-        Marks the first element in the listview.
-        """
-        self.listView.setCurrentIndex(self.listModel.index(0, 0))
-        self.getCurrentListObject()
-
-    def selectListViewRow(self, row):
-        """
-        Selects a specific row in the listview.
-        """
-        self.listView.setCurrentIndex(self.listModel.index(row, 0))
-
-    def unCheckAll(self):
-        """
-        Unchecks all list elements. Attribute check because they override
-        "select", which is normally reserved for text fields
-        """
-        if not hasattr(self, "listModel"):
-            return
-
-        for index in range(self.listModel.rowCount()):
-            item = self.listModel.item(index)
-            item.setCheckState(Qt.Unchecked)
-            trace = self.getTrace(item)
-            trace.is_checked = False
-
-        if HistogramWindow_.isVisible():
-            HistogramWindow_.refreshPlot()
-
-        if TransitionDensityWindow_.isVisible():
-            TransitionDensityWindow_.refreshPlot()
-
-    def checkAll(self):
-        """
-        Checks all list elements.
-        """
-        if not hasattr(self, "listModel"):
-            return
-
-        for index in range(self.listModel.rowCount()):
-            item = self.listModel.item(index)
-            item.setCheckState(Qt.Checked)
-            trace = self.getTrace(item)
-            trace.is_checked = True
-
-        if HistogramWindow_.isVisible():
-            HistogramWindow_.refreshPlot()
-
-        if TransitionDensityWindow_.isVisible():
-            TransitionDensityWindow_.refreshPlot()
-
-    def setupFigureCanvas(self, ax_type, use_layoutbox=True, **kwargs):
-        """
-        Creates a canvas with a given ax layout.
-        """
-        self.plotWidget = PlotWidget(ax_type=ax_type, **kwargs)
-        self.canvas = self.plotWidget.canvas
-
-        if use_layoutbox:
-            try:
-                self.ui.mpl_LayoutBox.addWidget(self.canvas)
-            except AttributeError:
-                qWarning(
-                    "Canvas must be placed in a Q-Layout named 'mpl_LayoutBox', "
-                    "which is currently missing from the .interface file for "
-                    "{}".format(type(self))
-                )
-
-        # make font editable in PDF
-        matplotlib.rcParams["pdf.fonttype"] = 42
-        matplotlib.rcParams["savefig.format"] = "pdf"
-
-        self.refreshPlot()
-
-    def openUrl(self):
-        """
-        Opens URL in default browser.
-        """
-        url = QUrl("https://github.com/komodovaran/DeepFRET-GUI/issues")
-        if not QDesktopServices.openUrl(url):
-            QMessageBox.warning(self, "Open Url", "Could not open url")
-
-    def resetListObjectColor(self):
-        """
-        Resets color of currently selected listview object.
-        """
-        item = self.listModel.itemFromIndex(self.listView.currentIndex())
-        item.setForeground(Qt.black)
-        item.setBackground(Qt.white)
-
-    def resetListObjectColorAll(self):
-        """
-        Resets color of all listview objects.
-        """
-        for index in range(self.listModel.rowCount()):
-            item = self.listModel.itemFromIndex(index)
-            item.setForeground(Qt.black)
-            item.setBackground(Qt.white)
-
-    def colorListObjectRed(self):
-        """
-        Colors the currently selected listview object red.
-        """
-        item = self.listModel.itemFromIndex(self.listView.currentIndex())
-        item.setForeground(Qt.white)
-        item.setBackground(Qt.darkRed)
-
-    def colorListObjectYellow(self):
-        """
-        Colors the currently selected listview object yellow.
-        """
-        item = self.listModel.itemFromIndex(self.listView.currentIndex())
-        item.setForeground(Qt.white)
-        item.setBackground(Qt.darkYellow)
-
-    def colorListObjectGreen(self):
-        """
-        Colors the currently selected listview object green.
-        """
-        item = self.listModel.itemFromIndex(self.listView.currentIndex())
-        item.setForeground(Qt.white)
-        item.setBackground(Qt.darkGreen)
-
-    def showAboutWindow(self):
-        """
-        Shows "About" window.
-        """
-        self.AboutWindow_.show()
-
-    def showPreferenceWindow(self):
-        """
-        Shows "Preference" window.
-        """
-        self.PreferencesWindow_.show()
-
-    @staticmethod
-    def newListItem(other, name):
-        """
-        Adds a new, single object to ListView.
-        """
-        item = QStandardItem(name)
-        other.listModel.appendRow(item)
-        other.listView.repaint()
-
-    def openFile(self):
-        """Override in subclass."""
-        pass
-
-    def savePlot(self):
-        """Override in subclass."""
-        pass
-
-    @staticmethod
-    def returnInfoHeader():
-        """
-        Generates boilerplate header text for every exported file.
-        """
-        exp_txt = "Exported by DeepFRET"
-        date_txt = "Date: {}".format(time.strftime("%Y-%m-%d, %H:%M"))
-
-        return exp_txt, date_txt
-
-    @staticmethod
-    def traceHeader(
-        trace_df, exp_txt, id_txt, video_filename, bleaches_at, is_simulated
-    ):
-        """Returns the string to use for saving the trace as txt"""
-        date_txt = "Date: {}".format(time.strftime("%Y-%m-%d, %H:%M"))
-        bl_txt = "Bleaches at {}".format(bleaches_at)
-        vid_txt = "Video filename: {}".format(video_filename)
-
-        if is_simulated:
-            exp_txt += " (Simulated)"
-
-        return (
-            "{0}\n"
-            "{1}\n"
-            "{2}\n"
-            "{3}\n"
-            "{4}\n\n"
-            "{5}".format(
-                exp_txt,
-                date_txt,
-                vid_txt,
-                id_txt,
-                bl_txt,
-                trace_df.to_csv(index=False, sep="\t", na_rep="NaN"),
-            )
-        )
-
-    def exportColocalization(self):
-        """
-        Exports colocalized ROI information for all currently colocalized
-        videos. Does not automatically trigger ColocalizeAll beforehand.
-        """
-        exp_txt, date_txt = self.returnInfoHeader()
-
-        directory = (
-            self.getConfig(gvars.key_lastOpenedDir) + "/Colocalization.txt"
-        )
-        path, _ = QFileDialog.getSaveFileName(
-            self, directory=directory
-        )  # type: str, str
-
-        if path != "":
-            if not path.split("/")[-1].endswith(".txt"):
-                path += ".txt"
-
-            columns = ("green", "red", "green/red", "filename")
-            d = {c: [] for c in columns}  # type: Dict[str, list]
-
-            assert columns[-1] == "filename"
-
-            for name, vid in MainWindow_.videos.items():
-
-                data = (
-                    vid.grn.n_spots,
-                    vid.red.n_spots,
-                    vid.coloc_grn_red.n_spots,
-                    name,
-                )
-
-                for c, da in zip(columns, data):
-                    d[c].append(da)
-
-            df = pd.DataFrame.from_dict(d)
-
-            with open(path, "w") as f:
-                f.write(
-                    "{0}\n"
-                    "{1}\n\n"
-                    "{2}".format(
-                        exp_txt,
-                        date_txt,
-                        df.to_csv(index=False, sep="\t", na_rep="NaN"),
-                    )
-                )
-
-    def exportTracesToAscii(self, checked_only=False):
-        """
-        Exports all traces as ASCII files to selected directory.
-        Maintains compatibility with iSMS and older pySMS scripts.
-        """
-        if isinstance(self, SimulatorWindow):
-            traces = self.data.simulated_traces
-        else:
-            traces = self.data.traces
-
-        if checked_only:
-            selected = [trace for trace in traces.values() if trace.is_checked]
-        else:
-            selected = [trace for trace in traces.values()]
-
-        diag = ExportDialog(
-            init_dir=gvars.key_lastOpenedDir, accept_label="Export"
-        )
-
-        if diag.exec():
-            path = diag.selectedFiles()[0]
-            self.processEvents()
-
-            for trace in selected:
-                trace.export_trace_to_txt(dir_to_join=path)
-
-    def exportCorrectionFactors(self):
-        """
-        Exports all available correction factors for each trace to table.
-        """
-
-        exp_txt, date_txt = self.returnInfoHeader()
-
-        directory = (
-            self.getConfig(gvars.key_lastOpenedDir) + "/CorrectionFactors.txt"
-        )
-        path, _ = QFileDialog.getSaveFileName(
-            self, directory=directory
-        )  # type: str, str
-
-        if path != "":
-            if not path.split("/")[-1].endswith(".txt"):
-                path += ".txt"
-
-            df = TraceWindow_.returnPooledCorrectionFactors()
-
-            with open(path, "w") as f:
-                f.write(
-                    "{0}\n"
-                    "{1}\n\n"
-                    "{2}".format(
-                        exp_txt,
-                        date_txt,
-                        df.to_csv(index=False, sep="\t", na_rep="NaN"),
-                    )
-                )
-
-    def exportHistogramData(self):
-        """
-        Exports histogram data for selected traces
-        """
-        exp_txt, date_txt = self.returnInfoHeader()
-
-        directory = (
-            self.getConfig(gvars.key_lastOpenedDir) + "/E_S_Histogram.txt"
-        )
-        path, _ = QFileDialog.getSaveFileName(
-            self, directory=directory
-        )  # type: str, str
-
-        HistogramWindow_.getPooledData()
-
-        if path != "":
-            if not path.split("/")[-1].endswith(".txt"):
-                path += ".txt"
-
-            # Exports all the currently plotted datapoints
-            if HistogramWindow_.ui.applyCorrectionsCheckBox.isChecked():
-                E, S = HistogramWindow_.E, HistogramWindow_.S
-            else:
-                E, S = HistogramWindow_.E_un, HistogramWindow_.S_un
-
-            if E is not None:
-                df = pd.DataFrame({"E": E, "S": S}).round(4)
-            else:
-                df = pd.DataFrame({"E": [], "S": []})
-
-            with open(path, "w") as f:
-                f.write(
-                    "{0}\n"
-                    "{1}\n\n"
-                    "{2}".format(
-                        exp_txt,
-                        date_txt,
-                        df.to_csv(index=False, sep="\t", na_rep="NaN"),
-                    )
-                )
-
-    def exportTransitionDensityData(self):
-        """
-        Exports TDP data for selected traces
-        """
-        exp_txt, date_txt = self.returnInfoHeader()
-
-        directory = (
-            self.getConfig(gvars.key_lastOpenedDir)
-            + "/Transition_Densities.txt"
-        )
-        path, _ = QFileDialog.getSaveFileName(
-            self, directory=directory
-        )  # type: str, str
-
-        TransitionDensityWindow_.setPooledLifetimes()
-
-        if path != "":
-            if not path.split("/")[-1].endswith(".txt"):
-                path += ".txt"
-
-            with open(path, "w") as f:
-                df = TransitionDensityWindow_.tdp_df
-
-                f.write(
-                    "{0}\n"
-                    "{1}\n\n"
-                    "{2}".format(
-                        exp_txt,
-                        date_txt,
-                        df.to_csv(index=False, sep="\t", na_rep="NaN"),
-                    )
-                )
-
-    def clearTraces(self):
-        """Clears all currently obtained traces."""
-        MainWindow_.data.traces.clear()
-        TraceWindow_.listModel.clear()
-        TraceWindow_.refreshPlot()
-
-    def formatPlotInspector(self):
-        """
-        Opens the inspector (modal) window to format the current plot
-        """
-        if (
-            isinstance(self, HistogramWindow)
-            or isinstance(self, TransitionDensityWindow)
-        ) and self.isActiveWindow():
-            self.inspector.show()
-
-    def configInspector(self):
-        """
-        Opens the inspector (modal) window to do advanced actions
-        """
-        if TraceWindow_.isVisible():
-            TraceWindowInspector_.show()
-
-    def correctionFactorInspector(self):
-        """
-        Opens the inspector (modal) window to set correction factors
-        """
-        if TraceWindow_.isVisible():
-            CorrectionFactorInspector_.show()
-
-    """
-    Functions below are not used in the BaseWindow, but they MUST be present
-    in order to be triggered via the menubar. It's also a good way to keep
-    naming consistent
-    """
-
-    def processEvents(self):
-        """Set by ApplicationContext before any windows are initialized"""
-        pass
-
-    def clearAllClassifications(self):
-        """Override in subclass."""
-        pass
-
-    def colocalizeSpotsAllVideos(self):
-        """Override in subclass."""
-        pass
-
-    def getTrace(self, name) -> TraceContainer:
-        """Override in subclass."""
-
-    def getTracesAllVideos(self):
-        """Override in subclass."""
-        pass
-
-    def setupPlot(self):
-        """Override in subclass."""
-        pass
-
-    def refreshPlot(self):
-        """Override in subclass."""
-        pass
-
-    def refreshInterface(self):
-        """Override in subclass."""
-        pass
-
-    def sortListByCondition(self, channel):
-        """Override in subclass."""
-        pass
-
-    def getCorrectionFactors(self, factor):
-        """Override in subclass."""
-        pass
-
-    def clearCorrectionFactors(self):
-        """Override in subclass."""
-        pass
-
-    def triggerBleach(self, color):
-        """Override in subclass."""
-        pass
-
-    def fitCheckedTracesHiddenMarkovModel(self):
-        """Override in subclass."""
-        pass
-
-    def classifyTraces(self, selected):
-        """Override in subclass."""
-        pass
-
-    def batchOpen(self):
-        """Override in subclass."""
-        pass
-
-    def findTracesAndShow(self):
-        """Override in subclass."""
-        pass
-
-    def _debug(self):
-        """Override in subclass."""
-        pass
 
 
 class MainWindow(BaseWindow):
@@ -1217,7 +81,6 @@ class MainWindow(BaseWindow):
         # Initialize UI states
         self.currName = None
         self.currRow = None
-        self.currDir = None
         self.currRoiSize = gvars.roi_draw_radius
         self.donor_first = self.getConfig(gvars.key_firstFrameIsDonor)
         self.donor_is_left = self.getConfig(gvars.key_donorLeft)
@@ -1272,6 +135,31 @@ class MainWindow(BaseWindow):
         )
 
         self.show()
+
+    def returnContainerInstance(self):
+        """Returns appropriate data container for implemented windows"""
+        return self.data.videos
+
+    def enablePerWindow(self):
+        """
+        Disables specific commands that should be unavailable for certain
+        window types. Export commands should be accessible from all windows
+        (no implicit behavior).
+        """
+        self.ui: Ui_MenuBar
+
+        menulist = (
+            self.ui.actionRemove_File,
+            self.ui.actionRemove_All_Files,
+            self.ui.actionColocalize_All,
+            self.ui.actionFind_Show_Traces,
+            self.ui.actionClear_Traces,
+            self.ui.actionClear_and_Rerun,
+        )
+        for menu in menulist:
+            menu.setEnabled(True)
+
+        self.ui.actionClose.setEnabled(False)
 
     def currentVideo(self) -> VideoContainer:
         """
@@ -1432,7 +320,7 @@ class MainWindow(BaseWindow):
                     self.setConfig(gvars.key_lastOpenedDir, self.currDir)
 
         if len(self.data.traces) > 0:
-            currently_loaded = TraceWindow_.returnCurrentListviewNames()
+            currently_loaded = TraceWindow_.returnCurrentListViewNames()
             # Iterate over all filenames and add to list
             for name in self.data.traces.keys():
                 # If name is already in list, skip it
@@ -1634,6 +522,7 @@ class MainWindow(BaseWindow):
 
         if self.currName is not None:
             self.canvas.defaultImageName = self.currName
+            self.canvas.defaultImageName = self.currName
         else:
             self.canvas.defaultImageName = "Blank"
 
@@ -1803,7 +692,7 @@ class MainWindow(BaseWindow):
             # Load all traces into their respective videos, and generate a
             # list of traces
             self.getTracesAllVideos()
-            currently_loaded = self.returnCurrentListviewNames()
+            currently_loaded = self.returnCurrentListViewNames()
             # Iterate over all filenames and add to list
             for (name, trace) in self.data.traces.items():
                 if name in currently_loaded:
@@ -1898,7 +787,7 @@ class TraceWindow(BaseWindow):
             )
 
         if item.checkState() in (Qt.Checked, Qt.Unchecked):
-            HistogramWindow_.getPooledData()
+            HistogramWindow_.getHistogramData()
             HistogramWindow_.gauss_params = None
             if HistogramWindow_.isVisible():
                 HistogramWindow_.refreshPlot()
@@ -1908,6 +797,58 @@ class TraceWindow(BaseWindow):
 
             if TransitionDensityWindow_.isVisible():
                 TransitionDensityWindow_.refreshPlot()
+
+    def enablePerWindow(self):
+        """
+        Disables specific commands that should be unavailable for certain
+        window types. Export commands should be accessible from all windows
+        (no implicit behavior).
+        """
+        self.ui: Ui_MenuBar
+
+        menulist = (
+            self.ui.actionRemove_File,
+            self.ui.actionRemove_All_Files,
+            self.ui.actionClear_Traces,
+            self.ui.actionAdvanced_Sort,
+            self.ui.actionSort_by_Ascending,
+            self.ui.actionSort_by_Green_Bleach,
+            self.ui.actionSort_by_Red_Bleach,
+            self.ui.actionSort_by_Equal_Stoichiometry,
+            self.ui.actionUncheck_All,
+            self.ui.actionCheck_All,
+            self.ui.actionGet_alphaFactor,
+            self.ui.actionGet_deltaFactor,
+            self.ui.actionColor_Red,
+            self.ui.actionColor_Yellow,
+            self.ui.actionColor_Green,
+            self.ui.actionClear_Color,
+            self.ui.actionClear_All_Colors,
+            self.ui.actionCorrectionFactorsWindow,
+            self.ui.actionClear_Correction_Factors,
+            self.ui.actionSelect_Bleach_Red_Channel,
+            self.ui.actionSelect_Bleach_Green_Channel,
+            self.ui.actionFit_Hmm_Selected,
+            self.ui.actionPredict_Selected_Traces,
+            self.ui.actionPredict_All_traces,
+            self.ui.actionClear_All_Predictions,
+            self.ui.actionClear_and_Rerun,
+            self.ui.actionCheck_All_Traces,
+            self.ui.actionUncheck_All_Traces,
+        )
+        for menu in menulist:
+            menu.setEnabled(True)
+
+    def returnContainerInstance(self):
+        """Returns appropriate data container for implemented windows"""
+        return self.data.traces
+
+    def correctionFactorInspector(self):
+        """
+        Opens the inspector (modal) window to set correction factors
+        """
+        if self.isVisible():
+            CorrectionFactorInspector_.show()
 
     def openFile(self, *args):
         """
@@ -2479,26 +1420,6 @@ class TraceWindow(BaseWindow):
                 trace.d_factor = lib.math.delta_factor(I_DD, I_DA, I_AA)
             self.refreshPlot()
 
-    def returnPooledCorrectionFactors(self):
-        """
-        Obtains global correction factors to be used
-        """
-        columns = "alpha", "delta", "filename"
-        assert columns[-1] == "filename"
-
-        d = {c: [] for c in columns}  # type: Dict[str, list]
-
-        for trace in self.data.traces.values():
-            if trace.a_factor is np.nan and trace.d_factor is np.nan:
-                continue
-            else:
-                data = trace.a_factor, trace.d_factor, trace.name
-
-                for c, da in zip(columns, data):
-                    d[c].append(da)
-
-        return pd.DataFrame.from_dict(d).round(4)
-
     def clearCorrectionFactors(self):
         """Zeros alpha and delta correction factors"""
         if self.currName is not None:
@@ -2704,22 +1625,22 @@ class TraceWindow(BaseWindow):
 class HistogramWindow(BaseWindow):
     def __init__(self):
         super().__init__()
-        self.currDir = None
+        # Histogram data
+        # TODO: these should all be merged to be part of HistogramData container
         self.E = None
         self.E_un = None
         self.S = None
         self.S_un = None
         self.DD, self.DA, self.corrs, = None, None, None
 
-        self.trace_median_len = None
-        self.marg_bins = np.arange(-0.3, 1.3, 0.02)
-        self.xpts = np.linspace(-0.3, 1.3, 300)
-        self.gauss_params = None
-
         self.alpha = None
         self.delta = None
         self.beta = None
         self.gamma = None
+
+        # Plotting parameters
+        self.marg_bins = np.arange(-0.3, 1.3, 0.02)
+        self.xpts = np.linspace(-0.3, 1.3, 300)
 
         self.ui = Ui_HistogramWindow()
         self.ui.setupUi(self)
@@ -2731,6 +1652,84 @@ class HistogramWindow(BaseWindow):
 
         self.setupPlot()
         self.connectUi()
+
+    def enablePerWindow(self):
+        """
+        Disables specific commands that should be unavailable for certain
+        window types. Export commands should be accessible from all windows
+        (no implicit behavior).
+        """
+        self.ui: Ui_MenuBar
+
+        menulist = (self.ui.actionFormat_Plot,)
+        for menu in menulist:
+            menu.setEnabled(True)
+
+    def formatPlotInspector(self):
+        """
+        Opens the inspector (modal) window to format the current plot
+        """
+        if self.isActiveWindow():
+            self.inspector.show()
+
+    def exportHistogramData(self):
+        """
+        Exports histogram data for selected traces
+        """
+        exp_txt, date_txt = self.returnInfoHeader()
+
+        directory = (
+            self.getConfig(gvars.key_lastOpenedDir) + "/E_S_Histogram.txt"
+        )
+        path, _ = QFileDialog.getSaveFileName(
+            self, directory=directory
+        )  # type: str, str
+
+        self.getHistogramData()
+
+        if path != "":
+            if not path.split("/")[-1].endswith(".txt"):
+                path += ".txt"
+
+            # Exports all the currently plotted datapoints
+            if self.ui.applyCorrectionsCheckBox.isChecked():
+                E, S = self.E, self.S
+            else:
+                E, S = self.E_un, self.S_un
+
+            if E is not None:
+                df = pd.DataFrame({"E": E, "S": S}).round(4)
+            else:
+                df = pd.DataFrame({"E": [], "S": []})
+
+            with open(path, "w") as f:
+                f.write(
+                    "{0}\n"
+                    "{1}\n\n"
+                    "{2}".format(
+                        exp_txt,
+                        date_txt,
+                        df.to_csv(index=False, sep="\t", na_rep="NaN"),
+                    )
+                )
+
+    def unCheckAll(self):
+        """
+        Unchecks all list elements. Attribute check because they override
+        "select", which is normally reserved for text fields
+        """
+        super().unCheckAll()
+        if self.isVisible():
+            self.refreshPlot()
+
+    def checkAll(self):
+        """
+        Checks all list elements.
+        """
+        super().checkAll()
+        if self.isVisible():
+            self.refreshPlot()
+
 
     def connectUi(self):
         for f in (
@@ -2783,7 +1782,7 @@ class HistogramWindow(BaseWindow):
             #     # labelright=False,
             # )
 
-    def getPooledData(self, n_first_frames="spinbox"):
+    def getHistogramData(self, n_first_frames="spinbox"):
         """
         Returns pooled E and S_app data before bleaching, for each trace.
         The loops take approx. 0.1 ms per trace, and it's too much trouble
@@ -2815,11 +1814,11 @@ class HistogramWindow(BaseWindow):
             trace for trace in self.data.traces.values() if trace.is_checked
         ]
 
-        self.n_samples = len(checkedTraces)
+        self.data.histData.n_samples = len(checkedTraces)
         alpha = self.getConfig(gvars.key_alphaFactor)
         delta = self.getConfig(gvars.key_deltaFactor)
 
-        self.trace_median_len = int(
+        self.data.histData.trace_median_len = int(
             np.median(
                 [
                     trace.first_bleach
@@ -2847,7 +1846,7 @@ class HistogramWindow(BaseWindow):
             DA.append(I_DA[: trace.first_bleach])
             lengths.append(len(trace.fret[: trace.first_bleach]))
             if self.getConfig(gvars.key_medianPearsonCorr):
-                n_lags_pcorr = self.trace_median_len
+                n_lags_pcorr = self.data.histData.trace_median_len
             else:
                 n_lags_pcorr = self.getConfig(gvars.key_lagsPearsonCorr)
 
@@ -2863,7 +1862,7 @@ class HistogramWindow(BaseWindow):
         self.DD = np.concatenate(DD).flatten()
         self.DA = np.concatenate(DA).flatten()
 
-        self.lengths = np.array(lengths)
+        self.data.histData.lengths = np.array(lengths)
         corrs = np.array(corrs)
         if len(corrs.shape) == 1:  # a nested array instead of one big array
             corrs = lib.math.correct_corrs(corrs)
@@ -2899,6 +1898,30 @@ class HistogramWindow(BaseWindow):
         self.alpha = alpha
         self.delta = delta
 
+        self.updatePooledData()
+
+    def updatePooledData(self):
+        """
+        Sets all variables from getHistogramData to be in a HistogramData container.
+        This way we can access the data from other windows as well.
+        This is only a temporary solution, over time this should be moved to DataContainer and this method should be removed
+        """
+        self.data.histData = HistogramData()
+        self.data.histData.alpha = self.alpha
+        self.data.histData.delta = self.delta
+        self.data.histData.beta = self.beta
+        self.data.histData.gamma = self.gamma
+
+        (
+            self.data.histData.E,
+            self.data.histData.S,
+            self.data.histData.DD,
+            self.data.histData.DA,
+            self.data.histData.corrs,
+            self.data.histData.E_un,
+            self.data.histData.S_un,
+        ) = (self.E, self.S, self.DD, self.DA, self.corrs, self.E_un, self.S_un)
+
     def fitGaussians(self, states):
         """
         Fits multiple gaussians to the E data
@@ -2917,9 +1940,9 @@ class HistogramWindow(BaseWindow):
                 max_n_components=np.max(n_components),
             )
 
-            self.gauss_params = params
-            self.best_k = best_model.n_components
-            self.ui.gaussianSpinBox.setValue(self.best_k)
+            self.data.histData.gauss_params = params
+            self.data.histData.best_k = best_model.n_components
+            self.ui.gaussianSpinBox.setValue(self.data.histData.best_k)
             self.ui.gaussianSpinBox.repaint()
 
     def plotDefaultElements(self):
@@ -2982,10 +2005,10 @@ class HistogramWindow(BaseWindow):
                 density=True,
                 histtype="stepfilled",
             )
-        if self.gauss_params is not None:
+        if self.data.histData.gauss_params is not None:
             joint_dist = []
             xpts = self.xpts
-            for (m, s, w) in self.gauss_params:
+            for (m, s, w) in self.data.histData.gauss_params:
                 _, y = lib.plotting.plot_gaussian(
                     mean=m, sigma=s, weight=w, x=xpts, ax=self.canvas.tl_ax_top
                 )
@@ -3036,18 +2059,18 @@ class HistogramWindow(BaseWindow):
 
         self.canvas.tl_ax_ctr.clear()
 
-        n_equals_txt = "N = {}\n".format(self.n_samples)
-        if not np.isnan(self.trace_median_len):
+        n_equals_txt = "N = {}\n".format(self.data.histData.n_samples)
+        if self.data.histData.trace_median_len is not None:
             n_equals_txt += "(median length {:.0f})".format(
-                self.trace_median_len
+                self.data.histData.trace_median_len
             )
 
         self.canvas.tl_ax_ctr.text(
             x=0, y=0.9, s=n_equals_txt, color=gvars.color_gui_text
         )
 
-        if self.gauss_params is not None:
-            for n, gauss_params in enumerate(self.gauss_params):
+        if self.data.histData.gauss_params is not None:
+            for n, gauss_params in enumerate(self.data.histData.gauss_params):
                 m, s, w = gauss_params
                 self.canvas.tl_ax_ctr.text(
                     x=0.6,
@@ -3149,7 +2172,7 @@ class HistogramWindow(BaseWindow):
         """
         Plots the bottom left top half Histogram, as well as an exponential fit of lifetimes.
         """
-        lengths = self.lengths
+        lengths = self.data.histData.lengths
         if lengths is not None:
             self.canvas.bl_ax_t.clear()
             self.canvas.bl_ax_t.hist(
@@ -3262,7 +2285,7 @@ class HistogramWindow(BaseWindow):
         """
         corrected = self.ui.applyCorrectionsCheckBox.isChecked()
         try:
-            self.getPooledData()
+            self.getHistogramData()
             for ax in self.canvas.axes:
                 ax.clear()
             if self.E is not None:
@@ -3293,12 +2316,7 @@ class TransitionDensityWindow(BaseWindow):
     def __init__(self):
         super().__init__()
         self.currDir = None
-        self.state_before = None
-        self.state_after = None
-        self.state_lifetime = None
-        self.n_samples = None
         self.selected_data = None
-        self.tdp_df = None
         self.colors = None
 
         # dynamically created once plot is refreshed
@@ -3311,6 +2329,43 @@ class TransitionDensityWindow(BaseWindow):
 
         self.setupFigureCanvas(ax_type="plot", width=2, height=2)
         self.setupPlot()
+
+    def enablePerWindow(self):
+        """
+        Disables specific commands that should be unavailable for certain
+        window types. Export commands should be accessible from all windows
+        (no implicit behavior).
+        """
+        self.ui: Ui_MenuBar
+
+        menulist = (self.ui.actionFormat_Plot,)
+        for menu in menulist:
+            menu.setEnabled(True)
+
+    def formatPlotInspector(self):
+        """
+        Opens the inspector (modal) window to format the current plot
+        """
+        if self.isActiveWindow():
+            self.inspector.show()
+
+    def unCheckAll(self):
+        """
+        Unchecks all list elements. Attribute check because they override
+        "select", which is normally reserved for text fields
+        """
+        super().unCheckAll()
+        if self.isVisible():
+            self.refreshPlot()
+
+    def checkAll(self):
+        """
+        Checks all list elements.
+        """
+        super().checkAll()
+        if self.isVisible():
+            self.refreshPlot()
+
 
     def savePlot(self):
         """
@@ -3348,8 +2403,10 @@ class TransitionDensityWindow(BaseWindow):
         """
         Re-plot non-persistent plot settings for left (TDP)
         """
-        smax = max(self.state_before)
-
+        try:
+            smax = max(self.data.tdpData.state_before)
+        except TypeError:
+            smax = 1.0
         self.tdp_ax.set_xlim(-0.15, smax + 0.15)
         self.tdp_ax.set_ylim(-0.15, smax + 0.15)
         self.tdp_ax.set_xlabel(xlabel="Before", color=gvars.color_gui_text)
@@ -3373,40 +2430,15 @@ class TransitionDensityWindow(BaseWindow):
                 spine.set_edgecolor(gvars.color_gui_text)
                 spine.set_linewidth(0.5)
 
-    def setPooledLifetimes(self):
-        """
-        Return pooled lifetimes from Hidden Markov Model fits.
-        """
-        checkedTraces = [
-            trace for trace in self.data.traces.values() if trace.is_checked
-        ]
-        self.n_samples = len(checkedTraces)
-
-        try:
-            transitions = pd.concat(
-                [trace.transitions for trace in checkedTraces]
-            )
-            transitions.reset_index(inplace=True)
-
-            self.state_lifetime = transitions["lifetime"]
-            self.state_before = transitions["e_before"]
-            self.state_after = transitions["e_after"]
-
-        except ValueError:
-            self.state_lifetime = None
-            self.state_before = None
-            self.state_after = None
-            self.tdp_df = None
-
     def setClusteredTransitions(self):
-        if self.state_before is not None:
+        if self.data.tdpData.state_before is not None:
             n_clusters = self.ui.nClustersSpinBox.value()
 
             tdp_df = pd.DataFrame(
                 {
-                    "e_before": self.state_before,
-                    "e_after": self.state_after,
-                    "lifetime": self.state_lifetime,
+                    "e_before": self.data.tdpData.state_before,
+                    "e_after": self.data.tdpData.state_after,
+                    "lifetime": self.data.tdpData.state_after,
                 }
             )
 
@@ -3424,7 +2456,7 @@ class TransitionDensityWindow(BaseWindow):
             diags = pd.concat(halves)
             tdp_df["label"] = diags["label"]
 
-            self.tdp_df = tdp_df
+            self.data.tdp_df = tdp_df
 
     def setupDynamicGridAxes(self):
         """
@@ -3459,7 +2491,11 @@ class TransitionDensityWindow(BaseWindow):
         Plots TDP contents
         """
         bandwidth, resolution, n_colors, overlay_pts, pts_alpha = params
-        smax = max(self.state_before)
+
+        try:
+            smax = max(self.data.tdpData.state_before)
+        except TypeError:
+            smax = 1.0
 
         self.tdp_ax.plot(
             [-0.15, smax + 0.15],
@@ -3467,10 +2503,13 @@ class TransitionDensityWindow(BaseWindow):
             color="lightgrey",
             ls="--",
         )
-        if self.state_before is not None and len(self.state_before) > 0:
+        if (
+            self.data.tdpData.state_before is not None
+            and len(self.data.tdpData.state_before) > 0
+        ):
             cont = lib.math.contour_2d(
-                xdata=self.state_before,
-                ydata=self.state_after,
+                xdata=self.data.tdpData.state_before,
+                ydata=self.data.tdpData.state_after,
                 bandwidth=bandwidth / 200,
                 resolution=resolution,
                 kernel="linear",
@@ -3482,19 +2521,25 @@ class TransitionDensityWindow(BaseWindow):
                 y=smax - 0.1,
                 s="N = {}\n"
                 "{} transitions\n".format(
-                    self.n_samples, len(self.state_lifetime)
+                    self.data.histData.n_samples,
+                    len(self.data.tdpData.state_after),
                 ),
                 color=gvars.color_gui_text,
             )
 
-            tdp_df_grp = self.tdp_df.groupby("label")
+            tdp_df_grp = self.data.tdp_df.groupby("label")
             self.colors = lib.plotting.get_colors(
                 "viridis", tdp_df_grp.ngroups * 2
             )
 
-            for i, cluster in tdp_df_grp:
-                xi = self.tdp_df["e_before"][self.tdp_df["label"] == i]
-                yi = self.tdp_df["e_after"][self.tdp_df["label"] == i]
+            for (
+                i,
+                cluster,
+            ) in (
+                tdp_df_grp
+            ):  # TODO: figx this so it doesn't need to call multiple times to data.tdpf_df
+                xi = cluster["e_before"]
+                yi = cluster["e_after"]
 
                 self.tdp_ax.scatter(
                     x=xi,
@@ -3517,13 +2562,13 @@ class TransitionDensityWindow(BaseWindow):
         """
         np.random.seed(1)  # make sure histograms don't change on every re-fit
 
-        if self.tdp_df is not None:
-            fret_lifetimes = self.tdp_df["lifetime"]
+        if self.data.tdp_df is not None:
+            fret_lifetimes = self.data.tdp_df["lifetime"]
             max_lifetime = np.max(fret_lifetimes)
             bw = lib.math.estimate_binwidth(fret_lifetimes)
             bins = np.arange(0, max_lifetime, bw)
 
-            for k, cluster in self.tdp_df.groupby("label"):
+            for k, cluster in self.data.tdp_df.groupby("label"):
                 try:
                     hx, hy, *_ = lib.math.histpoints_w_err(
                         data=cluster["lifetime"],
@@ -3765,7 +2810,8 @@ class TraceWindowInspector(SheetInspector):
             self.ui.spinBoxDynamics,
         )
 
-        TraceWindow_.inspector = self
+        if isinstance(parent, TraceWindow):
+            parent.inspector = self
 
         self.connectUi(parent)
         self.setUi()
@@ -3809,335 +2855,6 @@ class TraceWindowInspector(SheetInspector):
             dynamics,
             bleached_only,
         )
-
-
-class SimulatorWindow(BaseWindow):
-    """
-    smFRET trace simulator window
-    """
-
-    def __init__(self):
-        super().__init__()
-        # self.data.examples = {}
-        self.df = pd.DataFrame()
-        self.ui = Ui_SimulatorWindow()
-        self.ui.setupUi(self)
-
-        self.setupFigureCanvas(ax_type="dynamic", use_layoutbox=True)
-        self.connectUi()
-
-    def connectUi(self):
-        """Connect interface"""
-        # Find and connect all checkboxes dynamically
-
-        for c in dir(self.ui):
-            if c.startswith("checkBox"):
-                [
-                    getattr(self.ui, c).clicked.connect(f)
-                    for f in (self.refreshUi, self.refreshPlot)
-                ]
-
-        self.ui.inputFretStateMeans.returnPressed.connect(self.refreshPlot)
-
-        for i in dir(self.ui):
-            if i.startswith("input") and not i.startswith("inputFret"):
-                getattr(self.ui, i).textChanged.connect(self.refreshPlot)
-
-        self.ui.examplesComboBox.currentTextChanged.connect(self.refreshPlot)
-
-        for f in (
-            self.valuesFromGUI,
-            partial(self.generateTraces, False),
-            self.exportTracesToAscii,
-        ):
-            self.ui.pushButtonExport.clicked.connect(f)
-
-    def savePlot(self):
-        """
-        Saves plot for simulated traces
-        """
-        self.setSavefigrcParams()
-        self.canvas.defaultImageName = "Simulated Traces"
-        self.canvas.toolbar.save_figure()
-        self.refreshPlot()
-
-    def refreshUi(self):
-        """Refreshes UI to e.g. disable some input boxes"""
-        for inputBox, checkBox in (
-            (self.ui.inputDonorMeanLifetime, self.ui.checkBoxDlifetime),
-            (self.ui.inputAcceptorMeanLifetime, self.ui.checkBoxALifetime),
-            (
-                self.ui.inputTransitionProbabilityHi,
-                self.ui.checkBoxTransitionProbability,
-            ),
-            (self.ui.inputFretStateMeans, self.ui.checkBoxRandomState),
-            (self.ui.inputNoiseHi, self.ui.checkBoxNoise),
-            (self.ui.inputMismatchHi, self.ui.checkBoxMismatch),
-            (self.ui.inputScalerHi, self.ui.checkBoxScaler),
-            (self.ui.inputBleedthroughHi, self.ui.checkBoxBleedthrough),
-        ):
-            inputBox.setDisabled(checkBox.isChecked())
-
-        self.ui.inputMaxRandomStates.setEnabled(
-            self.ui.checkBoxRandomState.isChecked()
-        )
-
-    def valuesFromGUI(self):
-        """
-        Fetch values from GUI
-        """
-        # Number of traces to export
-        # Number of examples
-        self.n_examples = (
-            int(self.ui.examplesComboBox.currentText().split("x")[0]) ** 2
-        )
-
-        self.n_traces = int(self.ui.inputNumberOfTraces.value())
-
-        # Trace length
-        self.trace_len = int(self.ui.inputTraceLength.value())
-
-        # Scramble probability
-        self.scramble_prob = float(self.ui.inputScrambleProbability.value())
-
-        # Aggregation probability
-        self.aggregate_prob = float(self.ui.inputAggregateProbability.value())
-
-        # Max aggregate size
-        self.max_aggregate_size = int(self.ui.inputMaxAggregateSize.value())
-
-        # FRET state means
-        if self.ui.checkBoxRandomState.isChecked():
-            self.fret_means = "random"
-        else:
-            if hasattr(self, "fret_means"):
-                old_fret_means = self.fret_means
-            else:
-                old_fret_means = float(self.ui.inputFretStateMeans.text())
-
-            new_fret_means = sorted(
-                lib.misc.numstring_to_ls(self.ui.inputFretStateMeans.text())
-            )
-            if not new_fret_means:
-                self.fret_means = 0
-
-            if new_fret_means != old_fret_means:
-                self.fret_means = new_fret_means
-
-        # Max number of random states
-        self.max_random_states = int(self.ui.inputMaxRandomStates.value())
-
-        # Donor mean lifetime
-        if self.ui.checkBoxDlifetime.isChecked():
-            self.donor_lifetime = None
-        else:
-            self.donor_lifetime = int(self.ui.inputDonorMeanLifetime.value())
-
-        # Acceptor mean lifetime
-        if self.ui.checkBoxALifetime.isChecked():
-            self.acceptor_lifetime = None
-        else:
-            self.acceptor_lifetime = int(
-                self.ui.inputAcceptorMeanLifetime.value()
-            )
-
-        # Blinking probability
-        self.blinking_prob = float(self.ui.inputBlinkingProbability.value())
-
-        # Transition Probability
-        if self.ui.checkBoxTransitionProbability.isChecked():
-            self.transition_prob = float(
-                self.ui.inputTransitionProbabilityLo.value()
-            )
-        else:
-            self.transition_prob = (
-                float(self.ui.inputTransitionProbabilityLo.value()),
-                float(self.ui.inputTransitionProbabilityHi.value()),
-            )
-
-        # Noise
-        if self.ui.checkBoxNoise.isChecked():
-            self.noise = float(self.ui.inputNoiseLo.value())
-        else:
-            self.noise = (
-                float(self.ui.inputNoiseLo.value()),
-                float(self.ui.inputNoiseHi.value()),
-            )
-
-        # Acceptor-only mismatch
-        if self.ui.checkBoxMismatch.isChecked():
-            self.aa_mismatch = float(self.ui.inputMismatchLo.value())
-        else:
-            self.aa_mismatch = (
-                float(self.ui.inputMismatchLo.value()),
-                float(self.ui.inputMismatchHi.value()),
-            )
-
-        # Donor Bleedthrough
-        if self.ui.checkBoxBleedthrough.isChecked():
-            self.bleed_through = float(self.ui.inputBleedthroughLo.value())
-        else:
-            self.bleed_through = (
-                float(self.ui.inputBleedthroughLo.value()),
-                float(self.ui.inputBleedthroughHi.value()),
-            )
-
-        # Scaler
-        if self.ui.checkBoxScaler.isChecked():
-            self.scaling_factor = float(self.ui.inputScalerLo.value())
-        else:
-            self.scaling_factor = (
-                float(self.ui.inputScalerLo.value()),
-                float(self.ui.inputScalerHi.value()),
-            )
-
-    def getTrace(self, idx) -> TraceContainer:
-        """Returns a trace, given assigned index from df"""
-        return self.data.simulated_traces[idx]
-
-    def generateTraces(self, examples: bool):
-        """Generate traces to show in the GUI (examples) or for export"""
-        n_traces = self.n_examples if examples else self.n_traces
-
-        if n_traces > 50:
-            # every number of traces gets 20 updates in total
-            # but closes if less
-            update_every_nth = n_traces // 20
-            progressbar = ProgressBar(
-                parent=self, loop_len=n_traces / update_every_nth
-            )
-        else:
-            update_every_nth = None
-            progressbar = None
-
-        if examples:
-            self.data.example_traces.clear()
-        else:
-            self.data.simulated_traces.clear()
-
-        df = lib.math.generate_traces(
-            n_traces=n_traces,
-            aa_mismatch=self.aa_mismatch,
-            state_means=self.fret_means,
-            random_k_states_max=self.max_random_states,
-            max_aggregate_size=self.max_aggregate_size,
-            aggregation_prob=self.aggregate_prob,
-            scramble_prob=self.scramble_prob,
-            trace_length=self.trace_len,
-            trans_prob=self.transition_prob,
-            blink_prob=self.blinking_prob,
-            bleed_through=self.bleed_through,
-            noise=self.noise,
-            D_lifetime=self.donor_lifetime,
-            A_lifetime=self.acceptor_lifetime,
-            au_scaling_factor=self.scaling_factor,
-            discard_unbleached=False,
-            null_fret_value=-1,
-            min_state_diff=0.1,
-            acceptable_noise=0.25,
-            progressbar_callback=progressbar,
-            callback_every=update_every_nth,
-        )
-
-        df.index = np.arange(0, len(df), 1) // int(self.trace_len)
-        for n, (idx, trace_df) in enumerate(df.groupby(df.index)):
-            self.data.simulated_traces[idx] = TraceContainer(
-                filename="trace_{}.txt".format(idx),
-                loaded_from_ascii=False,
-                n=idx,
-            )
-
-            self.getTrace(idx).set_from_df(df=trace_df)
-
-        if progressbar is not None:
-            progressbar.close()
-
-    def refreshPlot(self):
-        """Refreshes preview plots"""
-        self.valuesFromGUI()
-
-        try:
-            for ax in self.canvas.axes:
-                self.canvas.fig.delaxes(ax)
-        except KeyError:
-            pass
-
-        # generate at least enough traces to show required number of examples
-        if self.n_traces < self.n_examples:
-            self.n_traces = self.n_examples
-
-        self.generateTraces(examples=True)
-
-        n_subplots = self.n_examples
-        nrows = int(self.n_examples ** (1 / 2))
-        ncols = nrows
-        outer_grid = matplotlib.gridspec.GridSpec(
-            nrows, ncols, wspace=0.1, hspace=0.1
-        )  # 2x2 grid
-
-        self.canvas.axes = []
-
-        for i in range(n_subplots):
-            trace = self.getTrace(i)
-            inner_subplot = matplotlib.gridspec.GridSpecFromSubplotSpec(
-                nrows=5,
-                ncols=1,
-                subplot_spec=outer_grid[i],
-                wspace=0,
-                hspace=0,
-                height_ratios=[3, 3, 3, 3, 1],
-            )
-            axes = [
-                plt.Subplot(self.canvas.fig, inner_subplot[n]) for n in range(5)
-            ]
-            self.canvas.axes.extend(axes)
-
-            ax_g_r, ax_red, ax_frt, ax_sto, ax_lbl = axes
-            bleach = trace.first_bleach
-            tmax = len(trace.grn.int)
-            fret_states = np.unique(trace.fret_true)
-            fret_states = fret_states[fret_states != -1]
-
-            ax_g_r.plot(trace.grn.int, color="seagreen")
-            ax_g_r.plot(trace.acc.int, color="salmon")
-            ax_red.plot(trace.red.int, color="red")
-            ax_frt.plot(trace.fret, color="orange")
-            ax_frt.plot(
-                trace.fret_true, color="black", ls="-", alpha=0.3
-            )  # TODO: fix in init
-
-            for state in fret_states:
-                ax_frt.plot([0, bleach], [state, state], color="red", alpha=0.2)
-
-            ax_sto.plot(trace.stoi, color="purple")
-
-            lib.plotting.plot_simulation_category(
-                y=trace.y_class,  # TODO: fix in init
-                ax=ax_lbl,
-                alpha=0.4,
-                fontsize=max(10, 36 // self.n_examples),
-            )
-
-            for ax in ax_frt, ax_sto:
-                ax.set_ylim(-0.15, 1.15)
-
-            for ax, s in zip((ax_g_r, ax_red), (trace.grn.int, trace.red.int)):
-                ax.set_ylim(s.max() * -0.15)
-                ax.plot([0] * len(s), color="black", ls="--", alpha=0.5)
-
-            for ax in axes:
-                for spine in ax.spines.values():
-                    spine.set_edgecolor("darkgrey")
-
-                if bleach is not None:
-                    ax.axvspan(bleach, tmax, color="black", alpha=0.1)
-
-                ax.set_xticks(())
-                ax.set_yticks(())
-                ax.set_xlim(0, tmax)
-                self.canvas.fig.add_subplot(ax)
-
-        self.canvas.draw()
 
 
 class AppContext(ApplicationContext):
@@ -4200,6 +2917,43 @@ class AppContext(ApplicationContext):
         self.config[key] = value
         self.config.write()
 
+    @staticmethod
+    def focusWindow(window): # TODO: this method could also live in lib.misc
+        """
+        Focuses selected window and brings it to front.
+        """
+        window.show()
+        window.setWindowState(
+            window.windowState() & ~Qt.WindowMinimized | Qt.WindowActive
+        )
+        window.raise_()
+        window.activateWindow()
+
+    def bringToFront(self, window):
+        """
+        Select which windows to focus and bring to front
+        """
+        if window == "MainWindow":
+            self.focusWindow(MainWindow_)
+
+        elif window == "TraceWindow":
+            TraceWindow_.refreshPlot()
+            self.focusWindow(TraceWindow_)
+
+        elif window == "HistogramWindow":
+            HistogramWindow_.refreshPlot()
+            self.focusWindow(HistogramWindow_)
+
+        elif window == "TransitionDensityWindow":
+            TransitionDensityWindow_.refreshPlot()
+            self.focusWindow(TransitionDensityWindow_)
+
+        elif window == "SimulatorWindow":
+            SimulatorWindow_.refreshPlot()
+            self.focusWindow(SimulatorWindow_)
+        else:
+            raise ValueError("Window doesn't exist")
+
     def assign(self):
         """
         Assigns resources and functions to the right windows
@@ -4212,6 +2966,7 @@ class AppContext(ApplicationContext):
             Window.processEvents = self.app.processEvents
             Window.getConfig = self.getConfig
             Window.setConfig = self.setConfig
+            Window.bringToFront = self.bringToFront
 
         AboutWindow.app_version = self.config["appVersion"]
         BaseWindow.keras_two_channel_model = self.keras_two_channel_model
@@ -4227,7 +2982,7 @@ class AppContext(ApplicationContext):
 if __name__ == "__main__":
     # Fixes https://github.com/mherrmann/fbs/issues/87
     multiprocessing.freeze_support()
-
+    # Create the app
     # Load app
     ctxt = AppContext()
     ctxt.assign()
@@ -4246,6 +3001,8 @@ if __name__ == "__main__":
     )
     CorrectionFactorInspector_ = CorrectionFactorInspector(TraceWindow_)
     TraceWindowInspector_ = TraceWindowInspector(TraceWindow_)
+
+    #
 
     exit_code = ctxt.run()
     sys.exit(exit_code)

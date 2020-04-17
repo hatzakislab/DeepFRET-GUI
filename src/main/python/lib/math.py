@@ -356,15 +356,14 @@ def fit_hmm(
 
 
 def get_hmm_model(X, n_components=5, name=None):
-    model = pg.HiddenMarkovModel.from_samples(
-        pg.NormalDistribution,
-        name=name,
-        n_components=n_components,
-        X=X,
-        n_jobs=-1,
-        # callbacks=[pgc.ModelCheckpoint(name=name)],
-    )
-    return model
+    return pg.HiddenMarkovModel.from_samples(
+            pg.NormalDistribution,
+            name=name,
+            n_components=n_components,
+            X=X,
+            n_jobs=-1,
+            # callbacks=[pgc.ModelCheckpoint(name=name)],
+        )
 
 
 def find_transitions(states, fret):
@@ -815,12 +814,12 @@ def generate_traces(
 
         rand_k_states = np.random.randint(1, random_k_states_max + 1)
 
-        if kind == "random":
-            k_states = rand_k_states
-            state_means = generate_state_means(min_state_diff, k_states)
-        elif kind == "aggregate":
+        if kind == "aggregate":
             state_means = np.random.uniform(0, 1)
             k_states = 1
+        elif kind == "random":
+            k_states = rand_k_states
+            state_means = generate_state_means(min_state_diff, k_states)
         else:
             if np.size(state_means) <= random_k_states_max:
                 # Pick the same amount of k states as state means given
@@ -868,12 +867,12 @@ def generate_traces(
         """Scramble trace for model robustness"""
 
         modify_trace = np.random.choice(("DD", "DA", "AA"))
-        if modify_trace == "DD":
-            c = DD
+        if modify_trace == "AA":
+            c = AA
         elif modify_trace == "DA":
             c = DA
-        elif modify_trace == "AA":
-            c = AA
+        elif modify_trace == "DD":
+            c = DD
         else:
             raise ValueError
 
@@ -1067,18 +1066,17 @@ def generate_traces(
         DD_no_blink, DA_no_blink = DD.copy(), DA.copy()
 
         # No blinking in aggregates (excessive/complicated)
-        if not is_aggregated:
-            if np.random.uniform(0, 1) < blink_prob:
-                blink_start = np.random.randint(1, trace_length)
-                blink_time = np.random.randint(1, 15)
+        if not is_aggregated and np.random.uniform(0, 1) < blink_prob:
+            blink_start = np.random.randint(1, trace_length)
+            blink_time = np.random.randint(1, 15)
 
-                # Blink either donor or acceptor
-                if np.random.uniform(0, 1) < 0.5:
-                    DD[blink_start : (blink_start + blink_time)] = 0
-                    DA[blink_start : (blink_start + blink_time)] = 0
-                else:
-                    DA[blink_start : (blink_start + blink_time)] = 0
-                    AA[blink_start : (blink_start + blink_time)] = 0
+            # Blink either donor or acceptor
+            if np.random.uniform(0, 1) < 0.5:
+                DD[blink_start : (blink_start + blink_time)] = 0
+                DA[blink_start : (blink_start + blink_time)] = 0
+            else:
+                DA[blink_start : (blink_start + blink_time)] = 0
+                AA[blink_start : (blink_start + blink_time)] = 0
 
         if first_bleach_all is not None:
             label[first_bleach_all:] = cls["bleached"]
@@ -1175,9 +1173,8 @@ def generate_traces(
             label[label <= 3] = 0
             label[label >= 4] = 1
 
-        if discard_unbleached:
-            if label[-1] != cls["bleached"]:
-                return pd.DataFrame()
+        if discard_unbleached and label[-1] != cls["bleached"]:
+            return pd.DataFrame()
 
         # Calculate difference between states if >=2 states and actual smFRET
         if label[0] in [5, 6, 7, 8]:
@@ -1226,15 +1223,10 @@ def generate_traces(
                 scramble_prob,
             )
         )
-        if progressbar_callback is not None:
-            if (i % callback_every) == 0:
-                progressbar_callback.increment()
+        if progressbar_callback is not None and (i % callback_every) == 0:
+            progressbar_callback.increment()
 
-    if len(traces) > 1:
-        traces = pd.concat(traces)
-    else:
-        traces = traces[0]
-
+    traces = pd.concat(traces) if len(traces) > 1 else traces[0]
     return traces
 
 
@@ -1336,23 +1328,17 @@ def fit_and_compare_exp_funcs(
         print(errs2)
         print(f"BIC : {bic_2:.6f}")
 
-    out = {}
-    if bic_1 < bic_2:
-        out["BEST"] = "SINGLE"
-    else:
-        out["BEST"] = "DOUBLE"
-
-    out["SINGLE_LLH"] = llh_1
-    out["SINGLE_BIC"] = bic_1
-    out["SINGLE_PARAM"] = res1.x
-    out["SINGLE_ERRS"] = errs1
-
-    out["DOUBLE_LLH"] = llh_2
-    out["DOUBLE_BIC"] = bic_2
-    out["DOUBLE_PARAM"] = res2.x
-    out["DOUBLE_ERRS"] = errs2
-
-    return out
+    return {
+        'BEST': 'SINGLE' if bic_1 < bic_2 else 'DOUBLE',
+        'SINGLE_LLH': llh_1,
+        'SINGLE_BIC': bic_1,
+        'SINGLE_PARAM': res1.x,
+        'SINGLE_ERRS': errs1,
+        'DOUBLE_LLH': llh_2,
+        'DOUBLE_BIC': bic_2,
+        'DOUBLE_PARAM': res2.x,
+        'DOUBLE_ERRS': errs2,
+    }
 
 
 def corrcoef_lags(x, y, n_lags: int = 5):
@@ -1373,7 +1359,7 @@ def corrcoef_lags(x, y, n_lags: int = 5):
 
 
 def correct_corrs(corrs):
-    maxlen = max([len(arr) for arr in corrs])
+    maxlen = max(len(arr) for arr in corrs)
     _corrs = np.zeros((len(corrs), maxlen))
     for j, corr in enumerate(corrs):
         _l = len(corr)

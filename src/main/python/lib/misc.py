@@ -279,7 +279,7 @@ def nice_string_output(
     :return string: formatted string
     Example:
     ---------
-    >>>In:nice_string_output(["Carrots","Peas"], ["Many", "Few"])
+    >>>In: nice_string_output(["Carrots","Peas"], ["Many", "Few"])
     >>>Carrots Many
     >>>Peas     Few
     """

@@ -578,6 +578,43 @@ class TraceContainer:
         self.transitions = lf
 
 
+class HistogramData:
+    """
+    Class with the data from HistogramWindow
+    """
+
+    def __init__(self):
+        self.alpha = None
+        self.beta = None
+        self.gamma = None
+        self.delta = None
+
+        self.E = None
+        self.S = None
+        self.DD = None
+        self.DA = None
+        self.corrs = None
+        self.E_un = None
+        self.S_un = None
+
+        self.lengths = None
+
+        self.gauss_params = None
+        self.best_k = None
+
+        self.n_samples = None
+
+        self.trace_median_len = None
+
+
+class TDPData:
+    def __init__(self):
+        self.tdp_df = None
+        self.state_lifetime = None
+        self.state_before = None
+        self.state_after = None
+
+
 class DataContainer:
     """
     Data wrapper that contains a dict with filenames and associated data.
@@ -589,6 +626,8 @@ class DataContainer:
         self.videos = {}
         self.traces = {}
         self.currName = None
+        self.histData = HistogramData()
+        self.tdpData = TDPData()
 
     def get(self, name) -> VideoContainer:
         """Shortcut to return the metadata of selected video."""

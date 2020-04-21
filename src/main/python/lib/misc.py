@@ -31,10 +31,8 @@ def filter_nonetype(ls):
 
 def min_none(ls) -> Union[float, None]:
     """Returns minimum value of list, and None if all elements are None"""
-    try:
-        return min(ls)
-    except TypeError:
-        return None
+    v = [x for x in ls if x is not None]
+    return np.min(v) if v else None
 
 
 def all_nonetype(ls):

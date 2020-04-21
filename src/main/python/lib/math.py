@@ -995,6 +995,8 @@ def generate_traces(
                 bleach_A = None
 
             first_bleach = lib.misc.min_none((bleach_D, bleach_A))
+
+            # To keep track of multiple fluorophores for aggregates
             first_bleach_all.append(first_bleach)
 
             # Calculate from underlying E
@@ -1144,7 +1146,9 @@ def generate_traces(
 
         # Count actually observed states, because a slow system might not
         # transition in the observation window
-        observed_states = np.unique(E_true[E_true != null_fret_value])
+        observed_states = np.unique(
+            E_true[E_true != null_fret_value][:first_bleach_all]
+        )
 
         # Calculate noise level for each FRET state, and check if it
         # surpasses the limit

@@ -490,31 +490,19 @@ class TraceContainer:
         Gets and sets the tracename based on the current videoname and the pair number
         :return self.tracename: str
         """
-        if self.tracename is None:
-            if self.video is None:
-                name = "Trace_pair{}.txt".format(self.n)
-            else:
-                name = "Trace_{}_pair{}.txt".format(
-                    self.video.replace(".", "_"), self.n
-                )
-
-            # Scrub mysterious \n if they appear from filename loading
-            self.tracename = lib.misc.remove_newlines(name)
-
+        self.tracename = os.path.basename(
+            lib.misc.remove_newlines(self.filename)
+        )
         return self.tracename
 
-    def get_savename(self, dir_to_join: Union[None, str] = None):
+    def get_savename(self, dir_to_join: str):
         """
         Returns the name with which the trace should be saved.
         Option for specifying output directory.
         :param dir_to_join: output directory, optional
         :return self.savename: str
         """
-        if self.savename is None:
-            if dir_to_join is not None:
-                self.savename = os.path.join(dir_to_join, self.get_tracename())
-            else:
-                self.savename = self.get_tracename()
+        self.savename = os.path.join(dir_to_join, self.get_tracename())
         return self.savename
 
     def export_trace_to_txt(
@@ -528,6 +516,7 @@ class TraceContainer:
         :param keep_nan_columns: Whether to keep columns that are nan, passed to get_export_txt
         """
         savename = self.get_savename(dir_to_join=dir_to_join)
+
         with open(savename, "w") as f:
             f.write(self.get_export_txt(keep_nan_columns=keep_nan_columns))
 

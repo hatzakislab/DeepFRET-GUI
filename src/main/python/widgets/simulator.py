@@ -1,4 +1,5 @@
 # coding=utf-8
+import os
 from functools import partial
 
 import matplotlib
@@ -71,9 +72,11 @@ class SimulatorWindow(BaseWindow):
         else:
             selected = [trace for trace in traces.values()]
 
-        diag = ExportDialog(
-            init_dir=gvars.key_lastOpenedDir, accept_label="Export"
-        )
+        directory = self.getConfig(gvars.key_lastOpenedDir)
+        if not os.path.exists(directory):
+            directory = ""
+
+        diag = ExportDialog(init_dir=directory, accept_label="Export")
 
         if diag.exec():
             path = diag.selectedFiles()[0]

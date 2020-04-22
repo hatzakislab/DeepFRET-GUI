@@ -710,6 +710,7 @@ def generate_traces(
     discard_unbleached=False,
     progressbar_callback=None,
     callback_every=1,
+    return_matrix=False,
 ):
     """
     Parameters
@@ -782,6 +783,7 @@ def generate_traces(
     progressbar_callback:
         Progressbar callback object
     """
+    eps = 1e-16
 
     def _E(DD, DA):
         return DA / (DD + DA)
@@ -818,7 +820,10 @@ def generate_traces(
             state_means = np.random.uniform(0, 1)
             k_states = 1
         elif kind == "random":
-            k_states = rand_k_states
+            if trans_mat is not None:
+                k_states = len(trans_mat)
+            else:
+                k_states = rand_k_states
             state_means = generate_state_means(min_state_diff, k_states)
         else:
             if np.size(state_means) <= random_k_states_max:
@@ -834,34 +839,43 @@ def generate_traces(
                 )
 
         if type(state_means) == float:
-            dists = [pg.NormalDistribution(state_means, 0)]
+            dists = [pg.NormalDistribution(state_means, eps)]
         else:
-            dists = [pg.NormalDistribution(m, 1e-16) for m in state_means]
+            dists = [pg.NormalDistribution(m, eps) for m in state_means]
 
         starts = np.random.uniform(0, 1, size=k_states)
         starts /= starts.sum()
 
         # Generate arbitrary transition matrix
         if trans_mat is None:
-            trans_mat = np.empty([k_states, k_states])
-            trans_mat.fill(trans_prob)
-            np.fill_diagonal(trans_mat, 1 - trans_prob)
+            matrix = np.empty([k_states, k_states])
+            matrix.fill(trans_prob)
+            np.fill_diagonal(matrix, 1 - trans_prob)
 
             # Make sure that each row/column sums to exactly 1
             if trans_prob != 0:
                 stay_prob = 1 - trans_prob
-                remaining_prob = 1 - trans_mat.sum(axis=0)
-                trans_mat[trans_mat == stay_prob] += remaining_prob
+                remaining_prob = 1 - matrix.sum(axis=0)
+                matrix[matrix == stay_prob] += remaining_prob
+        else:
+            if len(state_means) != len(trans_mat):
+                raise ValueError(
+                    "Number of FRET states ({0}) doesn't match transition matrix {1}x{1}".format(
+                        len(state_means), len(trans_mat)
+                    )
+                )
+            matrix = trans_mat
 
-        # Generate HMM model
         model = pg.HiddenMarkovModel.from_matrix(
-            trans_mat, distributions=dists, starts=starts
+            matrix, distributions=dists, starts=starts
         )
         model.bake()
 
+        final_matrix = model.dense_transition_matrix()[:k_states, :k_states]
+
         E_true = np.array(model.sample(n=1, length=trace_length))
         E_true = np.squeeze(E_true).round(4)
-        return E_true
+        return E_true, final_matrix
 
     def scramble(DD, DA, AA, cls, label):
         """Scramble trace for model robustness"""
@@ -881,9 +895,6 @@ def generate_traces(
         sinwave = np.sin(np.linspace(-10, np.random.randint(0, 1), len(DD)))
         sinwave[c == 0] = 0
         sinwave = sinwave ** np.random.randint(5, 10)
-        c += sinwave * 0.4
-        # Fix negatives
-        c = np.abs(c)
 
         # Correlate heavily
         DA *= AA * np.random.uniform(0.7, 1)
@@ -954,7 +965,7 @@ def generate_traces(
 
         if np.random.uniform(0, 1) < aggregation_prob:
             is_aggregated = True
-            E_true = generate_fret_states(
+            E_true, matrix = generate_fret_states(
                 kind="aggregate",
                 trans_mat=trans_mat,
                 trans_prob=0,
@@ -972,7 +983,7 @@ def generate_traces(
             is_aggregated = False
             n_pairs = 1
             trans_prob = np.random.uniform(trans_prob.min(), trans_prob.max())
-            E_true = generate_fret_states(
+            E_true, matrix = generate_fret_states(
                 kind=state_means,
                 trans_mat=trans_mat,
                 trans_prob=trans_prob,
@@ -1211,27 +1222,34 @@ def generate_traces(
         )
         trace.replace([np.inf, -np.inf], np.nan, inplace=True)
         trace.fillna(method="pad", inplace=True)
-        return trace
+        return trace, matrix
 
     processes = range(n_traces)
     traces = []
+    matrices = []
     for i in processes:
-        traces.append(
-            generate_single_trace(
-                i,
-                trans_prob,
-                au_scaling_factor,
-                noise,
-                bleed_through,
-                aa_mismatch,
-                scramble_prob,
-            )
+        t, m = generate_single_trace(
+            i,
+            trans_prob,
+            au_scaling_factor,
+            noise,
+            bleed_through,
+            aa_mismatch,
+            scramble_prob,
         )
+
+        traces.append(t)
+        matrices.append(m)
+
         if progressbar_callback is not None and (i % callback_every) == 0:
             progressbar_callback.increment()
 
     traces = pd.concat(traces) if len(traces) > 1 else traces[0]
-    return traces
+    matrices = np.array(matrices)
+    if return_matrix:
+        return traces, matrices
+    else:
+        return traces
 
 
 def func_double_exp(

@@ -1,6 +1,7 @@
+import os
 import time
 from functools import partial
-from typing import Union
+from typing import Dict, Union
 
 import matplotlib
 import numpy as np
@@ -596,9 +597,8 @@ class BaseWindow(QMainWindow):
         """
         exp_txt, date_txt = self.returnInfoHeader()
 
-        directory = (
-            self.getConfig(gvars.key_lastOpenedDir) + "/Colocalization.txt"
-        )
+        directory = os.path.join(self.getLastOpenedDir(), "Colocalization.txt")
+
         path, _ = QFileDialog.getSaveFileName(
             self, directory=directory
         )  # type: str, str
@@ -650,9 +650,9 @@ class BaseWindow(QMainWindow):
         else:
             selected = [trace for trace in traces.values()]
 
-        diag = ExportDialog(
-            init_dir=gvars.key_lastOpenedDir, accept_label="Export"
-        )
+        directory = self.getLastOpenedDir()
+
+        diag = ExportDialog(init_dir=directory, accept_label="Export")
 
         if diag.exec():
             path = diag.selectedFiles()[0]
@@ -688,9 +688,10 @@ class BaseWindow(QMainWindow):
 
         exp_txt, date_txt = self.returnInfoHeader()
 
-        directory = (
-            self.getConfig(gvars.key_lastOpenedDir) + "/CorrectionFactors.txt"
+        directory = os.path.join(
+            self.getLastOpenedDir(), "CorrectionFactors.txt"
         )
+
         path, _ = QFileDialog.getSaveFileName(
             self, directory=directory
         )  # type: str, str
@@ -734,6 +735,17 @@ class BaseWindow(QMainWindow):
                 ).round(4)
             else:
                 df = pd.DataFrame({"E": [], "S": []})
+
+            with open(path, "w") as f:
+                f.write(
+                    "{0}\n"
+                    "{1}\n\n"
+                    "{2}".format(
+                        exp_txt,
+                        date_txt,
+                        df.to_csv(index=False, sep="\t", na_rep="NaN"),
+                    )
+                )
 
     def setPooledLifetimes(self):
         """
@@ -810,6 +822,15 @@ class BaseWindow(QMainWindow):
         """
         if self.isVisible() and self.inspector is not None:
             self.inspector.show()
+
+    def getLastOpenedDir(self):
+        """
+        Gets the most recent directory from the config file, and set this in new file dialogs
+        """
+        directory = self.getConfig(gvars.key_lastOpenedDir)
+        if not os.path.exists(directory):
+            directory = ""
+        return directory
 
     def correctionFactorInspector(self):
         """

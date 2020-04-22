@@ -188,12 +188,7 @@ class MainWindow(BaseWindow):
         Open file to load in.
         """
         if not self.getConfig(gvars.key_batchLoadingMode):
-            if self.getConfig(gvars.key_lastOpenedDir) == "None":
-                directory = os.path.join(
-                    os.path.join(os.path.expanduser("~")), "Desktop"
-                )
-            else:
-                directory = self.getConfig(gvars.key_lastOpenedDir)
+            directory = self.getLastOpenedDir()
 
             filenames, selectedFilter = QFileDialog.getOpenFileNames(
                 self,
@@ -250,19 +245,13 @@ class MainWindow(BaseWindow):
     def batchOpen(self):
         """Loads one video at a time and extracts traces, then clears the
         video from memory afterwards"""
-        # TraceWindow_.traces.clear()
-        if self.getConfig(gvars.key_lastOpenedDir) == "None":
-            directory = os.path.join(
-                os.path.join(os.path.expanduser("~")), "Desktop"
-            )
-        else:
-            directory = self.getConfig(gvars.key_lastOpenedDir)
+        directory = self.getLastOpenedDir()
 
         filenames, selectedFilter = QFileDialog.getOpenFileNames(
             self,
             caption="Open File",
-            directory=directory,
             filter="Video files (*.tif *.fits)",
+            directory=directory,
         )
 
         if len(filenames) > 0:
@@ -845,12 +834,7 @@ class TraceWindow(BaseWindow):
         """
         Loads ASCII files directly into the TraceWindow.
         """
-        if self.getConfig(gvars.key_lastOpenedDir) == "None":
-            directory = os.path.join(
-                os.path.join(os.path.expanduser("~")), "Desktop"
-            )
-        else:
-            directory = self.getConfig(gvars.key_lastOpenedDir)
+        directory = self.getLastOpenedDir()
 
         filenames, selectedFilter = QFileDialog.getOpenFileNames(
             self,
@@ -875,6 +859,7 @@ class TraceWindow(BaseWindow):
                     newTrace = TraceContainer(
                         filename=full_filename, loaded_from_ascii=True
                     )
+
                 except AttributeError:  # if a non-trace file was selected
                     warnings.warn(
                         f"This file could not be read: \n{full_filename}",
@@ -1327,23 +1312,6 @@ class TraceWindow(BaseWindow):
         if type(name) == QStandardItem:
             name = name.text()
         return self.data.traces.get(name)
-
-    @staticmethod
-    def generatePrettyTracename(trace: TraceContainer) -> str:
-        """
-        Generates a pretty, readable generatePrettyTracename.
-        """
-
-        if trace.video is None:
-            name = "Trace_pair{}.txt".format(trace.n)
-        else:
-            name = "Trace_{}_pair{}.txt".format(
-                trace.video.replace(".", "_"), trace.n
-            )
-
-        # Scrub mysterious \n if they appear due to filenames
-        name = "".join(name.splitlines(keepends=False))
-        return name
 
     def savePlot(self):
         """

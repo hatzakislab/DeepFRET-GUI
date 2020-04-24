@@ -6,23 +6,9 @@ from typing import Dict, Union
 import matplotlib
 import numpy as np
 import pandas as pd
-from PyQt5.QtCore import pyqtSlot, QModelIndex, Qt, qWarning, QUrl
-from PyQt5.QtGui import (
-    QStandardItemModel,
-    QStandardItem,
-    QDesktopServices,
-    QKeySequence,
-)
-from PyQt5.QtWidgets import (
-    QMainWindow,
-    QSplitter,
-    QAbstractItemView,
-    QListView,
-    QMessageBox,
-    QFileDialog,
-    QDialog,
-    QShortcut,
-)
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
 
 from global_variables import GlobalVariables as gvars
 from lib.container import DataContainer, TraceContainer
@@ -30,7 +16,7 @@ from mpl_layout import PlotWidget
 from ui._AboutWindow import Ui_About
 from ui._MenuBar import Ui_MenuBar
 from ui._PreferencesWindow import Ui_Preferences
-from ui.misc import ListView, ExportDialog, RestartDialog
+from widgets.misc import ExportDialog, ListView, RestartDialog
 
 
 class BaseWindow(QMainWindow):
@@ -40,6 +26,7 @@ class BaseWindow(QMainWindow):
 
     # Place here to share state between all windows
     data = DataContainer()
+    instances = {}
 
     keras_two_channel_model = None
     keras_three_channel_model = None
@@ -47,6 +34,7 @@ class BaseWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
+        self.trackWindowInstance()
 
         # Other states are individual
         self.inspector = None
@@ -64,6 +52,13 @@ class BaseWindow(QMainWindow):
 
         self.PreferencesWindow_ = PreferencesWindow()
         self.AboutWindow_ = AboutWindow()
+
+    def trackWindowInstance(self):
+        """
+        Tracks every new window that is instantiated, so they can be accessed
+        in subclasses
+        """
+        self.__class__.instances[self.__class__.__name__] = self
 
     def setupMenuBarActions(self):
         """
@@ -222,6 +217,26 @@ class BaseWindow(QMainWindow):
     #
     #     if isinstance(self, MainWindow):
     #         self.ui.actionOpen.setEnabled(False)
+
+    def focusWindow(self):
+        """
+        Focuses selected window and brings it to front.
+        """
+        self.show()
+        self.setWindowState(
+            self.windowState() & ~Qt.WindowMinimized | Qt.WindowActive
+        )
+        self.raise_()
+        self.activateWindow()
+
+    @classmethod
+    def bringToFront(cls, window):
+        """
+        Select which windows to focus and bring to front
+        """
+        for instance in cls.instances.keys():
+            if instance == window:
+                cls.instances[instance].focusWindow()
 
     def resetCurrentName(self):
         """
@@ -437,6 +452,12 @@ class BaseWindow(QMainWindow):
             trace = self.getTrace(item)
             trace.is_checked = False
 
+        histogram_window = self.instances[gvars.HistogramWindow]
+        transition_density_window = self.instances[gvars.HistogramWindow]
+        for window in histogram_window, transition_density_window:
+            if window.isVisible():
+                window.refreshPlot()
+
     def checkAll(self):
         """
         Checks all list elements.
@@ -449,6 +470,12 @@ class BaseWindow(QMainWindow):
             item.setCheckState(Qt.Checked)
             trace = self.getTrace(item)
             trace.is_checked = True
+
+        histogram_window = self.instances[gvars.HistogramWindow]
+        transition_density_window = self.instances[gvars.HistogramWindow]
+        for window in histogram_window, transition_density_window:
+            if window.isVisible():
+                window.refreshPlot()
 
     # noinspection PyAttributeOutsideInit
     def setupFigureCanvas(self, ax_type, use_layoutbox=True, **kwargs):

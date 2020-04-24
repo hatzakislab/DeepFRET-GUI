@@ -1,8 +1,9 @@
 import sys
-from main import MainWindow, AppContext, gvars
+from main import AppContext, gvars
+from widgets.video_window import VideoWindow
 
 
-class SetUp(MainWindow):
+class SetUp(VideoWindow):
     def __init__(self):
         super(SetUp, self).__init__()
         self.ui.spotsGrnSpinBox.setValue(100)

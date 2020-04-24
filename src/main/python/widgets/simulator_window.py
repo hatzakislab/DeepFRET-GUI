@@ -13,8 +13,8 @@ import lib.plotting
 from global_variables import GlobalVariables as gvars
 from lib.container import TraceContainer
 from ui._SimulatorWindow import Ui_SimulatorWindow
-from ui.misc import ExportDialog, ProgressBar
-from widgets.base import BaseWindow
+from widgets.misc import ExportDialog, ProgressBar
+from widgets.base_window import BaseWindow
 
 
 class SimulatorWindow(BaseWindow):

@@ -11,7 +11,7 @@ from global_variables import GlobalVariables as gvars
 from lib.container import HistogramData
 from ui._HistogramWindow import Ui_HistogramWindow
 from ui._MenuBar import Ui_MenuBar
-from widgets.base import BaseWindow
+from widgets.base_window import BaseWindow
 
 
 class HistogramWindow(BaseWindow):

@@ -8,12 +8,19 @@ class GlobalVariables:
     """
 
     APPNAME = "DeepFRET"
-    APPVERSION = "0.9.0 (Beta)"
     AUTHORS = "created by Johannes Thomsen"
     LICENSE = "DeepFRET is free software, distributed under the terms of the MIT open source license"
     CONFIGNAME = "config.ini"
 
+    # Instance keys
+    VideoWindow = "VideoWindow"
+    TraceWindow = "TraceWindow"
+    TransitionDensityWindow = "TransitionDensityWindow"
+    HistogramWindow = "HistogramWindow"
+
+    # Bool maps for configs to avoid errors between strings/ints/bools
     boolMaps = {"True": 1, "1": 1, "False": 0, "0": 0}
+
     # List of possible user-configurable options (i.e. available keys),
     # so they'll be available with autocomplete and refactoring
     # States are edited through the getConfig interface

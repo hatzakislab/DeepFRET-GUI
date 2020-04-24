@@ -81,6 +81,7 @@ class ImageChannel:
         self.color = color  # type: str
         self.raw = None  # type: Union[None, np.ndarray]
         self.mean = None  # type: Union[None, np.ndarray]
+        self.mean_nobg = None  # type: Union[None, np.ndarray]
         self.rgba = None  # type: Union[None, np.ndarray]
         self.spots = None  # type: Union[None, np.ndarray]
         self.n_spots = 0  # type: int
@@ -516,6 +517,8 @@ class TraceContainer:
         :param keep_nan_columns: Whether to keep columns that are nan, passed to get_export_txt
         """
         savename = self.get_savename(dir_to_join=dir_to_join)
+        if not savename.endswith(".txt"):
+            savename += ".txt"
 
         with open(savename, "w") as f:
             f.write(self.get_export_txt(keep_nan_columns=keep_nan_columns))

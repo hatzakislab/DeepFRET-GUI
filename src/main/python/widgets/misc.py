@@ -4,7 +4,6 @@ multiprocessing.freeze_support()
 
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
-from lib.misc import timeit
 
 
 class SheetInspector(QDialog):

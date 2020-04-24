@@ -6,7 +6,7 @@ import matplotlib
 import matplotlib.ticker
 import sklearn.neighbors
 import lib.misc
-from ui.misc import ProgressBar
+from widgets.misc import ProgressBar
 from typing import Union, Tuple, List
 import scipy.signal
 import scipy.signal
@@ -20,8 +20,6 @@ import pandas as pd
 import numpy as np
 import pomegranate as pg
 from retrying import retry, RetryError
-from tqdm import tqdm
-from lib.misc import timeit
 
 pd.options.mode.chained_assignment = None
 
@@ -356,7 +354,7 @@ def fit_hmm(
 
 
 def get_hmm_model(X, n_components=5, name=None):
-    return pg.HiddenMarkovModel.from_samples(
+    model = pg.HiddenMarkovModel.from_samples(
         pg.NormalDistribution,
         name=name,
         n_components=n_components,
@@ -364,6 +362,7 @@ def get_hmm_model(X, n_components=5, name=None):
         n_jobs=-1,
         # callbacks=[pgc.ModelCheckpoint(name=name)],
     )
+    return model
 
 
 def find_transitions(states, fret):
@@ -710,7 +709,6 @@ def generate_traces(
     discard_unbleached=False,
     progressbar_callback=None,
     callback_every=1,
-    return_matrix=False,
 ):
     """
     Parameters
@@ -782,8 +780,9 @@ def generate_traces(
         How often to callback to the progressbar
     progressbar_callback:
         Progressbar callback object
+    return_matrix:
+        Whether to return the transition matrices used to generate the traces
     """
-    eps = 1e-16
 
     def _E(DD, DA):
         return DA / (DD + DA)
@@ -820,11 +819,13 @@ def generate_traces(
             state_means = np.random.uniform(0, 1)
             k_states = 1
         elif kind == "random":
-            if trans_mat is not None:
-                k_states = len(trans_mat)
-            else:
-                k_states = rand_k_states
+            k_states = (
+                len(trans_mat) if trans_mat is not None else rand_k_states
+            )
             state_means = generate_state_means(min_state_diff, k_states)
+        elif kind == "aggregate":
+            state_means = np.random.uniform(0, 1)
+            k_states = 1
         else:
             if np.size(state_means) <= random_k_states_max:
                 # Pick the same amount of k states as state means given
@@ -839,54 +840,45 @@ def generate_traces(
                 )
 
         if type(state_means) == float:
-            dists = [pg.NormalDistribution(state_means, eps)]
+            dists = [pg.NormalDistribution(state_means, 0)]
         else:
-            dists = [pg.NormalDistribution(m, eps) for m in state_means]
+            dists = [pg.NormalDistribution(m, 1e-16) for m in state_means]
 
         starts = np.random.uniform(0, 1, size=k_states)
         starts /= starts.sum()
 
         # Generate arbitrary transition matrix
         if trans_mat is None:
-            matrix = np.empty([k_states, k_states])
-            matrix.fill(trans_prob)
-            np.fill_diagonal(matrix, 1 - trans_prob)
+            trans_mat = np.empty([k_states, k_states])
+            trans_mat.fill(trans_prob)
+            np.fill_diagonal(trans_mat, 1 - trans_prob)
 
             # Make sure that each row/column sums to exactly 1
             if trans_prob != 0:
                 stay_prob = 1 - trans_prob
-                remaining_prob = 1 - matrix.sum(axis=0)
-                matrix[matrix == stay_prob] += remaining_prob
-        else:
-            if len(state_means) != len(trans_mat):
-                raise ValueError(
-                    "Number of FRET states ({0}) doesn't match transition matrix {1}x{1}".format(
-                        len(state_means), len(trans_mat)
-                    )
-                )
-            matrix = trans_mat
+                remaining_prob = 1 - trans_mat.sum(axis=0)
+                trans_mat[trans_mat == stay_prob] += remaining_prob
 
+        # Generate HMM model
         model = pg.HiddenMarkovModel.from_matrix(
-            matrix, distributions=dists, starts=starts
+            trans_mat, distributions=dists, starts=starts
         )
         model.bake()
 
-        final_matrix = model.dense_transition_matrix()[:k_states, :k_states]
-
         E_true = np.array(model.sample(n=1, length=trace_length))
         E_true = np.squeeze(E_true).round(4)
-        return E_true, final_matrix
+        return E_true
 
     def scramble(DD, DA, AA, cls, label):
         """Scramble trace for model robustness"""
 
         modify_trace = np.random.choice(("DD", "DA", "AA"))
-        if modify_trace == "AA":
-            c = AA
+        if modify_trace == "DD":
+            c = DD
         elif modify_trace == "DA":
             c = DA
-        elif modify_trace == "DD":
-            c = DD
+        elif modify_trace == "AA":
+            c = AA
         else:
             raise ValueError
 
@@ -895,6 +887,9 @@ def generate_traces(
         sinwave = np.sin(np.linspace(-10, np.random.randint(0, 1), len(DD)))
         sinwave[c == 0] = 0
         sinwave = sinwave ** np.random.randint(5, 10)
+        c += sinwave * 0.4
+        # Fix negatives
+        c = np.abs(c)
 
         # Correlate heavily
         DA *= AA * np.random.uniform(0.7, 1)
@@ -965,7 +960,7 @@ def generate_traces(
 
         if np.random.uniform(0, 1) < aggregation_prob:
             is_aggregated = True
-            E_true, matrix = generate_fret_states(
+            E_true = generate_fret_states(
                 kind="aggregate",
                 trans_mat=trans_mat,
                 trans_prob=0,
@@ -983,7 +978,7 @@ def generate_traces(
             is_aggregated = False
             n_pairs = 1
             trans_prob = np.random.uniform(trans_prob.min(), trans_prob.max())
-            E_true, matrix = generate_fret_states(
+            E_true = generate_fret_states(
                 kind=state_means,
                 trans_mat=trans_mat,
                 trans_prob=trans_prob,
@@ -1006,8 +1001,6 @@ def generate_traces(
                 bleach_A = None
 
             first_bleach = lib.misc.min_none((bleach_D, bleach_A))
-
-            # To keep track of multiple fluorophores for aggregates
             first_bleach_all.append(first_bleach)
 
             # Calculate from underlying E
@@ -1079,17 +1072,18 @@ def generate_traces(
         DD_no_blink, DA_no_blink = DD.copy(), DA.copy()
 
         # No blinking in aggregates (excessive/complicated)
-        if not is_aggregated and np.random.uniform(0, 1) < blink_prob:
-            blink_start = np.random.randint(1, trace_length)
-            blink_time = np.random.randint(1, 15)
+        if not is_aggregated:
+            if np.random.uniform(0, 1) < blink_prob:
+                blink_start = np.random.randint(1, trace_length)
+                blink_time = np.random.randint(1, 15)
 
-            # Blink either donor or acceptor
-            if np.random.uniform(0, 1) < 0.5:
-                DD[blink_start : (blink_start + blink_time)] = 0
-                DA[blink_start : (blink_start + blink_time)] = 0
-            else:
-                DA[blink_start : (blink_start + blink_time)] = 0
-                AA[blink_start : (blink_start + blink_time)] = 0
+                # Blink either donor or acceptor
+                if np.random.uniform(0, 1) < 0.5:
+                    DD[blink_start : (blink_start + blink_time)] = 0
+                    DA[blink_start : (blink_start + blink_time)] = 0
+                else:
+                    DA[blink_start : (blink_start + blink_time)] = 0
+                    AA[blink_start : (blink_start + blink_time)] = 0
 
         if first_bleach_all is not None:
             label[first_bleach_all:] = cls["bleached"]
@@ -1157,9 +1151,7 @@ def generate_traces(
 
         # Count actually observed states, because a slow system might not
         # transition in the observation window
-        observed_states = np.unique(
-            E_true[E_true != null_fret_value][:first_bleach_all]
-        )
+        observed_states = np.unique(E_true[E_true != null_fret_value])
 
         # Calculate noise level for each FRET state, and check if it
         # surpasses the limit
@@ -1188,8 +1180,9 @@ def generate_traces(
             label[label <= 3] = 0
             label[label >= 4] = 1
 
-        if discard_unbleached and label[-1] != cls["bleached"]:
-            return pd.DataFrame()
+        if discard_unbleached:
+            if label[-1] != cls["bleached"]:
+                return pd.DataFrame()
 
         # Calculate difference between states if >=2 states and actual smFRET
         if label[0] in [5, 6, 7, 8]:
@@ -1222,34 +1215,32 @@ def generate_traces(
         )
         trace.replace([np.inf, -np.inf], np.nan, inplace=True)
         trace.fillna(method="pad", inplace=True)
-        return trace, matrix
+        return trace
 
     processes = range(n_traces)
     traces = []
-    matrices = []
     for i in processes:
-        t, m = generate_single_trace(
-            i,
-            trans_prob,
-            au_scaling_factor,
-            noise,
-            bleed_through,
-            aa_mismatch,
-            scramble_prob,
+        traces.append(
+            generate_single_trace(
+                i,
+                trans_prob,
+                au_scaling_factor,
+                noise,
+                bleed_through,
+                aa_mismatch,
+                scramble_prob,
+            )
         )
+        if progressbar_callback is not None:
+            if (i % callback_every) == 0:
+                progressbar_callback.increment()
 
-        traces.append(t)
-        matrices.append(m)
-
-        if progressbar_callback is not None and (i % callback_every) == 0:
-            progressbar_callback.increment()
-
-    traces = pd.concat(traces) if len(traces) > 1 else traces[0]
-    matrices = np.array(matrices)
-    if return_matrix:
-        return traces, matrices
+    if len(traces) > 1:
+        traces = pd.concat(traces)
     else:
-        return traces
+        traces = traces[0]
+
+    return traces
 
 
 def func_double_exp(
@@ -1350,17 +1341,23 @@ def fit_and_compare_exp_funcs(
         print(errs2)
         print(f"BIC : {bic_2:.6f}")
 
-    return {
-        "BEST": "SINGLE" if bic_1 < bic_2 else "DOUBLE",
-        "SINGLE_LLH": llh_1,
-        "SINGLE_BIC": bic_1,
-        "SINGLE_PARAM": res1.x,
-        "SINGLE_ERRS": errs1,
-        "DOUBLE_LLH": llh_2,
-        "DOUBLE_BIC": bic_2,
-        "DOUBLE_PARAM": res2.x,
-        "DOUBLE_ERRS": errs2,
-    }
+    out = {}
+    if bic_1 < bic_2:
+        out["BEST"] = "SINGLE"
+    else:
+        out["BEST"] = "DOUBLE"
+
+    out["SINGLE_LLH"] = llh_1
+    out["SINGLE_BIC"] = bic_1
+    out["SINGLE_PARAM"] = res1.x
+    out["SINGLE_ERRS"] = errs1
+
+    out["DOUBLE_LLH"] = llh_2
+    out["DOUBLE_BIC"] = bic_2
+    out["DOUBLE_PARAM"] = res2.x
+    out["DOUBLE_ERRS"] = errs2
+
+    return out
 
 
 def corrcoef_lags(x, y, n_lags: int = 5):
@@ -1381,7 +1378,7 @@ def corrcoef_lags(x, y, n_lags: int = 5):
 
 
 def correct_corrs(corrs):
-    maxlen = max(len(arr) for arr in corrs)
+    maxlen = max([len(arr) for arr in corrs])
     _corrs = np.zeros((len(corrs), maxlen))
     for j, corr in enumerate(corrs):
         _l = len(corr)

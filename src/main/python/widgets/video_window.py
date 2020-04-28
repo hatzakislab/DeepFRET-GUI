@@ -209,7 +209,7 @@ class VideoWindow(BaseWindow):
         """Loads one video at a time and extracts traces, then clears the
         video from memory afterwards"""
         directory = self.getLastOpenedDir()
-        trace_window = self.instances[gvars.TraceWindow]  # type: TraceWindow
+        trace_window = self.windows[gvars.TraceWindow]  # type: TraceWindow
 
         filenames, selectedFilter = QFileDialog.getOpenFileNames(
             self,
@@ -633,7 +633,7 @@ class VideoWindow(BaseWindow):
         Gets the name of currently stored traces and puts them into the
         trace listView.
         """
-        trace_window = self.instances[gvars.TraceWindow]
+        trace_window = self.windows[gvars.TraceWindow]
 
         if len(self.data.traces) == 0:
             # Load all traces into their respective videos, and generate a
@@ -654,6 +654,28 @@ class VideoWindow(BaseWindow):
 
         trace_window.refreshPlot()
         trace_window.show()
+
+    def clearTraceAndRerun(self):
+        """
+        Clears everything and reruns on selected videos.
+        Loads all traces into their respective videos, and generates a list
+        of traces
+        """
+        trace_window = self.windows[gvars.TraceWindow]
+
+        self.clearTraces()
+        self.getTracesAllVideos()
+
+        # Iterate over all filenames and add to list
+        for (name, trace) in self.data.traces.items():
+            item = QStandardItem(trace.name)
+            trace_window.listModel.appendRow(item)
+            trace_window.currName = trace.name
+            item.setCheckable(True)
+
+        if trace_window.isVisible():
+            trace_window.selectListViewTopRow()
+            trace_window.refreshPlot()
 
     def newTraceFromContainer(self, trace, n):
         """

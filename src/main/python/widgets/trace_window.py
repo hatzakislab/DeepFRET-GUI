@@ -13,11 +13,9 @@ import lib.math
 import lib.plotting
 from global_variables import GlobalVariables as gvars
 from lib.container import TraceContainer
-from ui._CorrectionFactorInspector import Ui_CorrectionFactorInspector
 from ui._MenuBar import Ui_MenuBar
 from ui._TraceWindow import Ui_TraceWindow
-from ui._TraceWindowInspector import Ui_TraceWindowInspector
-from widgets.misc import ProgressBar, SheetInspector
+from widgets.misc import ProgressBar
 from widgets.base_window import BaseWindow
 from widgets.histogram_window import HistogramWindow
 from widgets.transition_density_window import TransitionDensityWindow
@@ -62,11 +60,11 @@ class TraceWindow(BaseWindow):
         """
         Refreshes other windows when a trace is checked.
         """
-        histogram_window = self.instances[
+        histogram_window = self.windows[
             gvars.HistogramWindow
         ]  # type: HistogramWindow
 
-        transition_density_window = self.instances[
+        transition_density_window = self.windows[
             gvars.TransitionDensityWindow
         ]  # type: TransitionDensityWindow
 
@@ -130,16 +128,19 @@ class TraceWindow(BaseWindow):
         for menu in menulist:
             menu.setEnabled(True)
 
+    def clearTraceAndRerun(self):
+        self.windows[gvars.VideoWindow].clearTraceAndRerun(self)
+
     def returnContainerInstance(self):
         """Returns appropriate data container for implemented windows"""
         return self.data.traces
 
-    def correctionFactorInspector(self):
+    def showCorrectionFactorInspector(self):
         """
         Opens the inspector (modal) window to set correction factors
         """
         if self.isVisible():
-            self.CorrectionFactorInspector.show()
+            self.inspectors[gvars.CorrectionFactorInspector].show()
 
     def openFile(self, *args):
         """
@@ -330,8 +331,8 @@ class TraceWindow(BaseWindow):
 
             trace.calculate_transitions()
 
-        if self.instances["TransitionDensityWindow"].isVisible():
-            self.instances["TransitionDensityWindow"].refreshPlot()
+        if self.windows["TransitionDensityWindow"].isVisible():
+            self.windows["TransitionDensityWindow"].refreshPlot()
 
     @staticmethod
     def setClassifications(trace, yi_pred):
@@ -525,13 +526,21 @@ class TraceWindow(BaseWindow):
 
         return tracenames
 
+    def showAdvancedSortInspector(self):
+        """
+        Show advanced sort inspector
+        """
+        self.inspectors[gvars.AdvancedSortInspector].show()
+
     def sortListByCondition(self, setup):
         """
         Checks all traces where the red fluorophore (acceptor or direct
         excitation) channel is bleached.
         """
         # Only used for inspector currently
-        params = self.inspector.returnInspectorValues()
+        params = self.inspectors[
+            gvars.AdvancedSortInspector
+        ].returnInspectorValues()
 
         (
             S_med_lo,
@@ -609,7 +618,8 @@ class TraceWindow(BaseWindow):
 
         self.sortListByChecked()
         self.selectListViewTopRow()
-        self.inspector.setInspectorConfigs(params)
+
+        self.inspectors[gvars.AdvancedSortInspector].setInspectorConfigs(params)
 
     def currentTrace(self) -> TraceContainer:
         """
@@ -893,125 +903,3 @@ class TraceWindow(BaseWindow):
 
     def _debug(self):
         pass
-
-
-class TraceWindowInspector(SheetInspector):
-    """
-    Inspector for the advanced sorting sheet.
-    """
-
-    def __init__(self, parent):
-        super().__init__(parent=parent)
-
-        self.getConfig = parent.getConfig
-        self.setConfig = parent.setConfig
-        self.ui = Ui_TraceWindowInspector()
-        self.ui.setupUi(self)
-        self.keys = gvars.keys_trace
-
-        self.spinBoxes = (
-            self.ui.spinBoxStoiLo,
-            self.ui.spinBoxStoiHi,
-            self.ui.spinBoxFretLo,
-            self.ui.spinBoxFretHi,
-            self.ui.spinBoxMinFrames,
-            self.ui.spinBoxConfidence,
-            self.ui.spinBoxDynamics,
-        )
-
-        if isinstance(parent, TraceWindow):
-            parent.inspector = self
-
-        self.connectUi(parent)
-        self.setUi()
-
-    def setUi(self):
-        """Setup UI according to last saved preferences."""
-        for spinBox, key in zip(self.spinBoxes, self.keys):
-            spinBox.setValue(self.getConfig(key))
-
-    def connectUi(self, parent):
-        """Connect Ui to parent functions."""
-        self.ui.pushButtonFind.clicked.connect(self.findPushed)
-
-    def findPushed(self):
-        """Sorts list by conditions set by spinBoxes and closes."""
-        self.trace_window.sortListByCondition(setup="advanced")
-        if self.histogram_window.isVisible():
-            self.histogram_window.refreshPlot(True)
-        self.close()
-
-    def returnInspectorValues(self):
-        """Returns inspector values to parent window"""
-        (
-            S_med_lo,
-            S_med_hi,
-            E_med_lo,
-            E_med_hi,
-            min_n_frames,
-            confidence,
-            dynamics,
-        ) = [spinBox.value() for spinBox in self.spinBoxes]
-
-        bleached_only = self.ui.checkBoxBleach.isChecked()
-        return (
-            S_med_lo,
-            S_med_hi,
-            E_med_lo,
-            E_med_hi,
-            min_n_frames,
-            confidence,
-            dynamics,
-            bleached_only,
-        )
-
-
-class CorrectionFactorInspector(SheetInspector):
-    def __init__(self, parent):
-        super().__init__(parent=parent)
-
-        self.getConfig = parent.getConfig
-
-        self.ui = Ui_CorrectionFactorInspector()
-        self.ui.setupUi(self)
-
-        self.alphaFactor = self.getConfig(gvars.key_alphaFactor)
-        self.deltaFactor = self.getConfig(gvars.key_deltaFactor)
-
-        self.ui.alphaFactorBox.setValue(self.alphaFactor)
-        self.ui.deltaFactorBox.setValue(self.deltaFactor)
-
-        self.ui.alphaFactorBox.valueChanged.connect(
-            partial(self.setCorrectionFactors, "alpha")
-        )
-        self.ui.deltaFactorBox.valueChanged.connect(
-            partial(self.setCorrectionFactors, "delta")
-        )
-
-    def setCorrectionFactors(self, factor):
-        """
-        Sets the global correction factors
-        """
-        trace_window = self.instances[gvars.TraceWindow]
-        histogram_window = self.instances[gvars.TraceWindow]
-
-        parent = self.parent
-        self.alphaFactor = self.ui.alphaFactorBox.value()
-        self.deltaFactor = self.ui.deltaFactorBox.value()
-
-        if factor == "alpha":
-            parent.setConfig(gvars.key_alphaFactor, self.alphaFactor)
-        elif factor == "delta":
-            parent.setConfig(gvars.key_deltaFactor, self.deltaFactor)
-
-        if trace_window.isVisible():
-            trace_window.refreshPlot()
-
-        if histogram_window.isVisible():
-            histogram_window.refreshPlot()
-
-    def showEvent(self, event):
-        self.ui.alphaFactorBox.setValue(self.alphaFactor)
-        self.ui.deltaFactorBox.setValue(self.deltaFactor)
-        self.ui.alphaFactorBox.repaint()
-        self.ui.deltaFactorBox.repaint()

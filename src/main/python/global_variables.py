@@ -12,11 +12,16 @@ class GlobalVariables:
     LICENSE = "DeepFRET is free software, distributed under the terms of the MIT open source license"
     CONFIGNAME = "config.ini"
 
-    # Instance keys
+    # Window instance keys
     VideoWindow = "VideoWindow"
     TraceWindow = "TraceWindow"
     TransitionDensityWindow = "TransitionDensityWindow"
     HistogramWindow = "HistogramWindow"
+
+    # Inspector instance keys
+    CorrectionFactorInspector = "CorrectionFactorInspector"
+    AdvancedSortInspector = "AdvancedSortInspector"
+    DensityWindowInspector = "DensityWindowInspector"
 
     # Bool maps for configs to avoid errors between strings/ints/bools
     boolMaps = {"True": 1, "1": 1, "False": 0, "0": 0}

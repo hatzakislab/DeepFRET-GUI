@@ -5,13 +5,13 @@ from PyQt5.QtCore import qWarning
 
 from widgets.base_window import AboutWindow, BaseWindow, PreferencesWindow
 from widgets.histogram_window import HistogramWindow
-from widgets.inspectors import DensityWindowInspector
-from widgets.simulator_window import SimulatorWindow
-from widgets.trace_window import (
+from widgets.inspectors import (
     CorrectionFactorInspector,
-    TraceWindow,
-    TraceWindowInspector,
+    DensityWindowInspector,
+    AdvancedSortInspector,
 )
+from widgets.simulator_window import SimulatorWindow
+from widgets.trace_window import TraceWindow
 from widgets.transition_density_window import TransitionDensityWindow
 from widgets.video_window import VideoWindow
 
@@ -133,19 +133,19 @@ if __name__ == "__main__":
     ctxt.assign()
 
     # Windows
-    VideoWindow_ = VideoWindow()
-    TraceWindow_ = TraceWindow()
-    HistogramWindow_ = HistogramWindow()
-    TransitionDensityWindow_ = TransitionDensityWindow()
-    SimulatorWindow_ = SimulatorWindow()
+    _VideoWindow = VideoWindow()
+    _TraceWindow = TraceWindow()
+    _HistogramWindow = HistogramWindow()
+    _TransitionDensityWindow = TransitionDensityWindow()
+    _SimulatorWindow = SimulatorWindow()
 
     # Inspector sheets
-    HistogramInspector_ = DensityWindowInspector(HistogramWindow_)
-    TransitionDensityInspector_ = DensityWindowInspector(
-        TransitionDensityWindow_
+    _HistogramInspector = DensityWindowInspector(_HistogramWindow)
+    _TransitionDensityInspector = DensityWindowInspector(
+        _TransitionDensityWindow
     )
-    CorrectionFactorInspector_ = CorrectionFactorInspector(TraceWindow_)
-    TraceWindowInspector_ = TraceWindowInspector(TraceWindow_)
+    _CorrectionFactorInspector = CorrectionFactorInspector(_TraceWindow)
+    _AdvancedSortInspector = AdvancedSortInspector(_TraceWindow)
 
     exit_code = ctxt.run()
     sys.exit(exit_code)

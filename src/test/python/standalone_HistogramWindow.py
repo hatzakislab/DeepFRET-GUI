@@ -9,7 +9,6 @@ import numpy as np
 class setUp(HistogramWindow):
     def __init__(self):
         super(setUp, self).__init__()
-        self.inspector = DensityWindowInspector(self)
 
     def setFile(self, path):
         df = pd.read_csv(path, skiprows=5, sep="\t")

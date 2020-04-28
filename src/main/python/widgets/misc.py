@@ -1,90 +1,11 @@
 import multiprocessing
 
+from widgets.inspectors import SheetInspector
+
 multiprocessing.freeze_support()
 
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
-from global_variables import GlobalVariables as gvars
-from lib.misc import timeit
-
-
-class SheetInspector(QDialog):
-    """
-    Addon class for modal dialogs. Must be placed AFTER the actual PyQt superclass
-    that the window inherits from.
-    """
-
-    def __init__(self, parent):
-        super().__init__()
-        self.instances = parent.instances
-        self.setParent(parent)
-        self.parent = parent
-
-        self.trace_window = self.instances[gvars.TraceWindow]
-        self.histogram_window = self.instances[gvars.HistogramWindow]
-        self.transition_density_window = self.instances[
-            gvars.TransitionDensityWindow
-        ]
-        self.video_window = self.instances[gvars.VideoWindow]
-
-        self.setModal(True)
-        self.setWindowFlag(Qt.Sheet)
-
-    def setInspectorConfigs(self, params):
-        """
-        Writes defaults for the Ui, by passing the params tuple from parent window
-        """
-        for key, new_val in zip(self.keys, params):
-            self.setConfig(key, new_val)
-
-    def connectUi(self, parent):
-        """
-        Connect Ui to parent functions. Override in parent
-        """
-        pass
-
-    def setUi(self):
-        """
-        Setup UI according to last saved preferences. Override in parent
-        """
-        pass
-
-    def returnInspectorValues(self):
-        """
-        Returns values from inspector window to be used in parent window
-        """
-        pass
-
-
-# class RestartDialog(QMessageBox, SheetInspector):
-#     """
-#     Triggers a modal restart dialog if imaging mode is changed.
-#     Otherwise, the GUI will crash, because the plotting backend isn't set up properly.
-#     """
-#
-#     def __init__(self, parent):
-#         super().__init__(parent=parent)
-#
-#         self.status = None
-#
-#         self.setText("Imaging mode changed")
-#         self.setInformativeText(
-#             "Restart application for new settings to take effect."
-#         )
-#         self.minimumSizeHint()
-#
-#         self.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-#
-#         self.buttonYes = self.button(QMessageBox.Yes)
-#         self.buttonYes.setText("Restart")
-#
-#         self.buttonNo = self.button(QMessageBox.No)
-#         self.buttonNo.setText("Cancel")
-#
-#         self.buttonClicked.connect(self.returnButton)
-#
-#     def returnButton(self, i):
-#         self.status = "Restart" if i.text() == "Restart" else "Cancel"
 
 
 class ExportDialog(QFileDialog):

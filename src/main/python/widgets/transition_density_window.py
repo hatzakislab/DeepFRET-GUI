@@ -49,12 +49,12 @@ class TransitionDensityWindow(BaseWindow):
         for menu in menulist:
             menu.setEnabled(True)
 
-    def formatPlotInspector(self):
+    def showDensityWindowInspector(self):
         """
         Opens the inspector (modal) window to format the current plot
         """
         if self.isActiveWindow():
-            self.inspector.show()
+            self.inspectors[gvars.DensityWindowInspector].show()
 
     def unCheckAll(self):
         """
@@ -333,8 +333,12 @@ class TransitionDensityWindow(BaseWindow):
         try:
             self.setPooledLifetimes()
 
-            params = self.inspector.returnInspectorValues()
-            self.inspector.setInspectorConfigs(params)
+            params = self.inspectors[
+                gvars.DensityWindowInspector
+            ].returnInspectorValues()
+            self.inspectors[gvars.DensityWindowInspector].setInspectorConfigs(
+                params
+            )
 
             self.setClusteredTransitions()
             self.plotTransitionDensity(params)

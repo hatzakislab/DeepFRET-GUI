@@ -26,7 +26,9 @@ class BaseWindow(QMainWindow):
 
     # Place here to share state between all windows
     data = DataContainer()
-    instances = {}
+
+    # Every window is tracked globally, so they can all reference each other
+    windows = {}
 
     keras_two_channel_model = None
     keras_three_channel_model = None
@@ -36,8 +38,8 @@ class BaseWindow(QMainWindow):
         super().__init__()
         self.trackWindowInstance()
 
-        # Other states are individual
-        self.inspector = None
+        # Each window tracks its own inspector instances
+        self.inspectors = {}
 
         self.ui = Ui_MenuBar()
         self.ui.setupUi(self)
@@ -58,7 +60,7 @@ class BaseWindow(QMainWindow):
         Tracks every new window that is instantiated, so they can be accessed
         in subclasses
         """
-        self.__class__.instances[self.__class__.__name__] = self
+        self.__class__.windows[self.__class__.__name__] = self
 
     def setupMenuBarActions(self):
         """
@@ -114,9 +116,13 @@ class BaseWindow(QMainWindow):
         self.ui.actionUncheck_All_Traces.triggered.connect(self.unCheckAll)
 
         # View
-        self.ui.actionFormat_Plot.triggered.connect(self.formatPlotInspector)
+        self.ui.actionFormat_Plot.triggered.connect(
+            self.showDensityWindowInspector
+        )
         # ---
-        self.ui.actionAdvanced_Sort.triggered.connect(self.configInspector)
+        self.ui.actionAdvanced_Sort.triggered.connect(
+            self.showAdvancedSortInspector
+        )
         self.ui.actionSort_by_Ascending.triggered.connect(
             self.sortListAscending
         )
@@ -150,7 +156,7 @@ class BaseWindow(QMainWindow):
         )
         # ---
         self.ui.actionCorrectionFactorsWindow.triggered.connect(
-            self.correctionFactorInspector
+            self.showCorrectionFactorInspector
         )
         self.ui.actionGet_alphaFactor.triggered.connect(
             partial(self.getCorrectionFactors, "alpha")
@@ -234,9 +240,9 @@ class BaseWindow(QMainWindow):
         """
         Select which windows to focus and bring to front
         """
-        for instance in cls.instances.keys():
+        for instance in cls.windows.keys():
             if instance == window:
-                cls.instances[instance].focusWindow()
+                cls.windows[instance].focusWindow()
 
     def resetCurrentName(self):
         """
@@ -328,25 +334,6 @@ class BaseWindow(QMainWindow):
             name = item.text()
             in_listModel.append(name)
         return in_listModel
-
-    def clearTraceAndRerun(self):
-        """
-        Clears everything and reruns on selected videos.
-        Loads all traces into their respective videos, and generates a list
-        of traces
-        """
-        self.clearTraces()
-        self.getTracesAllVideos()
-
-        # Iterate over all filenames and add to list
-        for (name, trace) in self.data.traces.items():
-            item = QStandardItem(trace.name)
-            self.listModel.appendRow(item)
-            self.currName = trace.name
-            item.setCheckable(True)
-
-        self.selectListViewTopRow()
-        self.refreshPlot()
 
     def getCurrentListObject(self):
         """
@@ -452,8 +439,8 @@ class BaseWindow(QMainWindow):
             trace = self.getTrace(item)
             trace.is_checked = False
 
-        histogram_window = self.instances[gvars.HistogramWindow]
-        transition_density_window = self.instances[gvars.HistogramWindow]
+        histogram_window = self.windows[gvars.HistogramWindow]
+        transition_density_window = self.windows[gvars.HistogramWindow]
         for window in histogram_window, transition_density_window:
             if window.isVisible():
                 window.refreshPlot()
@@ -471,8 +458,8 @@ class BaseWindow(QMainWindow):
             trace = self.getTrace(item)
             trace.is_checked = True
 
-        histogram_window = self.instances[gvars.HistogramWindow]
-        transition_density_window = self.instances[gvars.HistogramWindow]
+        histogram_window = self.windows[gvars.HistogramWindow]
+        transition_density_window = self.windows[gvars.HistogramWindow]
         for window in histogram_window, transition_density_window:
             if window.isVisible():
                 window.refreshPlot()
@@ -831,25 +818,6 @@ class BaseWindow(QMainWindow):
                     )
                 )
 
-    def clearTraces(self):
-        """Clears all currently obtained traces."""
-        self.data.traces.clear()
-        self.listModel.clear()
-        self.refreshPlot()
-        #
-        #
-        # MainWindow_.data.traces.clear()
-        # TraceWindow_.listModel.clear()
-        # TraceWindow_.refreshPlot()
-        pass
-
-    def configInspector(self):
-        """
-        Opens the inspector (modal) window to do advanced actions
-        """
-        if self.isVisible() and self.inspector is not None:
-            self.inspector.show()
-
     def getLastOpenedDir(self):
         """
         Gets the most recent directory from the config file, and set this in new file dialogs
@@ -858,13 +826,6 @@ class BaseWindow(QMainWindow):
         if not os.path.exists(directory):
             directory = ""
         return directory
-
-    def correctionFactorInspector(self):
-        """
-        Opens the inspector (modal) window to set correction factors.
-        Overridden in subclass.
-        """
-        pass
 
     """
     Functions below are not used in the BaseWindow, but they MUST be present
@@ -876,11 +837,15 @@ class BaseWindow(QMainWindow):
         """Set by ApplicationContext before any windows are initialized"""
         pass
 
-    def formatPlotInspector(self):
-        """
-        Opens the inspector (modal) window to format the current plot.
-        Overridden in subclass.
-        """
+    def showDensityWindowInspector(self):
+        """Override in subclass."""
+        pass
+
+    def clearTraces(self):
+        """Override in subclass."""
+        pass
+
+    def clearTraceAndRerun(self):
         pass
 
     def clearAllClassifications(self):
@@ -920,6 +885,16 @@ class BaseWindow(QMainWindow):
 
     def clearCorrectionFactors(self):
         """Override in subclass."""
+        pass
+
+    def showCorrectionFactorInspector(self):
+        """
+        Opens the inspector (modal) window to set correction factors.
+        """
+        pass
+
+    def showAdvancedSortInspector(self):
+        """Override in subclass"""
         pass
 
     def triggerBleach(self, color):

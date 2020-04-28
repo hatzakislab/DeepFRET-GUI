@@ -57,12 +57,12 @@ class HistogramWindow(BaseWindow):
         for menu in menulist:
             menu.setEnabled(True)
 
-    def formatPlotInspector(self):
+    def showDensityWindowInspector(self):
         """
         Opens the inspector (modal) window to format the current plot
         """
         if self.isActiveWindow():
-            self.inspector.show()
+            self.inspectors[gvars.DensityWindowInspector].show()
 
     def exportHistogramData(self):
         """
@@ -444,9 +444,13 @@ class HistogramWindow(BaseWindow):
         S = self.S if corrected else self.S_un
         E = self.E if corrected else self.E_un
 
-        params = self.inspector.returnInspectorValues()
+        params = self.inspectors[
+            gvars.DensityWindowInspector
+        ].returnInspectorValues()
         bandwidth, resolution, n_colors, overlay_pts, pts_alpha = params
-        self.inspector.setInspectorConfigs(params)
+        self.inspectors[gvars.DensityWindowInspector].setInspectorConfigs(
+            params
+        )
 
         self.canvas.tl_ax_ctr.clear()
 

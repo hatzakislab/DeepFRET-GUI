@@ -1,7 +1,7 @@
 from global_variables import GlobalVariables as gvars
 from ui._DensityWindowInspector import Ui_DensityWindowInspector
-from widgets.misc import SheetInspector
 from widgets.histogram_window import HistogramWindow
+from widgets.misc import SheetInspector
 from widgets.transition_density_window import TransitionDensityWindow
 
 
@@ -13,7 +13,6 @@ class DensityWindowInspector(SheetInspector):
 
     def __init__(self, parent):
         super().__init__(parent=parent)
-
         self.getConfig = parent.getConfig
         self.setConfig = parent.setConfig
         self.ui = Ui_DensityWindowInspector()

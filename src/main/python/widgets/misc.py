@@ -4,6 +4,8 @@ multiprocessing.freeze_support()
 
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
+from global_variables import GlobalVariables as gvars
+from lib.misc import timeit
 
 
 class SheetInspector(QDialog):
@@ -14,8 +16,17 @@ class SheetInspector(QDialog):
 
     def __init__(self, parent):
         super().__init__()
+        self.instances = parent.instances
         self.setParent(parent)
         self.parent = parent
+
+        self.trace_window = self.instances[gvars.TraceWindow]
+        self.histogram_window = self.instances[gvars.HistogramWindow]
+        self.transition_density_window = self.instances[
+            gvars.TransitionDensityWindow
+        ]
+        self.video_window = self.instances[gvars.VideoWindow]
+
         self.setModal(True)
         self.setWindowFlag(Qt.Sheet)
 
@@ -45,35 +56,35 @@ class SheetInspector(QDialog):
         pass
 
 
-class RestartDialog(QMessageBox, SheetInspector):
-    """
-    Triggers a modal restart dialog if imaging mode is changed.
-    Otherwise, the GUI will crash, because the plotting backend isn't set up properly.
-    """
-
-    def __init__(self, parent):
-        super().__init__(parent=parent)
-
-        self.status = None
-
-        self.setText("Imaging mode changed")
-        self.setInformativeText(
-            "Restart application for new settings to take effect."
-        )
-        self.minimumSizeHint()
-
-        self.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-
-        self.buttonYes = self.button(QMessageBox.Yes)
-        self.buttonYes.setText("Restart")
-
-        self.buttonNo = self.button(QMessageBox.No)
-        self.buttonNo.setText("Cancel")
-
-        self.buttonClicked.connect(self.returnButton)
-
-    def returnButton(self, i):
-        self.status = "Restart" if i.text() == "Restart" else "Cancel"
+# class RestartDialog(QMessageBox, SheetInspector):
+#     """
+#     Triggers a modal restart dialog if imaging mode is changed.
+#     Otherwise, the GUI will crash, because the plotting backend isn't set up properly.
+#     """
+#
+#     def __init__(self, parent):
+#         super().__init__(parent=parent)
+#
+#         self.status = None
+#
+#         self.setText("Imaging mode changed")
+#         self.setInformativeText(
+#             "Restart application for new settings to take effect."
+#         )
+#         self.minimumSizeHint()
+#
+#         self.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+#
+#         self.buttonYes = self.button(QMessageBox.Yes)
+#         self.buttonYes.setText("Restart")
+#
+#         self.buttonNo = self.button(QMessageBox.No)
+#         self.buttonNo.setText("Cancel")
+#
+#         self.buttonClicked.connect(self.returnButton)
+#
+#     def returnButton(self, i):
+#         self.status = "Restart" if i.text() == "Restart" else "Cancel"
 
 
 class ExportDialog(QFileDialog):

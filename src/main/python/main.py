@@ -35,6 +35,10 @@ pd.set_option("display.max_rows", 500)
 pd.set_option("display.max_columns", 500)
 pd.set_option("display.width", 10000)
 
+import warnings
+
+warnings.filterwarnings("ignore")
+
 
 class AppContext(ApplicationContext):
     """

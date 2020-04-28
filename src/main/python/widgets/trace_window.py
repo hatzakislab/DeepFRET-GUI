@@ -925,16 +925,6 @@ class TraceWindowInspector(SheetInspector):
         self.connectUi(parent)
         self.setUi()
 
-    def setHistogramWindow(self, instance):
-        if not isinstance(instance, HistogramWindow):
-            raise ValueError
-        self.HistogramWindow = instance
-
-    def setTraceWindow(self, instance):
-        if not isinstance(instance, TraceWindow):
-            raise ValueError
-        self.TraceWindow = instance
-
     def setUi(self):
         """Setup UI according to last saved preferences."""
         for spinBox, key in zip(self.spinBoxes, self.keys):
@@ -946,9 +936,9 @@ class TraceWindowInspector(SheetInspector):
 
     def findPushed(self):
         """Sorts list by conditions set by spinBoxes and closes."""
-        self.TraceWindow.sortListByCondition(setup="advanced")
-        if self.HistogramWindow.isVisible():
-            self.HistogramWindow.refreshPlot(autofit=True)
+        self.trace_window.sortListByCondition(setup="advanced")
+        if self.histogram_window.isVisible():
+            self.histogram_window.refreshPlot(True)
         self.close()
 
     def returnInspectorValues(self):
@@ -998,20 +988,13 @@ class CorrectionFactorInspector(SheetInspector):
             partial(self.setCorrectionFactors, "delta")
         )
 
-    def setHistogramWindow(self, instance):
-        if not isinstance(instance, HistogramWindow):
-            raise ValueError
-        self.HistogramWindow = instance
-
-    def setTraceWindow(self, instance):
-        if not isinstance(instance, TraceWindow):
-            raise ValueError
-        self.TraceWindow = instance
-
     def setCorrectionFactors(self, factor):
         """
         Sets the global correction factors
         """
+        trace_window = self.instances[gvars.TraceWindow]
+        histogram_window = self.instances[gvars.TraceWindow]
+
         parent = self.parent
         self.alphaFactor = self.ui.alphaFactorBox.value()
         self.deltaFactor = self.ui.deltaFactorBox.value()
@@ -1020,11 +1003,12 @@ class CorrectionFactorInspector(SheetInspector):
             parent.setConfig(gvars.key_alphaFactor, self.alphaFactor)
         elif factor == "delta":
             parent.setConfig(gvars.key_deltaFactor, self.deltaFactor)
-        if self.TraceWindow.isVisible():
-            self.TraceWindow.refreshPlot()
 
-        if self.HistogramWindow.isVisible():
-            self.HistogramWindow.refreshPlot()
+        if trace_window.isVisible():
+            trace_window.refreshPlot()
+
+        if histogram_window.isVisible():
+            histogram_window.refreshPlot()
 
     def showEvent(self, event):
         self.ui.alphaFactorBox.setValue(self.alphaFactor)

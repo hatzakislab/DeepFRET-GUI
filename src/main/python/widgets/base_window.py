@@ -16,7 +16,7 @@ from mpl_layout import PlotWidget
 from ui._AboutWindow import Ui_About
 from ui._MenuBar import Ui_MenuBar
 from ui._PreferencesWindow import Ui_Preferences
-from widgets.misc import ExportDialog, ListView, RestartDialog
+from widgets.misc import ExportDialog, ListView
 
 
 class BaseWindow(QMainWindow):
@@ -1004,7 +1004,6 @@ class PreferencesWindow(QDialog):
         self.setModal(True)
         self.ui = Ui_Preferences()
         self.ui.setupUi(self)
-        self.restartDialog = RestartDialog(self)
 
         self.globalCheckBoxes = (
             self.ui.checkBox_batchLoadingMode,

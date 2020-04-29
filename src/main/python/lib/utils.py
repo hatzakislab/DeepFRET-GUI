@@ -1,6 +1,8 @@
 import itertools
 import multiprocessing
 import re
+import sys
+import random
 
 from matplotlib.ticker import FuncFormatter
 
@@ -316,3 +318,28 @@ def remove_newlines(s) -> str:
     Removes all newlines from string
     """
     return "".join(s.splitlines(keepends=False))
+
+
+def generate_name(length=10, module=None):
+    """
+    Generates a random ID for a module
+    """
+    if module is None:
+        module = sys.modules[__name__]
+    while True:
+        name = "id{:0{length}d}".format(
+            random.randint(0, 10 ** length - 1), length=length
+        )
+        if not hasattr(module, name):
+            return name
+
+
+def global_function(func):
+    """
+    Decorate a local function to make it global, thus enabling
+    multiprocessing pickling of it
+    """
+    module = sys.modules[func.__module__]
+    func.__name__ = func.__qualname__ = generate_name(module=module)
+    setattr(module, func.__name__, func)
+    return func

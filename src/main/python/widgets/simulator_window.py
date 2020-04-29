@@ -8,7 +8,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 
 import lib.math
-import lib.misc
+import lib.utils
 import lib.plotting
 from global_variables import GlobalVariables as gvars
 from lib.container import TraceContainer
@@ -33,30 +33,40 @@ class SimulatorWindow(BaseWindow):
         self.connectUi()
 
     def connectUi(self):
-        """Connect interface"""
-        # Find and connect all checkboxes dynamically
-
-        for c in dir(self.ui):
-            if c.startswith("checkBox"):
+        """
+        Connects interface to function. Most of it is done automatically, based
+        on ui element names
+        """
+        # Checkboxes
+        for element in dir(self.ui):
+            if element.startswith("checkBox"):
                 [
-                    getattr(self.ui, c).clicked.connect(f)
+                    getattr(self.ui, element).clicked.connect(f)
                     for f in (self.refreshUi, self.refreshPlot)
                 ]
 
-        self.ui.inputFretStateMeans.returnPressed.connect(self.refreshPlot)
+        # Input fields
+        for element in dir(self.ui):
+            if element.startswith("input"):
+                if element.startswith("inputFretStateMeans"):
+                    continue
+                else:
+                    getattr(self.ui, element).textChanged.connect(
+                        self.refreshPlot
+                    )
 
-        for i in dir(self.ui):
-            if i.startswith("input") and not i.startswith("inputFret"):
-                getattr(self.ui, i).textChanged.connect(self.refreshPlot)
-
-        self.ui.examplesComboBox.currentTextChanged.connect(self.refreshPlot)
-
+        # Functions will be carried out in the given order when export button
+        # is pushed
         for f in (
             self.valuesFromGUI,
             partial(self.generateTraces, False),
             self.exportTracesToAscii,
         ):
             self.ui.pushButtonExport.clicked.connect(f)
+
+        # Other inputs not handled above
+        self.ui.inputFretStateMeans.returnPressed.connect(self.refreshPlot)
+        self.ui.examplesComboBox.currentTextChanged.connect(self.refreshPlot)
 
     def exportTracesToAscii(self, checked_only=False):
         """
@@ -65,7 +75,7 @@ class SimulatorWindow(BaseWindow):
         """
         traces = (
             self.data.simulated_traces
-        )  # TODO : maybe genereted traces should be stored at .traces?
+        )  # TODO : maybe generated traces should be stored at .traces?
 
         if checked_only:
             selected = [trace for trace in traces.values() if trace.is_checked]
@@ -133,6 +143,11 @@ class SimulatorWindow(BaseWindow):
         # Scramble probability
         self.scramble_prob = float(self.ui.inputScrambleProbability.value())
 
+        # Scramble decouple probability
+        self.scramble_decouple_prob = float(
+            self.ui.inputScrambleDecoupleProbability.value()
+        )
+
         # Aggregation probability
         self.aggregate_prob = float(self.ui.inputAggregateProbability.value())
 
@@ -149,7 +164,7 @@ class SimulatorWindow(BaseWindow):
                 old_fret_means = float(self.ui.inputFretStateMeans.text())
 
             new_fret_means = sorted(
-                lib.misc.numstring_to_ls(self.ui.inputFretStateMeans.text())
+                lib.utils.numstring_to_ls(self.ui.inputFretStateMeans.text())
             )
             if not new_fret_means:
                 self.fret_means = 0
@@ -159,6 +174,9 @@ class SimulatorWindow(BaseWindow):
 
         # Max number of random states
         self.max_random_states = int(self.ui.inputMaxRandomStates.value())
+
+        # Minimum FRET state difference
+        self.min_fret_diff = float(self.ui.inputMinFretStateDiff.value())
 
         # Donor mean lifetime
         if self.ui.checkBoxDlifetime.isChecked():
@@ -176,6 +194,12 @@ class SimulatorWindow(BaseWindow):
 
         # Blinking probability
         self.blinking_prob = float(self.ui.inputBlinkingProbability.value())
+
+        # Fall-off probability
+        self.fall_off_prob = float(self.ui.inputFalloffProbability.value())
+
+        # Fall-off lifetime
+        self.fall_off_lifetime = int(self.ui.inputFalloffMeanLifetime.value())
 
         # Transition Probability
         if self.ui.checkBoxTransitionProbability.isChecked():
@@ -252,10 +276,12 @@ class SimulatorWindow(BaseWindow):
             n_traces=n_traces,
             aa_mismatch=self.aa_mismatch,
             state_means=self.fret_means,
+            min_state_diff=self.min_fret_diff,
             random_k_states_max=self.max_random_states,
             max_aggregate_size=self.max_aggregate_size,
             aggregation_prob=self.aggregate_prob,
             scramble_prob=self.scramble_prob,
+            scramble_decouple_prob=self.scramble_decouple_prob,
             trace_length=self.trace_len,
             trans_prob=self.transition_prob,
             blink_prob=self.blinking_prob,
@@ -264,12 +290,15 @@ class SimulatorWindow(BaseWindow):
             D_lifetime=self.donor_lifetime,
             A_lifetime=self.acceptor_lifetime,
             au_scaling_factor=self.scaling_factor,
+            falloff_prob=self.fall_off_prob,
+            falloff_lifetime=self.fall_off_lifetime,
             discard_unbleached=False,
-            null_fret_value=-1,
-            min_state_diff=0.1,
-            acceptable_noise=0.25,
             progressbar_callback=progressbar,
             callback_every=update_every_nth,
+            return_matrix=False,
+            reduce_memory=False,
+            run_headless_parallel=False,
+            merge_state_labels=True,
         )
 
         df.index = np.arange(0, len(df), 1) // int(self.trace_len)
@@ -349,6 +378,7 @@ class SimulatorWindow(BaseWindow):
                 ax=ax_lbl,
                 alpha=0.4,
                 fontsize=max(10, 36 // self.n_examples),
+                model_has_states=False,
             )
 
             for ax in ax_frt, ax_sto:

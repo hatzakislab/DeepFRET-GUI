@@ -1,6 +1,6 @@
 import os
 import json
-from lib.misc import git_app_version
+from lib.utils import git_app_version
 from configobj import ConfigObj
 
 

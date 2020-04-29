@@ -6,9 +6,9 @@ from PyQt5.QtCore import qWarning
 from widgets.base_window import AboutWindow, BaseWindow, PreferencesWindow
 from widgets.histogram_window import HistogramWindow
 from widgets.inspectors import (
+    AdvancedSortInspector,
     CorrectionFactorInspector,
     DensityWindowInspector,
-    AdvancedSortInspector,
 )
 from widgets.simulator_window import SimulatorWindow
 from widgets.trace_window import TraceWindow
@@ -129,8 +129,8 @@ if __name__ == "__main__":
     multiprocessing.freeze_support()
     # Create the app
     # Load app
-    ctxt = AppContext()
-    ctxt.assign()
+    _ctxt = AppContext()
+    _ctxt.assign()
 
     # Windows
     _VideoWindow = VideoWindow()
@@ -147,5 +147,5 @@ if __name__ == "__main__":
     _CorrectionFactorInspector = CorrectionFactorInspector(_TraceWindow)
     _AdvancedSortInspector = AdvancedSortInspector(_TraceWindow)
 
-    exit_code = ctxt.run()
+    exit_code = _ctxt.run()
     sys.exit(exit_code)

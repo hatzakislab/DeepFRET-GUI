@@ -338,12 +338,12 @@ class TraceWindow(BaseWindow):
     def setClassifications(trace, yi_pred):
         """Assign predicted trace classifications to trace"""
         trace.y_pred = yi_pred
-        trace.y_class, trace.confidence = lib.math.seq_probabilities(
-            trace.y_pred
-        )
-        trace.first_bleach = lib.math.find_bleach(
-            p_bleach=trace.y_pred[:, 0], threshold=0.5, window=7
-        )
+        (
+            trace.y_class,
+            trace.confidence,
+            trace.first_bleach,
+        ) = lib.math.seq_probabilities(trace.y_pred)
+
         for c in trace.channels:
             c.bleach = trace.first_bleach
 
@@ -831,6 +831,8 @@ class TraceWindow(BaseWindow):
                 (gvars.color_orange, gvars.color_purple),
                 ("E", "S"),
             ):
+
+                print("first bleach: ", trace.first_bleach)
                 ax.plot(trace.frames, signal, color=color)
                 ax.axvspan(
                     trace.first_bleach,
@@ -891,6 +893,8 @@ class TraceWindow(BaseWindow):
             if hasattr(self.canvas, "ax_ml") and trace.y_pred is not None:
                 lib.plotting.plot_predictions(
                     yi_pred=trace.y_pred,
+                    confidence=trace.confidence,
+                    y_class=trace.y_class,
                     fig=self.canvas.fig,
                     ax=self.canvas.ax_ml,
                 )

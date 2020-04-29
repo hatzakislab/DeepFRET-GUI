@@ -2,10 +2,12 @@ import multiprocessing
 
 multiprocessing.freeze_support()
 
+from parmap import parmap
+from tqdm import tqdm
 import matplotlib
 import matplotlib.ticker
 import sklearn.neighbors
-import lib.misc
+import lib.utils
 from widgets.misc import ProgressBar
 from typing import Union, Tuple, List
 import scipy.signal
@@ -20,6 +22,7 @@ import pandas as pd
 import numpy as np
 import pomegranate as pg
 from retrying import retry, RetryError
+from lib.utils import global_function
 
 pd.options.mode.chained_assignment = None
 
@@ -29,19 +32,6 @@ def contains_nan(array):
     Returns True if array contains nan values
     """
     return np.isnan(np.sum(array))
-
-
-def count_n_states(class_probs):
-    """
-    Count number of states in trace, given propabilities
-
-    Assumes the mapping
-    class 4 -> 1 state
-    class 5 -> 2 states
-    etc...
-    """
-    classes_w_states = class_probs[[4, 5, 6, 7, 8]]
-    return np.argmax(classes_w_states) + 1
 
 
 def single_exp_fit(x, scale):
@@ -354,7 +344,7 @@ def fit_hmm(
 
 
 def get_hmm_model(X, n_components=5, name=None):
-    model = pg.HiddenMarkovModel.from_samples(
+    return pg.HiddenMarkovModel.from_samples(
         pg.NormalDistribution,
         name=name,
         n_components=n_components,
@@ -362,7 +352,6 @@ def get_hmm_model(X, n_components=5, name=None):
         n_jobs=-1,
         # callbacks=[pgc.ModelCheckpoint(name=name)],
     )
-    return model
 
 
 def find_transitions(states, fret):
@@ -420,35 +409,9 @@ def sample_max_normalize_3d(X):
     return np.squeeze(X)
 
 
-def seq_probabilities(yi, skip_threshold=0.5, skip_column=0):
-    """
-    Calculates class-wise probabilities over the entire trace for a one-hot
-    encoded sequence prediction. Skips values where the first value is above
-    threshold (bleaching).
-    """
-    assert len(yi.shape) == 2
-
-    # Discard frames where bleaching (column 0) is above threshold (0.5)
-    p = yi[yi[:, skip_column] < skip_threshold]
-    if len(p) > 0:
-        # Sum frame values for each class
-        p = p.sum(axis=0) / len(p)
-
-        # Normalize to 1
-        p = p / p.sum()
-
-        # don't ignore bleached frames entirely,
-        # as it's easier to deal with a tiny number of edge cases
-        # p[skip_column] = 0
-    else:
-        p = np.zeros(yi.shape[1])
-
-    # sum static and dynamic smFRET scores (they shouldn't compete)
-    confidence = p[4:].sum()
-    return p, confidence
-
-
-def find_bleach(p_bleach, threshold=0.5, window=7):
+def find_bleach(
+    p_bleach: np.ndarray, threshold: float = 0.5, window: int = 7
+) -> Union[int, None]:
     """
     Finds bleaching given a list of frame-wise probabilities.
     The majority of datapoints in a given window must be above the threshold
@@ -457,7 +420,43 @@ def find_bleach(p_bleach, threshold=0.5, window=7):
     bleach_frame = np.argmax(is_bleached)
     if bleach_frame == 0:
         bleach_frame = None
+    if np.alltrue(is_bleached):
+        bleach_frame = 1
     return bleach_frame
+
+
+def seq_probabilities(
+    yi: np.ndarray,
+    skip_threshold: float = 0.5,
+    p_bleach_column: int = 0,
+    min_frames: int = 15,
+) -> Tuple[np.ndarray, np.ndarray, Union[int, None]]:
+    """
+    Calculates class-wise probabilities over the entire trace for a one-hot
+    encoded sequence prediction. Skips values where the first value is above
+    threshold (bleaching).
+    """
+    assert len(yi.shape) == 2
+
+    # Discard frames where bleaching (column 0) is above threshold (0.5)
+    bleach_frame = find_bleach(yi[:, p_bleach_column], skip_threshold)
+
+    p = yi[yi[:, p_bleach_column] < skip_threshold]
+
+    # Don't base confidence on anything less than 15 frames
+    if bleach_frame is None or bleach_frame > min_frames:
+        # Sum frame values for each class
+        p = p.sum(axis=0) / len(p)
+
+        # Normalize to 1
+        p = p / p.sum()
+    else:
+        p = np.zeros(yi.shape[1])
+        p[0] = 1
+
+    # sum static and dynamic smFRET scores (they shouldn't compete)
+    confidence = p[4:].sum()
+    return p, confidence, bleach_frame
 
 
 def predict_single(xi, model):
@@ -687,28 +686,36 @@ def exp_function(x, N, lam):
 def generate_traces(
     n_traces,
     state_means="random",
-    random_k_states_max=5,
+    random_k_states_max=4,
     min_state_diff=0.1,
-    D_lifetime=400,
-    A_lifetime=200,
-    blink_prob=0.05,
-    bleed_through=0,
-    aa_mismatch=(-0.3, 0.3),
-    trace_length=200,
-    trans_prob=0.1,
-    noise=0.08,
+    D_lifetime=500,
+    A_lifetime=500,
+    blink_prob=0.2,
+    bleed_through=(0, 0.15),
+    aa_mismatch=(-0.35, 0.35),
+    trace_length=300,
+    trans_prob=(0.0, 0.20),
+    noise=(0.01, 0.30),
     trans_mat=None,
     au_scaling_factor=1,
-    aggregation_prob=0.1,
-    max_aggregate_size=100,
+    aggregation_prob=0.15,
+    max_aggregate_size=20,
     null_fret_value=-1,
     acceptable_noise=0.25,
-    scramble_prob=0.3,
-    gamma_noise_prob=0.5,
+    S_range=(0.3, 0.7),
+    scramble_prob=0.15,
+    gamma_noise_prob=0.8,
+    falloff_lifetime=500,
+    falloff_prob=0.1,
     merge_labels=False,
     discard_unbleached=False,
     progressbar_callback=None,
     callback_every=1,
+    return_matrix=False,
+    run_headless_parallel=True,
+    scramble_decouple_prob=0.9,
+    reduce_memory=True,
+    merge_state_labels=True,
 ):
     """
     Parameters
@@ -765,12 +772,21 @@ def generate_traces(
         Maximum acceptable noise level before trace is labelled as "noisy". If
         acceptable_noise is above the upper range of noise, no "noisy" traces
         will be generated.
+    S_range:
+        Range of accepted stoichiometry values for un-bleached frames, for
+        scrambled or noisy traces only. Adjusting this may help the model better
+        learn when a fluorophore is bleached
     scramble_prob:
         Probability that the trace will end up being scrambled. This stacks with
         aggregation.
     gamma_noise_prob:
         Probability to multiply centered Gamma(1, 0.11) to each frame's noise,
         to make the data appear less synthetic
+    falloff_prob:
+        Probability that the molecule will spontaneously fall off the surface
+        (All intensities zero)
+    falloff_lifetime:
+        Exponential average lifetime if the molecule falls off the surface
     merge_labels:
         Merges (dynamic, static) and (aggregate, noisy, scrambled) to deal with
         binary labels only
@@ -782,7 +798,20 @@ def generate_traces(
         Progressbar callback object
     return_matrix:
         Whether to return the transition matrices used to generate the traces
+    run_headless_parallel:
+        Runs the generator in parallel to massively speed up generation of
+        traces. Does not work with GUI!
+    scramble_decouple_prob:
+        Probability for de-coupling fluorophores so that they aren't FRETing,
+        if trace is "scrambled".
+    reduce_memory:
+        Reduces memory consumption of dataframe by keeping only intensities
+        and labels
+    merge_state_labels:
+        Sets state labels to either 'static' or 'dynamic', instead of n-states.
+        All labels above 5 (for more states) are thus set to 5
     """
+    eps = 1e-16
 
     def _E(DD, DA):
         return DA / (DD + DA)
@@ -800,11 +829,11 @@ def generate_traces(
         return np.ones(len(E))
 
     @retry
-    def generate_state_means(min_diff, k_states):
+    def generate_state_means(min_acceptable_diff, k_states):
         """Returns random values and retries if they are too closely spaced"""
         states = np.random.uniform(0.01, 0.99, k_states)
         diffs = np.diff(sorted(states))
-        if any(diffs < min_diff):
+        if any(diffs < min_acceptable_diff):
             raise RetryError
         return states
 
@@ -823,9 +852,6 @@ def generate_traces(
                 len(trans_mat) if trans_mat is not None else rand_k_states
             )
             state_means = generate_state_means(min_state_diff, k_states)
-        elif kind == "aggregate":
-            state_means = np.random.uniform(0, 1)
-            k_states = 1
         else:
             if np.size(state_means) <= random_k_states_max:
                 # Pick the same amount of k states as state means given
@@ -840,96 +866,120 @@ def generate_traces(
                 )
 
         if type(state_means) == float:
-            dists = [pg.NormalDistribution(state_means, 0)]
+            dists = [pg.NormalDistribution(state_means, eps)]
         else:
-            dists = [pg.NormalDistribution(m, 1e-16) for m in state_means]
+            dists = [pg.NormalDistribution(m, eps) for m in state_means]
 
         starts = np.random.uniform(0, 1, size=k_states)
         starts /= starts.sum()
 
         # Generate arbitrary transition matrix
         if trans_mat is None:
-            trans_mat = np.empty([k_states, k_states])
-            trans_mat.fill(trans_prob)
-            np.fill_diagonal(trans_mat, 1 - trans_prob)
+            matrix = np.empty([k_states, k_states])
+            matrix.fill(trans_prob)
+            np.fill_diagonal(matrix, 1 - trans_prob)
 
             # Make sure that each row/column sums to exactly 1
             if trans_prob != 0:
                 stay_prob = 1 - trans_prob
-                remaining_prob = 1 - trans_mat.sum(axis=0)
-                trans_mat[trans_mat == stay_prob] += remaining_prob
+                remaining_prob = 1 - matrix.sum(axis=0)
+                matrix[matrix == stay_prob] += remaining_prob
+        else:
+            if len(state_means) != len(trans_mat):
+                raise ValueError(
+                    "Number of FRET states ({0}) doesn't match transition matrix {1}x{1}".format(
+                        len(state_means), len(trans_mat)
+                    )
+                )
+            matrix = trans_mat
 
-        # Generate HMM model
         model = pg.HiddenMarkovModel.from_matrix(
-            trans_mat, distributions=dists, starts=starts
+            matrix, distributions=dists, starts=starts
         )
         model.bake()
 
+        final_matrix = model.dense_transition_matrix()[:k_states, :k_states]
+
         E_true = np.array(model.sample(n=1, length=trace_length))
         E_true = np.squeeze(E_true).round(4)
-        return E_true
+        return E_true, final_matrix
 
-    def scramble(DD, DA, AA, cls, label):
+    def scramble(DD, DA, AA, classifications, label, decouple):
         """Scramble trace for model robustness"""
-
-        modify_trace = np.random.choice(("DD", "DA", "AA"))
-        if modify_trace == "DD":
-            c = DD
-        elif modify_trace == "DA":
-            c = DA
-        elif modify_trace == "AA":
-            c = AA
+        if decouple:
+            modify_trace = np.random.choice(("D", "A", "both"))
+            # Either observe the wrong donor or acceptor
+            if modify_trace == "D":
+                DD[DD != 0] = 1
+            elif modify_trace == "A":
+                AA[AA != 0] = 1
+                DA = AA
+            # Otherwise, set to two static, non-interacting fluorophores
+            else:
+                DD[DD != 0] = 1
+                AA[AA != 0] = 1
+                DA = AA
         else:
-            raise ValueError
 
-        c[c != 0] = 1
-        # Create a sign wave and merge with trace
-        sinwave = np.sin(np.linspace(-10, np.random.randint(0, 1), len(DD)))
-        sinwave[c == 0] = 0
-        sinwave = sinwave ** np.random.randint(5, 10)
-        c += sinwave * 0.4
-        # Fix negatives
-        c = np.abs(c)
+            modify_trace = np.random.choice(("DD", "DA", "AA", "none"))
+            if modify_trace == "AA":
+                c = AA
+            elif modify_trace == "DA":
+                c = DA
+            elif modify_trace == "DD":
+                c = DD
+            else:
+                c = None
 
-        # Correlate heavily
-        DA *= AA * np.random.uniform(0.7, 1)
-        AA *= DA * np.random.uniform(0.7, 1)
-        DD *= AA * np.random.uniform(0.7, 1)
+            if c is not None:
+                # Create a sign wave and merge with trace
+                c[c != 0] = 1
+                sinwave = np.sin(
+                    np.linspace(-10, np.random.randint(0, 1), len(DD))
+                )
+                sinwave[c == 0] = 0
+                sinwave = sinwave ** np.random.randint(5, 10)
+                c += sinwave * 0.4
+                # Fix negatives
+                c = np.abs(c)
+                if modify_trace == "AA":
+                    AA = c
+                elif modify_trace == "DA":
+                    DA = c
+                elif modify_trace == "DD":
+                    DD = c
 
-        # Add dark state
-        add_dark = np.random.choice(("add", "noadd"))
-        if add_dark == "add":
-            dark_state_start = np.random.randint(0, 40)
-            dark_state_time = np.random.randint(10, 40)
-            dark_state_end = dark_state_start + dark_state_time
-            DD[dark_state_start:dark_state_end] = 0
+            # Add dark state
+            add_dark = np.random.choice(("add", "noadd"))
+            if add_dark == "add":
+                dark_state_start = np.random.randint(0, 40)
+                dark_state_time = np.random.randint(10, 40)
+                dark_state_end = dark_state_start + dark_state_time
+                DD[dark_state_start:dark_state_end] = 0
 
-        # Add noise
-        if np.random.uniform(0, 1) < 0.1:
-            noise_start = np.random.randint(1, trace_length)
-            noise_time = np.random.randint(10, 50)
-            noise_end = noise_start + noise_time
-            if noise_end > trace_length:
-                noise_end = trace_length
+            # Flip traces
+            flip_trace = np.random.choice(("DD", "DA", "AA"))
+            if flip_trace == "DD":
+                DD = np.flip(DD)
+            elif flip_trace == "DA":
+                AA = np.flip(AA)
+            elif flip_trace == "AA":
+                DA = np.flip(DA)
 
-            DD[noise_start:noise_end] *= np.random.normal(
-                1, 1, noise_end - noise_start
-            )
+            DD, DA, AA = [np.abs(x) for x in (DD, DA, AA)]
 
-        # Flip traces
-        flip_trace = np.random.choice(("flipDD", "flipDA", "flipAA"))
-        if flip_trace == "flipDD":
-            DD = np.flip(DD)
-        elif flip_trace == "flipAA":
-            AA = np.flip(AA)
-        elif flip_trace == "flipDA":
-            DA = np.flip(DA)
+        label.fill(classifications["scramble"])
+        for x in DD, DA, AA:
+            label[x == 0] = classifications["bleached"]
 
-        DD, DA, AA = [np.abs(x) for x in (DD, DA, AA)]
+        if not decouple:
+            S_true = (DD + DA) / (DD + DA + AA)
+            label[S_true < np.min(S_range)] = classifications["bleached"]
+            label[S_true > np.max(S_range)] = classifications["bleached"]
 
-        label.fill(cls["scramble"])
         return DD, DA, AA, label
 
+    # @global_function
     def generate_single_trace(*args):
         """Function to generate a single trace"""
         (
@@ -942,8 +992,10 @@ def generate_traces(
             scramble_prob,
         ) = [np.array(arg) for arg in args]
 
-        # Simple table to keep track of labels
-        cls = {
+        pbar.update(n=1)
+
+        # Table to keep track of labels
+        classifications = {
             "bleached": 0,
             "aggregate": 1,
             "noisy": 2,
@@ -960,7 +1012,7 @@ def generate_traces(
 
         if np.random.uniform(0, 1) < aggregation_prob:
             is_aggregated = True
-            E_true = generate_fret_states(
+            E_true, matrix = generate_fret_states(
                 kind="aggregate",
                 trans_mat=trans_mat,
                 trans_prob=0,
@@ -978,7 +1030,7 @@ def generate_traces(
             is_aggregated = False
             n_pairs = 1
             trans_prob = np.random.uniform(trans_prob.min(), trans_prob.max())
-            E_true = generate_fret_states(
+            E_true, matrix = generate_fret_states(
                 kind=state_means,
                 trans_mat=trans_mat,
                 trans_prob=trans_prob,
@@ -1000,13 +1052,23 @@ def generate_traces(
             else:
                 bleach_A = None
 
-            first_bleach = lib.misc.min_none((bleach_D, bleach_A))
+            first_bleach = lib.utils.min_none((bleach_D, bleach_A))
+
+            # To keep track of multiple fluorophores for aggregates
             first_bleach_all.append(first_bleach)
 
             # Calculate from underlying E
             DD = _DD(E_true)
             DA = _DA(DD, E_true)
             AA = _AA(E_true)
+
+            # Randomly remove either single donor or acceptor from aggregate
+            if np.random.uniform(0, 1) < 0.5 and j == 1 and n_pairs == 2:
+                if np.random.choice(("D", "A")) == "D":
+                    DD -= 1
+                else:
+                    DA -= 1
+                    AA -= 1
 
             # In case AA intensity doesn't correspond exactly to donor
             # experimentally (S will be off)
@@ -1030,12 +1092,12 @@ def generate_traces(
                         spike_len = np.min((np.random.randint(2, 10), bleach_D))
                         DD[bleach_A : bleach_A + spike_len] = 2
 
-            # No matter what, zero each signal after its own bleaching
-            if bleach_D is not None:
-                DD[bleach_D:] = 0
-            if bleach_A is not None:
-                DA[bleach_A:] = 0
-                AA[bleach_A:] = 0
+                # No matter what, zero each signal after its own bleaching
+                if bleach_D is not None:
+                    DD[bleach_D:] = 0
+                if bleach_A is not None:
+                    DA[bleach_A:] = 0
+                    AA[bleach_A:] = 0
 
             # Append to total fluorophore intensity per channel
             DD_total.append(DD)
@@ -1052,46 +1114,56 @@ def generate_traces(
         # fluorophore channel hits 0 from bleaching (because 100% FRET not
         # considered possible)
         if is_aggregated:
+            if np.random.uniform(0, 1) < falloff_prob:
+                if falloff_lifetime is not None:
+                    falloff_frame = int(
+                        np.ceil(np.random.exponential(falloff_lifetime))
+                    )
+                else:
+                    falloff_frame = None
+                DD[falloff_frame:] = 0
+                DA[falloff_frame:] = 0
+                AA[falloff_frame:] = 0
+
             # First bleaching for
             bleach_DD_all = np.argmax(DD == 0)
             bleach_DA_all = np.argmax(DA == 0)
             bleach_AA_all = np.argmax(AA == 0)
 
             # Find first bleaching overall
-            first_bleach_all = lib.misc.min_none(
+            first_bleach_all = lib.utils.min_none(
                 (bleach_DD_all, bleach_DA_all, bleach_AA_all)
             )
             if first_bleach_all == 0:
                 first_bleach_all = None
-            label.fill(cls["aggregate"])
+            label.fill(classifications["aggregate"])
         else:
             # Else simply check whether DD or DA bleaches first from lifetimes
-            first_bleach_all = lib.misc.min_none(first_bleach_all)
+            first_bleach_all = lib.utils.min_none(first_bleach_all)
 
         # Save unblinked fluorophores to calculate E_true
         DD_no_blink, DA_no_blink = DD.copy(), DA.copy()
 
         # No blinking in aggregates (excessive/complicated)
-        if not is_aggregated:
-            if np.random.uniform(0, 1) < blink_prob:
-                blink_start = np.random.randint(1, trace_length)
-                blink_time = np.random.randint(1, 15)
+        if not is_aggregated and np.random.uniform(0, 1) < blink_prob:
+            blink_start = np.random.randint(1, trace_length)
+            blink_time = np.random.randint(1, 15)
 
-                # Blink either donor or acceptor
-                if np.random.uniform(0, 1) < 0.5:
-                    DD[blink_start : (blink_start + blink_time)] = 0
-                    DA[blink_start : (blink_start + blink_time)] = 0
-                else:
-                    DA[blink_start : (blink_start + blink_time)] = 0
-                    AA[blink_start : (blink_start + blink_time)] = 0
+            # Blink either donor or acceptor
+            if np.random.uniform(0, 1) < 0.5:
+                DD[blink_start : (blink_start + blink_time)] = 0
+                DA[blink_start : (blink_start + blink_time)] = 0
+            else:
+                DA[blink_start : (blink_start + blink_time)] = 0
+                AA[blink_start : (blink_start + blink_time)] = 0
 
         if first_bleach_all is not None:
-            label[first_bleach_all:] = cls["bleached"]
+            label[first_bleach_all:] = classifications["bleached"]
             E_true[first_bleach_all:] = null_fret_value
 
         for x in (DD, DA, AA):
             # Bleached points get label 0
-            label[x == 0] = cls["bleached"]
+            label[x == 0] = classifications["bleached"]
 
         if is_aggregated:
             first_bleach_all = np.argmin(label)
@@ -1102,15 +1174,20 @@ def generate_traces(
         # effect otherwise)
         is_scrambled = False
         if np.random.uniform(0, 1) < scramble_prob and n_pairs <= 2:
+            is_decoupled = (
+                True
+                if np.random.uniform(0, 1) < scramble_decouple_prob
+                else False
+            )
             DD, DA, AA, label = scramble(
-                DD=DD, DA=DA, AA=AA, cls=cls, label=label
+                DD=DD,
+                DA=DA,
+                AA=AA,
+                classifications=classifications,
+                label=label,
+                decouple=is_decoupled,
             )
             is_scrambled = True
-
-        # Figure out bleached places before true signal is modified:
-        is_bleached = np.zeros(trace_length)
-        for x in (DD, DA, AA):
-            is_bleached[x == 0] = 1
 
         # Add donor bleed-through
         DD_bleed = np.random.uniform(bleed_through.min(), bleed_through.max())
@@ -1150,78 +1227,125 @@ def generate_traces(
         E_unbleached_true = E_true[:first_bleach_all]
 
         # Count actually observed states, because a slow system might not
-        # transition in the observation window
-        observed_states = np.unique(E_true[E_true != null_fret_value])
+        # transition between all states in the observation window
+        unique_states = np.unique(
+            E_unbleached_true[E_unbleached_true != null_fret_value]
+        )
 
         # Calculate noise level for each FRET state, and check if it
         # surpasses the limit
         is_noisy = False
-        for state in observed_states:
-            noise_level = np.std(E_unbleached[E_unbleached_true == state])
-            if noise_level > acceptable_noise:
-                label[label != cls["bleached"]] = cls["noisy"]
-                is_noisy = True
+        if not any((is_aggregated, is_scrambled)):
+            for state in unique_states:
+                noise_level = np.std(E_unbleached[E_unbleached_true == state])
+                if noise_level > acceptable_noise:
+                    label[
+                        label != classifications["bleached"]
+                    ] = classifications["noisy"]
+                    is_noisy = True
 
         # For all FRET traces, assign the number of states observed
         if not any((is_noisy, is_aggregated, is_scrambled)):
             for i in range(5):
                 k_states = i + 1
-                if len(observed_states) == k_states:
-                    label[label != cls["bleached"]] = cls[
-                        "{}-state".format(k_states)
-                    ]
+                if len(unique_states) == k_states:
+                    label[
+                        label != classifications["bleached"]
+                    ] = classifications["{}-state".format(k_states)]
 
         # Bad traces don't contain FRET
         if any((is_noisy, is_aggregated, is_scrambled)):
             E_true.fill(-1)
+
+        # Ensure that any bad stoichiometry values are correctly set to bleached
+        if any((is_noisy, is_scrambled)):
+            E_true[label == classifications["bleached"]] = -1
 
         # Everything that isn't FRET is 0, and FRET is 1
         if merge_labels:
             label[label <= 3] = 0
             label[label >= 4] = 1
 
-        if discard_unbleached:
-            if label[-1] != cls["bleached"]:
-                return pd.DataFrame()
+        if discard_unbleached and label[-1] != classifications["bleached"]:
+            return pd.DataFrame()
 
-        # Calculate difference between states if >=2 states and actual smFRET
-        if label[0] in [5, 6, 7, 8]:
-            min_diff = np.min(np.diff(np.unique(E_unbleached_true)))
-        else:
-            min_diff = np.nan
+        try:
+            if label[0] in [5, 6, 7, 8]:
+                min_diff = np.min(np.diff(np.unique(E_unbleached_true)))
+            else:
+                min_diff = -1
+        except ValueError:
+            min_diff = -1
 
         bg = np.zeros_like(DD)
 
         # Columns pre-fixed with underscore contain metadata, and only the
         # first value should be used (repeated because table structure)
-        trace = pd.DataFrame(
-            {
-                "D-Dexc-rw": DD,
-                "A-Dexc-rw": DA,
-                "A-Aexc-rw": AA,
-                "D-Dexc-bg": bg,
-                "A-Dexc-bg": bg,
-                "A-Aexc-bg": bg,
-                "E": E_obs,
-                "E_true": E_true,
-                "S": S_obs,
-                "frame": frames,
-                "name": name,
-                "label": label,
-                "_bleaches_at": np.array(first_bleach_all).repeat(trace_length),
-                "_noise_level": np.array(noise).repeat(trace_length),
-                "_min_state_diff": np.array(min_diff).repeat(trace_length),
-            }
-        )
-        trace.replace([np.inf, -np.inf], np.nan, inplace=True)
+        if reduce_memory:
+            trace = pd.DataFrame(
+                {
+                    "D-Dexc-rw": DD,
+                    "A-Dexc-rw": DA,
+                    "A-Aexc-rw": AA,
+                    "name": name,
+                    "label": label,
+                }
+            )
+        else:
+            trace = pd.DataFrame(
+                {
+                    "D-Dexc-rw": DD,
+                    "A-Dexc-rw": DA,
+                    "A-Aexc-rw": AA,
+                    "D-Dexc-bg": bg,
+                    "A-Dexc-bg": bg,
+                    "A-Aexc-bg": bg,
+                    "E": E_obs,
+                    "E_true": E_true,
+                    "S": S_obs,
+                    "frame": frames,
+                    "name": name,
+                    "label": label,
+                    "_bleaches_at": np.array(first_bleach_all).repeat(
+                        trace_length
+                    ),
+                    "_noise_level": np.array(noise).repeat(trace_length),
+                    "_min_state_diff": np.array(min_diff).repeat(trace_length),
+                    "_max_n_classes": np.array(
+                        len(classifications.keys())
+                    ).repeat(trace_length),
+                }
+            )
+        trace.replace([np.inf, -np.inf, np.nan], -1, inplace=True)
         trace.fillna(method="pad", inplace=True)
-        return trace
+        pbar.update()
+
+        return trace, matrix
 
     processes = range(n_traces)
-    traces = []
-    for i in processes:
-        traces.append(
-            generate_single_trace(
+    n_processes = 8 if run_headless_parallel else 1
+    pbar = tqdm(total=(n_traces / n_processes) * 2, smoothing=0)
+
+    if run_headless_parallel:
+        traces_matrices = parmap.map(
+            generate_single_trace,
+            processes,
+            trans_prob,
+            au_scaling_factor,
+            noise,
+            bleed_through,
+            aa_mismatch,
+            scramble_prob,
+            pm_parallel=True,
+            pm_processes=n_processes,
+        )
+
+        traces, matrices = zip(*traces_matrices)
+    else:
+        traces = []
+        matrices = []
+        for i in processes:
+            t, m = generate_single_trace(
                 i,
                 trans_prob,
                 au_scaling_factor,
@@ -1230,17 +1354,30 @@ def generate_traces(
                 aa_mismatch,
                 scramble_prob,
             )
-        )
-        if progressbar_callback is not None:
-            if (i % callback_every) == 0:
+
+            traces.append(t)
+            matrices.append(m)
+
+            if progressbar_callback is not None and (i % callback_every) == 0:
                 progressbar_callback.increment()
 
-    if len(traces) > 1:
-        traces = pd.concat(traces)
-    else:
-        traces = traces[0]
+    traces = (
+        pd.concat(traces, ignore_index=True, copy=False, sort=False)
+        if len(traces) > 1
+        else traces[0]
+    )
+    matrices = np.array(matrices)
+    pbar.close()
 
-    return traces
+    if merge_state_labels:
+        # 2, 3, 4, 5 states will all have the same label,
+        # considered "dynamic"
+        traces[traces["label"] > 5] = 5
+
+    if return_matrix:
+        return traces, matrices
+    else:
+        return traces
 
 
 def func_double_exp(
@@ -1341,23 +1478,17 @@ def fit_and_compare_exp_funcs(
         print(errs2)
         print(f"BIC : {bic_2:.6f}")
 
-    out = {}
-    if bic_1 < bic_2:
-        out["BEST"] = "SINGLE"
-    else:
-        out["BEST"] = "DOUBLE"
-
-    out["SINGLE_LLH"] = llh_1
-    out["SINGLE_BIC"] = bic_1
-    out["SINGLE_PARAM"] = res1.x
-    out["SINGLE_ERRS"] = errs1
-
-    out["DOUBLE_LLH"] = llh_2
-    out["DOUBLE_BIC"] = bic_2
-    out["DOUBLE_PARAM"] = res2.x
-    out["DOUBLE_ERRS"] = errs2
-
-    return out
+    return {
+        "BEST": "SINGLE" if bic_1 < bic_2 else "DOUBLE",
+        "SINGLE_LLH": llh_1,
+        "SINGLE_BIC": bic_1,
+        "SINGLE_PARAM": res1.x,
+        "SINGLE_ERRS": errs1,
+        "DOUBLE_LLH": llh_2,
+        "DOUBLE_BIC": bic_2,
+        "DOUBLE_PARAM": res2.x,
+        "DOUBLE_ERRS": errs2,
+    }
 
 
 def corrcoef_lags(x, y, n_lags: int = 5):
@@ -1378,7 +1509,7 @@ def corrcoef_lags(x, y, n_lags: int = 5):
 
 
 def correct_corrs(corrs):
-    maxlen = max([len(arr) for arr in corrs])
+    maxlen = max(len(arr) for arr in corrs)
     _corrs = np.zeros((len(corrs), maxlen))
     for j, corr in enumerate(corrs):
         _l = len(corr)

@@ -409,35 +409,9 @@ def sample_max_normalize_3d(X):
     return np.squeeze(X)
 
 
-def seq_probabilities(yi, skip_threshold=0.5, skip_column=0):
-    """
-    Calculates class-wise probabilities over the entire trace for a one-hot
-    encoded sequence prediction. Skips values where the first value is above
-    threshold (bleaching).
-    """
-    assert len(yi.shape) == 2
-
-    # Discard frames where bleaching (column 0) is above threshold (0.5)
-    p = yi[yi[:, skip_column] < skip_threshold]
-    if len(p) > 0:
-        # Sum frame values for each class
-        p = p.sum(axis=0) / len(p)
-
-        # Normalize to 1
-        p = p / p.sum()
-
-        # don't ignore bleached frames entirely,
-        # as it's easier to deal with a tiny number of edge cases
-        # p[skip_column] = 0
-    else:
-        p = np.zeros(yi.shape[1])
-
-    # sum static and dynamic smFRET scores (they shouldn't compete)
-    confidence = p[4:].sum()
-    return p, confidence
-
-
-def find_bleach(p_bleach, threshold=0.5, window=7):
+def find_bleach(
+    p_bleach: np.ndarray, threshold: float = 0.5, window: int = 7
+) -> Union[int, None]:
     """
     Finds bleaching given a list of frame-wise probabilities.
     The majority of datapoints in a given window must be above the threshold
@@ -446,7 +420,43 @@ def find_bleach(p_bleach, threshold=0.5, window=7):
     bleach_frame = np.argmax(is_bleached)
     if bleach_frame == 0:
         bleach_frame = None
+    if np.alltrue(is_bleached):
+        bleach_frame = 1
     return bleach_frame
+
+
+def seq_probabilities(
+    yi: np.ndarray,
+    skip_threshold: float = 0.5,
+    p_bleach_column: int = 0,
+    min_frames: int = 15,
+) -> Tuple[np.ndarray, np.ndarray, Union[int, None]]:
+    """
+    Calculates class-wise probabilities over the entire trace for a one-hot
+    encoded sequence prediction. Skips values where the first value is above
+    threshold (bleaching).
+    """
+    assert len(yi.shape) == 2
+
+    # Discard frames where bleaching (column 0) is above threshold (0.5)
+    bleach_frame = find_bleach(yi[:, p_bleach_column], skip_threshold)
+
+    p = yi[yi[:, p_bleach_column] < skip_threshold]
+
+    # Don't base confidence on anything less than 15 frames
+    if bleach_frame is None or bleach_frame > min_frames:
+        # Sum frame values for each class
+        p = p.sum(axis=0) / len(p)
+
+        # Normalize to 1
+        p = p / p.sum()
+    else:
+        p = np.zeros(yi.shape[1])
+        p[0] = 1
+
+    # sum static and dynamic smFRET scores (they shouldn't compete)
+    confidence = p[4:].sum()
+    return p, confidence, bleach_frame
 
 
 def predict_single(xi, model):

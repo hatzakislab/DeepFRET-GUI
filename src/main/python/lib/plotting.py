@@ -181,7 +181,7 @@ def point_density(xdata, ydata, kernel="gaussian", bandwidth=0.1):
     return np.exp(kernel_sk.score_samples(list(zip(*positions))))
 
 
-def plot_shaded_category(y, ax, alpha, colors=None):
+def plot_shaded_category(y, ax, alpha, colors):
     """
     Plots a color for every class segment in a timeseries
 
@@ -196,9 +196,6 @@ def plot_shaded_category(y, ax, alpha, colors=None):
     colors:
         Colors to cycle through
     """
-    if colors is None:
-        colors = ("darkgrey", "red", "green", "orange", "royalblue", "purple")
-
     y_ = y.argmax(axis=1) if len(y.shape) != 1 else y
     if len(colors) < len(set(y_)):
         raise ValueError("Must have at least a color for each class")
@@ -256,7 +253,9 @@ def plot_simulation_category(
     ax.legend(loc="lower right", prop={"size": fontsize})
 
 
-def plot_predictions(yi_pred, fig, ax, model_has_states=False):
+def plot_predictions(
+    yi_pred, y_class, confidence, fig, ax, model_has_states=False
+):
     """
     Plots Keras predictions as probabilities with shaded argmax overlays
     """
@@ -266,15 +265,17 @@ def plot_predictions(yi_pred, fig, ax, model_has_states=False):
             classification_dict=names, color_dict=colors
         )
 
-    probability, confidence = lib.math.seq_probabilities(
-        yi_pred, skip_threshold=0.5
-    )
     plot_shaded_category(y=yi_pred, ax=ax, colors=colors, alpha=0.1)
 
     # Upper right individual %
     patches = []
     for i in range(yi_pred.shape[-1]):
-        p = probability[i] * 100
+
+        # Don't plot bleaching class (confusing)
+        if i == 0:
+            continue
+
+        p = y_class[i] * 100
         label = "{:.0f}% {}".format(p, names[i])
         # Align with monospace if single digit prob
         if p < 10:

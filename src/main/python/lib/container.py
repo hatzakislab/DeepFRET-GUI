@@ -127,16 +127,14 @@ class TraceContainer:
     Class for storing individual trace information.
     """
 
+    # TODO: make these names switchable depending on global vars and model config
     ml_column_names = [
         "p_bleached",
-        "p_aggegate",
+        "p_aggregated",
         "p_noisy",
-        "p_scramble",
-        "p_dynamic",
+        "p_scrambled",
         "p_static",
-        # "p_3-state",
-        # "p_4-state",
-        # "p_5-state",
+        "p_dynamic",
     ]
 
     def __init__(
@@ -316,11 +314,15 @@ class TraceContainer:
 
         else:
             if "p_bleached" in df.columns:
-                colnames += self.ml_column_names
-                self.y_pred = df[self.ml_column_names].values
-                self.y_class, self.confidence = lib.math.seq_probabilities(
-                    self.y_pred
-                )
+                # Try/except to ignore if using incompatible older traces
+                try:
+                    colnames += self.ml_column_names
+                    self.y_pred = df[self.ml_column_names].values
+                    self.y_class, self.confidence = lib.math.seq_probabilities(
+                        self.y_pred
+                    )
+                except KeyError:
+                    pass
 
             # This strips periods if present
             df.columns = [c.strip(".") for c in df.columns]

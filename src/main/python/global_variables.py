@@ -195,9 +195,9 @@ class GlobalVariables:
     model_classes_full = OrderedDict(
         (
             (0, "bleached"),
-            (1, "aggregate"),
+            (1, "aggregated"),
             (2, "noisy"),
-            (3, "scramble"),
+            (3, "scrambled"),
             (4, "1-state"),
             (5, "2-state"),
             (6, "3-state"),

@@ -332,7 +332,6 @@ class TransitionDensityWindow(BaseWindow):
 
         try:
             self.setPooledLifetimes()
-
             params = self.inspectors[
                 gvars.DensityWindowInspector
             ].returnInspectorValues()
@@ -344,29 +343,16 @@ class TransitionDensityWindow(BaseWindow):
             self.plotTransitionDensity(params)
             self.plotHistograms()
 
-            # Adjust defaults
-            self.plotDefaultElementsLeft()
-            self.plotDefaultElementsRight()
-            self.plotDefaultElements()
+        except (KeyError, AttributeError):
+            for ax in self.canvas.axes:
+                ax.plot([])
+                self.canvas.fig.add_subplot(ax)
 
-            self.canvas.draw()
+        self.plotDefaultElementsLeft()
+        self.plotDefaultElementsRight()
+        self.plotDefaultElements()
 
-        except AttributeError:
-            pass
-
-    # def showEvent(self, QShowEvent):
-    #     """
-    #     No idea why this window writes incorrect correction factors,
-    #     but this hotfix overrides the bug
-    #     """
-    #     # TODO: delete this part and update the config using signals like
-    #     # TODO: spinBox.valueChanged.connect(...) (see PreferencesWindow)
-    #     self.setConfig(
-    #         gvars.key_alphaFactor, CorrectionFactorInspector_.alphaFactor
-    #     )
-    #     self.setConfig(
-    #         gvars.key_deltaFactor, CorrectionFactorInspector_.deltaFactor
-    #     )
+        self.canvas.draw()
 
     def _debug(self):
         self.refreshPlot()

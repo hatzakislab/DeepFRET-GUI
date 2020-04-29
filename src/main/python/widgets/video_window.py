@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import QDoubleSpinBox, QFileDialog
 
 import lib.imgdata
 import lib.math
-import lib.misc
+import lib.utils
 import lib.plotting
 from global_variables import GlobalVariables as gvars
 from lib.container import (
@@ -16,7 +16,7 @@ from lib.container import (
     TraceContainer,
     VideoContainer,
 )
-from lib.misc import timeit
+from lib.utils import timeit
 from ui._MainWindow import Ui_MainWindow
 from ui._MenuBar import Ui_MenuBar
 from widgets.misc import ProgressBar
@@ -167,7 +167,7 @@ class VideoWindow(BaseWindow):
                         break
 
                     # Make sure name is unique
-                    uniqueName = lib.misc.generate_unique_name(
+                    uniqueName = lib.utils.generate_unique_name(
                         full_filename=full_filename,
                         array=self.data.videos.keys(),
                     )
@@ -408,7 +408,7 @@ class VideoWindow(BaseWindow):
                 self.colocalizeSpotsSingleVideo(c)
         else:
             for n, *row in vid.coloc_grn_red.spots.itertuples():
-                yx_grn, yx_red = lib.misc.pairwise(row)
+                yx_grn, yx_red = lib.utils.pairwise(row)
 
                 trace = self.newTraceFromVideo(n)
 

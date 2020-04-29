@@ -5,7 +5,7 @@ import pandas as pd
 from PyQt5.QtWidgets import QFileDialog
 
 import lib.math
-import lib.misc
+import lib.utils
 import lib.plotting
 from global_variables import GlobalVariables as gvars
 from lib.container import HistogramData
@@ -351,12 +351,14 @@ class HistogramWindow(BaseWindow):
                 tk.set_visible(False)
 
         self.canvas.tr_ax_ctr.yaxis.set_major_formatter(
-            lib.misc.format_string_to_k
+            lib.utils.format_string_to_k
         )
         self.canvas.tr_ax_ctr.xaxis.set_major_formatter(
-            lib.misc.format_string_to_k
+            lib.utils.format_string_to_k
         )
-        self.canvas.br_ax.xaxis.set_major_formatter(lib.misc.format_string_to_k)
+        self.canvas.br_ax.xaxis.set_major_formatter(
+            lib.utils.format_string_to_k
+        )
 
         self.canvas.bl_ax_b.axhline(
             0,
@@ -584,7 +586,7 @@ class HistogramWindow(BaseWindow):
                 yarr_1,
                 c="r",
                 label=f"Lifetimes \n"
-                + lib.misc.nice_string_output(
+                + lib.utils.nice_string_output(
                     [r"$\tau$"], [f"{1. / single_param[0]:.2f}",],
                 ),
                 alpha=0.5,

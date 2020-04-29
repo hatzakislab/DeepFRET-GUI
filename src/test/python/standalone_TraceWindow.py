@@ -1,6 +1,7 @@
 import sys
 
-from main import AppContext, TraceContainer, TraceWindow
+from main import AppContext, TraceContainer
+from widgets.trace_window import TraceWindow
 
 
 class SetUp(TraceWindow):

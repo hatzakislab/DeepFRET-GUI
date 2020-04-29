@@ -1,5 +1,7 @@
 import sys
-from main import HistogramWindow, AppContext, DensityWindowInspector
+from main import AppContext
+from widgets.inspectors import DensityWindowInspector
+from widgets.histogram_window import HistogramWindow
 import pandas as pd
 import numpy as np
 
@@ -7,7 +9,6 @@ import numpy as np
 class setUp(HistogramWindow):
     def __init__(self):
         super(setUp, self).__init__()
-        self.inspector = DensityWindowInspector(self)
 
     def setFile(self, path):
         df = pd.read_csv(path, skiprows=5, sep="\t")

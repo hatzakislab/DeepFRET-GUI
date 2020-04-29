@@ -5,8 +5,6 @@ multiprocessing.freeze_support()
 from global_variables import GlobalVariables as gvars
 import matplotlib
 
-from lib.math import estimate_bw
-
 matplotlib.use("qt5agg")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -158,7 +156,9 @@ def point_density(xdata, ydata, kernel="gaussian", bandwidth=0.1):
         kernel = "epanechnikov"
 
     if bandwidth == "auto":
-        bandwidth = estimate_bw(n=len(xdata) + len(ydata), d=2, factor=0.25)
+        bandwidth = lib.math.estimate_bw(
+            n=len(xdata) + len(ydata), d=2, factor=0.25
+        )
 
     positions = np.vstack([xdata.ravel(), ydata.ravel()])
     kernel_sk = sklearn.neighbors.KernelDensity(

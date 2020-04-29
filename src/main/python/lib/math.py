@@ -6,7 +6,7 @@ import matplotlib
 import matplotlib.ticker
 import sklearn.neighbors
 import lib.misc
-from ui.misc import ProgressBar
+from widgets.misc import ProgressBar
 from typing import Union, Tuple, List
 import scipy.signal
 import scipy.signal
@@ -20,8 +20,6 @@ import pandas as pd
 import numpy as np
 import pomegranate as pg
 from retrying import retry, RetryError
-from tqdm import tqdm
-from lib.misc import timeit
 
 pd.options.mode.chained_assignment = None
 
@@ -782,6 +780,8 @@ def generate_traces(
         How often to callback to the progressbar
     progressbar_callback:
         Progressbar callback object
+    return_matrix:
+        Whether to return the transition matrices used to generate the traces
     """
 
     def _E(DD, DA):
@@ -815,8 +815,13 @@ def generate_traces(
 
         rand_k_states = np.random.randint(1, random_k_states_max + 1)
 
-        if kind == "random":
-            k_states = rand_k_states
+        if kind == "aggregate":
+            state_means = np.random.uniform(0, 1)
+            k_states = 1
+        elif kind == "random":
+            k_states = (
+                len(trans_mat) if trans_mat is not None else rand_k_states
+            )
             state_means = generate_state_means(min_state_diff, k_states)
         elif kind == "aggregate":
             state_means = np.random.uniform(0, 1)

@@ -1,5 +1,6 @@
 import sys
-from main import SimulatorWindow, AppContext
+from main import AppContext
+from widgets.simulator_window import SimulatorWindow
 
 if __name__ == "__main__":
     ctxt = AppContext()

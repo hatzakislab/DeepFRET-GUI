@@ -81,6 +81,7 @@ class ImageChannel:
         self.color = color  # type: str
         self.raw = None  # type: Union[None, np.ndarray]
         self.mean = None  # type: Union[None, np.ndarray]
+        self.mean_nobg = None  # type: Union[None, np.ndarray]
         self.rgba = None  # type: Union[None, np.ndarray]
         self.spots = None  # type: Union[None, np.ndarray]
         self.n_spots = 0  # type: int
@@ -490,31 +491,19 @@ class TraceContainer:
         Gets and sets the tracename based on the current videoname and the pair number
         :return self.tracename: str
         """
-        if self.tracename is None:
-            if self.video is None:
-                name = "Trace_pair{}.txt".format(self.n)
-            else:
-                name = "Trace_{}_pair{}.txt".format(
-                    self.video.replace(".", "_"), self.n
-                )
-
-            # Scrub mysterious \n if they appear from filename loading
-            self.tracename = lib.misc.remove_newlines(name)
-
+        self.tracename = os.path.basename(
+            lib.misc.remove_newlines(self.filename)
+        )
         return self.tracename
 
-    def get_savename(self, dir_to_join: Union[None, str] = None):
+    def get_savename(self, dir_to_join: str):
         """
         Returns the name with which the trace should be saved.
         Option for specifying output directory.
         :param dir_to_join: output directory, optional
         :return self.savename: str
         """
-        if self.savename is None:
-            if dir_to_join is not None:
-                self.savename = os.path.join(dir_to_join, self.get_tracename())
-            else:
-                self.savename = self.get_tracename()
+        self.savename = os.path.join(dir_to_join, self.get_tracename())
         return self.savename
 
     def export_trace_to_txt(
@@ -528,6 +517,9 @@ class TraceContainer:
         :param keep_nan_columns: Whether to keep columns that are nan, passed to get_export_txt
         """
         savename = self.get_savename(dir_to_join=dir_to_join)
+        if not savename.endswith(".txt"):
+            savename += ".txt"
+
         with open(savename, "w") as f:
             f.write(self.get_export_txt(keep_nan_columns=keep_nan_columns))
 
@@ -578,6 +570,43 @@ class TraceContainer:
         self.transitions = lf
 
 
+class HistogramData:
+    """
+    Class with the data from HistogramWindow
+    """
+
+    def __init__(self):
+        self.alpha = None
+        self.beta = None
+        self.gamma = None
+        self.delta = None
+
+        self.E = None
+        self.S = None
+        self.DD = None
+        self.DA = None
+        self.corrs = None
+        self.E_un = None
+        self.S_un = None
+
+        self.lengths = None
+
+        self.gauss_params = None
+        self.best_k = None
+
+        self.n_samples = None
+
+        self.trace_median_len = None
+
+
+class TDPData:
+    def __init__(self):
+        self.df = None
+        self.state_lifetime = None
+        self.state_before = None
+        self.state_after = None
+
+
 class DataContainer:
     """
     Data wrapper that contains a dict with filenames and associated data.
@@ -589,6 +618,8 @@ class DataContainer:
         self.videos = {}
         self.traces = {}
         self.currName = None
+        self.histData = HistogramData()
+        self.tdpData = TDPData()
 
     def get(self, name) -> VideoContainer:
         """Shortcut to return the metadata of selected video."""

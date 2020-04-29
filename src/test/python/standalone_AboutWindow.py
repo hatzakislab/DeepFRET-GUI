@@ -1,5 +1,6 @@
 import sys
-from main import AboutWindow, AppContext
+from main import AppContext
+from widgets.base_window import AboutWindow
 
 if __name__ == "__main__":
     ctxt = AppContext()

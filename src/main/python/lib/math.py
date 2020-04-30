@@ -992,8 +992,6 @@ def generate_traces(
             scramble_prob,
         ) = [np.array(arg) for arg in args]
 
-        pbar.update(n=1)
-
         # Table to keep track of labels
         classifications = {
             "bleached": 0,
@@ -1324,7 +1322,12 @@ def generate_traces(
 
     processes = range(n_traces)
     n_processes = 8 if run_headless_parallel else 1
-    pbar = tqdm(total=(n_traces / n_processes) * 2, smoothing=0)
+
+    if run_headless_parallel:
+        # Running in parallel seems to get the progress slightly wrong
+        pbar = tqdm(total=(n_traces / n_processes), smoothing=1)
+    else:
+        pbar = tqdm(n_traces)
 
     if run_headless_parallel:
         traces_matrices = parmap.map(
@@ -1372,7 +1375,7 @@ def generate_traces(
     if merge_state_labels:
         # 2, 3, 4, 5 states will all have the same label,
         # considered "dynamic"
-        traces[traces["label"] > 5] = 5
+        traces["label"][traces["label"] > 5] = 5
 
     if return_matrix:
         return traces, matrices

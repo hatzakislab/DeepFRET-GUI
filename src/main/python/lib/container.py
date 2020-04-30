@@ -6,7 +6,7 @@ import warnings
 import PIL.Image
 import PIL.TiffTags
 
-from lib.misc import timeit
+from lib.utils import timeit
 
 multiprocessing.freeze_support()
 
@@ -18,7 +18,7 @@ import pandas as pd
 import skimage.io
 import lib.imgdata
 import lib.math
-import lib.misc
+import lib.utils
 import astropy.io.fits
 
 
@@ -127,16 +127,14 @@ class TraceContainer:
     Class for storing individual trace information.
     """
 
+    # TODO: make these names switchable depending on global vars and model config
     ml_column_names = [
         "p_bleached",
-        "p_aggegate",
+        "p_aggregated",
         "p_noisy",
-        "p_scramble",
-        "p_1-state",
-        "p_2-state",
-        "p_3-state",
-        "p_4-state",
-        "p_5-state",
+        "p_scrambled",
+        "p_static",
+        "p_dynamic",
     ]
 
     def __init__(
@@ -275,16 +273,16 @@ class TraceContainer:
                     df.columns = colnames
         # Else DeepFRET trace compatibility
         else:
-            df = lib.misc.csv_skip_to(
+            df = lib.utils.csv_skip_to(
                 path=self.filename, line="D-Dexc", sep="\s+"
             )
         try:
-            pair_n = lib.misc.seek_line(
+            pair_n = lib.utils.seek_line(
                 path=self.filename, line_starts="FRET pair"
             )
             self.n = int(pair_n.split("#")[-1])
 
-            video = lib.misc.seek_line(
+            video = lib.utils.seek_line(
                 path=self.filename, line_starts="Video filename"
             )
             self.video = video.split(": ")[-1]
@@ -316,11 +314,15 @@ class TraceContainer:
 
         else:
             if "p_bleached" in df.columns:
-                colnames += self.ml_column_names
-                self.y_pred = df[self.ml_column_names].values
-                self.y_class, self.confidence = lib.math.seq_probabilities(
-                    self.y_pred
-                )
+                # Try/except to ignore if using incompatible older traces
+                try:
+                    colnames += self.ml_column_names
+                    self.y_pred = df[self.ml_column_names].values
+                    self.y_class, self.confidence = lib.math.seq_probabilities(
+                        self.y_pred
+                    )
+                except KeyError:
+                    pass
 
             # This strips periods if present
             df.columns = [c.strip(".") for c in df.columns]
@@ -492,7 +494,7 @@ class TraceContainer:
         :return self.tracename: str
         """
         self.tracename = os.path.basename(
-            lib.misc.remove_newlines(self.filename)
+            lib.utils.remove_newlines(self.filename)
         )
         return self.tracename
 

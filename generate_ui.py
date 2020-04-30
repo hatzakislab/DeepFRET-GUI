@@ -4,8 +4,10 @@ from os.path import join, dirname, basename
 
 
 def generatePyFromUi(verbose=True):
-    """Add Qt .interface Example_Files here to dynamically convert to .py on
-    launch"""
+    """
+    Convert .ui files to .py files after editing, so they can be imported in
+    Python
+    """
     ui_files = glob.glob("**/*.ui", recursive=True)
 
     for filename in ui_files:

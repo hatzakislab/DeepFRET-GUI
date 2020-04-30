@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from collections import OrderedDict
 
 
 @dataclass
@@ -189,3 +190,32 @@ class GlobalVariables:
     color_cyan = "cyan"
     color_yellow = "yellow"
     color_white = "white"
+
+    # For model data and classification
+    model_classes_full = OrderedDict(
+        (
+            (0, "bleached"),
+            (1, "aggregated"),
+            (2, "noisy"),
+            (3, "scrambled"),
+            (4, "1-state"),
+            (5, "2-state"),
+            (6, "3-state"),
+            (7, "4-state"),
+            (8, "5-state"),
+        )
+    )
+
+    model_colors_full = OrderedDict(
+        (
+            (0, "darkgrey"),
+            (1, "red"),
+            (2, "blue"),
+            (3, "purple"),
+            (4, "orange"),
+            (5, "lightgreen"),
+            (6, "green"),
+            (7, "mediumseagreen"),
+            (8, "darkolivegreen"),
+        )
+    )

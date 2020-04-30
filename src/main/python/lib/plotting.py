@@ -12,10 +12,24 @@ from matplotlib.ticker import MaxNLocator
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Patch
 import sklearn.neighbors
-import lib.misc
+import lib.utils
 from matplotlib.colors import Normalize
 import lib.math
 import scipy.stats
+
+
+def remove_states(classification_dict, color_dict):
+    """
+    Removes states from the expanded classification and color dictionaries
+    to toggle between old and possible newer type models
+    """
+    names = classification_dict.copy()
+    colors = color_dict.copy()
+    remove_states = (6, 7, 8)
+    [names.pop(k) for k in remove_states]
+    [colors.pop(k) for k in remove_states]
+    names[4], names[5] = "static", "dynamic"
+    return names, colors
 
 
 def empty_imshow(img_ax):
@@ -167,7 +181,7 @@ def point_density(xdata, ydata, kernel="gaussian", bandwidth=0.1):
     return np.exp(kernel_sk.score_samples(list(zip(*positions))))
 
 
-def plot_shaded_category(y, ax, alpha, colors=None):
+def plot_shaded_category(y, ax, alpha, colors):
     """
     Plots a color for every class segment in a timeseries
 
@@ -182,14 +196,11 @@ def plot_shaded_category(y, ax, alpha, colors=None):
     colors:
         Colors to cycle through
     """
-    if colors is None:
-        colors = ("darkgrey", "red", "green", "orange", "royalblue", "purple")
-
     y_ = y.argmax(axis=1) if len(y.shape) != 1 else y
     if len(colors) < len(set(y_)):
         raise ValueError("Must have at least a color for each class")
 
-    adjs, lns = lib.misc.count_adjacent_values(y_)
+    adjs, lns = lib.utils.count_adjacent_values(y_)
     position = range(len(y_))
     for idx, ln in zip(adjs, lns):
         label = y_[idx]
@@ -201,7 +212,9 @@ def plot_shaded_category(y, ax, alpha, colors=None):
         )
 
 
-def plot_simulation_category(y, ax, alpha=0.2, fontsize=6):
+def plot_simulation_category(
+    y, ax, alpha=0.2, fontsize=6, model_has_states=False
+):
     """
     Plots a color for every class segment in a timeseries
 
@@ -211,39 +224,22 @@ def plot_simulation_category(y, ax, alpha=0.2, fontsize=6):
         One-hot coded or categorical labels
     ax:
         Ax for plotting
-    colors:
-        Colors to cycle through
+    model_has_states:
+        Whether the model is able to predict number of states in a trace.
+        If not, the remaining categories will be merged
     """
-    cls = {
-        0: "bleached",
-        1: "aggregate",
-        2: "noisy",
-        3: "scramble",
-        4: "1-state",
-        5: "2-state",
-        6: "3-state",
-        7: "4-state",
-        8: "5-state",
-    }
-
-    colors = {
-        0: "darkgrey",
-        1: "red",
-        2: "blue",
-        3: "purple",
-        4: "orange",
-        5: "lightgreen",
-        6: "green",
-        7: "mediumseagreen",
-        8: "darkolivegreen",
-    }
+    names, colors = gvars.model_classes_full, gvars.model_colors_full
+    if not model_has_states:
+        names, colors = remove_states(
+            classification_dict=names, color_dict=colors
+        )
 
     y_ = y.argmax(axis=1) if len(y.shape) != 1 else y
     y_ = y_.astype(int)  # type conversion to avoid float type labels
     if len(colors) < len(set(y_)):
         raise ValueError("Must have at least a color for each class")
 
-    adjs, lns = lib.misc.count_adjacent_values(y_)
+    adjs, lns = lib.utils.count_adjacent_values(y_)
     position = range(len(y_))
     for idx, ln in zip(adjs, lns):
         label = y_[idx]
@@ -253,52 +249,39 @@ def plot_simulation_category(y, ax, alpha=0.2, fontsize=6):
             alpha=alpha,
             facecolor=colors[label],
         )
-    ax.plot([], label=cls[y_[0]], color=colors[y_[0]])
+    ax.plot([], label=names[y_[0]], color=colors[y_[0]])
     ax.legend(loc="lower right", prop={"size": fontsize})
 
 
-def plot_predictions(yi_pred, fig, ax):
+def plot_predictions(
+    yi_pred, y_class, confidence, fig, ax, model_has_states=False
+):
     """
     Plots Keras predictions as probabilities with shaded argmax overlays
     """
-    names = (
-        "bleached",
-        "aggregated",
-        "noisy",
-        "scrambled",
-        "1-state",
-        "2-state",
-        "3-state",
-        "4-state",
-        "5-state",
-    )
+    names, colors = gvars.model_classes_full, gvars.model_colors_full
+    if not model_has_states:
+        names, colors = remove_states(
+            classification_dict=names, color_dict=colors
+        )
 
-    clrs = (
-        "darkgrey",
-        "red",
-        "royalblue",
-        "mediumvioletred",
-        "orange",
-        "lightgreen",
-        "springgreen",
-        "limegreen",
-        "green",
-    )
-    probability, confidence = lib.math.seq_probabilities(
-        yi_pred, skip_threshold=0.5
-    )
-    plot_shaded_category(y=yi_pred, ax=ax, colors=clrs, alpha=0.1)
+    plot_shaded_category(y=yi_pred, ax=ax, colors=colors, alpha=0.1)
 
     # Upper right individual %
     patches = []
     for i in range(yi_pred.shape[-1]):
-        p = probability[i] * 100
+
+        # Don't plot bleaching class (confusing)
+        if i == 0:
+            continue
+
+        p = y_class[i] * 100
         label = "{:.0f}% {}".format(p, names[i])
         # Align with monospace if single digit prob
         if p < 10:
             label = " " + label
-        ax.plot(yi_pred[:, i], color=clrs[i])
-        patch = Patch(color=clrs[i], label=label)
+        ax.plot(yi_pred[:, i], color=colors[i])
+        patch = Patch(color=colors[i], label=label)
         patches.append(patch)
 
     fig.legend(
@@ -374,5 +357,3 @@ def plot_gaussian_mixture_to_ax(
             zorder=10,
             ls="--",
         )
-
-    pass

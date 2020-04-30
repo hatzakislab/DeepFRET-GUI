@@ -1,4 +1,5 @@
 from functools import partial
+from typing import Dict
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QDialog, QWidget
@@ -15,7 +16,7 @@ class SheetInspector(QDialog):
     superclass that the window inherits from.
     """
 
-    def __init__(self, parent):
+    def __init__(self, parent: QWidget):
         super().__init__()
         self.setParent(parent)
         self.windows = parent.windows
@@ -36,7 +37,7 @@ class SheetInspector(QDialog):
         self.setModal(True)
         self.setWindowFlag(Qt.Sheet)
 
-    def addSelfToParentInspectorTracking(self, parent: QWidget):
+    def addSelfToParentInspectorTracking(self, parent):
         """
         Adds current instance to parent, so each parent window can track their
         assigned inspectors

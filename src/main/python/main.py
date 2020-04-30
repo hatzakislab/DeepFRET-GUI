@@ -61,10 +61,10 @@ class AppContext(ApplicationContext):
         """
         # model_experimental is better but undocumented
         self.keras_two_channel_model = load_model(
-            self.get_resource("FRET_2C_experimental.h5")
+            self.get_resource("FRET_2C_keras_model.h5")
         )  # type: Model
         self.keras_three_channel_model = load_model(
-            self.get_resource("FRET_3C_experimental.h5")
+            self.get_resource("FRET_3C_keras_model.h5")
         )  # type: Model
         self.config = ConfigObj(self.get_resource("config.ini"))
 

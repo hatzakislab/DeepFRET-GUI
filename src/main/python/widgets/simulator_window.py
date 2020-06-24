@@ -392,7 +392,7 @@ class SimulatorWindow(BaseWindow):
                 for spine in ax.spines.values():
                     spine.set_edgecolor("darkgrey")
 
-                if bleach is not None:
+                if bleach is not None and bleach > 1:
                     ax.axvspan(bleach, tmax, color="black", alpha=0.1)
 
                 ax.set_xticks(())

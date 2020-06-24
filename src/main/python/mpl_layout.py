@@ -122,58 +122,77 @@ class MatplotlibCanvas(FigureCanvas):
         Outer grid is a 2x2 grid, and the inner grids are from top left, clockwise:
         6x6, 6x6, 2x1, 1x1
         """
-        outer_grid = GridSpec(nrows=2, ncols=2, figure=self.fig,)  # 2x2 grid
-        self.adjust_margins(
-            fig=outer_grid, margin=0.10, hspace=0.10, wspace=0.10,
-        )
+        # outer_grid = GridSpec(nrows=1, ncols=1, figure=self.fig,)  # 2x2 grid
+        # self.adjust_margins(
+        #     fig=outer_grid, margin=0.10, hspace=0.10, wspace=0.10,
+        # )
+        #
+        # gs_top_lft = GridSpecFromSubplotSpec(
+        #     nrows=1, ncols=1, subplot_spec=outer_grid[0, 0], wspace=0, hspace=0,
+        # )
+        #
+        # gs_top_rgt = GridSpecFromSubplotSpec(
+        #     nrows=6, ncols=6, subplot_spec=outer_grid[0, 1], wspace=0, hspace=0,
+        # )
+        #
+        # gs_btm_lft = GridSpecFromSubplotSpec(
+        #     nrows=2,
+        #     ncols=1,
+        #     subplot_spec=outer_grid[1, 0],
+        #     wspace=0,
+        #     hspace=0.15,
+        # )
+        # gs_btm_rgt = GridSpecFromSubplotSpec(
+        #     nrows=1, ncols=1, subplot_spec=outer_grid[1, 1], wspace=0, hspace=0,
+        # )
+        #
+        # self.tl_ax_ctr, self.tl_ax_top, self.tl_ax_rgt = self.setupJointGrid(
+        #     self.fig, gs_top_lft
+        # )
+        # self.tr_ax_ctr, self.tr_ax_top, self.tr_ax_rgt = self.setupJointGrid(
+        #     self.fig, gs_top_rgt
+        # )
+        #
+        # self.bl_ax_t = self.fig.add_subplot(gs_btm_lft[0])
+        # self.bl_ax_b = self.fig.add_subplot(gs_btm_lft[1])
+        # self.br_ax = self.fig.add_subplot(gs_btm_rgt[0])
+        #
+        # self.axes = (
+        #     self.tl_ax_ctr,
+        #     self.tl_ax_top,
+        #     self.tl_ax_rgt,
+        # self.tr_ax_ctr,
+        # self.tr_ax_top,
+        # self.tr_ax_rgt,
+        # self.bl_ax_b,
+        # self.bl_ax_t,
+        # self.br_ax,
+        # )
+        # self.axes_marg = (
+        #     self.tl_ax_top,
+        #     self.tl_ax_rgt,
+        # self.tr_ax_top,
+        # self.tr_ax_rgt,
+        # )
+        """
+        Sets up a 2D-histogram layout similar to a seaborn JointGrid,
+        but manually through matplotlib for compatibility reasons.
+        """
+        space_between = 0  # 0.01
+        left, right = 0.08, 0.7
+        bottom, height = 0.08, 0.7
+        bottom_h = left_h = left + right + space_between
 
-        gs_top_lft = GridSpecFromSubplotSpec(
-            nrows=6, ncols=6, subplot_spec=outer_grid[0, 0], wspace=0, hspace=0,
-        )
+        rect_center = left, bottom, right, height
+        rect_hist_top = left, bottom_h, right, 0.2
+        rect_hist_right = left_h, bottom, 0.2, height
 
-        gs_top_rgt = GridSpecFromSubplotSpec(
-            nrows=6, ncols=6, subplot_spec=outer_grid[0, 1], wspace=0, hspace=0,
-        )
+        self.ax_ctr = self.fig.add_axes(rect_center)
+        self.ax_top = self.fig.add_axes(rect_hist_top)
+        self.ax_rgt = self.fig.add_axes(rect_hist_right)
 
-        gs_btm_lft = GridSpecFromSubplotSpec(
-            nrows=2,
-            ncols=1,
-            subplot_spec=outer_grid[1, 0],
-            wspace=0,
-            hspace=0.15,
-        )
-        gs_btm_rgt = GridSpecFromSubplotSpec(
-            nrows=1, ncols=1, subplot_spec=outer_grid[1, 1], wspace=0, hspace=0,
-        )
-
-        self.tl_ax_ctr, self.tl_ax_top, self.tl_ax_rgt = self.setupJointGrid(
-            self.fig, gs_top_lft
-        )
-        self.tr_ax_ctr, self.tr_ax_top, self.tr_ax_rgt = self.setupJointGrid(
-            self.fig, gs_top_rgt
-        )
-
-        self.bl_ax_t = self.fig.add_subplot(gs_btm_lft[0])
-        self.bl_ax_b = self.fig.add_subplot(gs_btm_lft[1])
-        self.br_ax = self.fig.add_subplot(gs_btm_rgt[0])
-
-        self.axes = (
-            self.tl_ax_ctr,
-            self.tl_ax_top,
-            self.tl_ax_rgt,
-            self.tr_ax_ctr,
-            self.tr_ax_top,
-            self.tr_ax_rgt,
-            self.bl_ax_b,
-            self.bl_ax_t,
-            self.br_ax,
-        )
-        self.axes_marg = (
-            self.tl_ax_top,
-            self.tl_ax_rgt,
-            self.tr_ax_top,
-            self.tr_ax_rgt,
-        )
+        self.axes = self.ax_ctr, self.ax_top, self.ax_rgt
+        self.axes_marg = self.ax_top, self.ax_rgt
 
     def setupTwoColorImageLayout(self):
         """

@@ -358,8 +358,8 @@ class HistogramWindow(BaseWindow):
         Re-plot non-persistent plot settings (otherwise will be overwritten
         by ax.clear())
         """
-        self.canvas.tl_ax_ctr.set_xlim(-0.1, 1.1)
-        self.canvas.tl_ax_ctr.set_ylim(-0.1, 1.1)
+        self.canvas.ax_ctr.set_xlim(-0.1, 1.1)
+        self.canvas.ax_ctr.set_ylim(-0.1, 1.1)
 
         for ax in self.canvas.axes_marg:
             for tk in ax.get_xticklabels():
@@ -367,37 +367,37 @@ class HistogramWindow(BaseWindow):
             for tk in ax.get_yticklabels():
                 tk.set_visible(False)
 
-        self.canvas.tr_ax_ctr.yaxis.set_major_formatter(
-            lib.utils.format_string_to_k
-        )
-        self.canvas.tr_ax_ctr.xaxis.set_major_formatter(
-            lib.utils.format_string_to_k
-        )
-        self.canvas.br_ax.xaxis.set_major_formatter(
-            lib.utils.format_string_to_k
-        )
+        # self.canvas.tr_ax_ctr.yaxis.set_major_formatter(
+        #     lib.utils.format_string_to_k
+        # )
+        # self.canvas.tr_ax_ctr.xaxis.set_major_formatter(
+        #     lib.utils.format_string_to_k
+        # )
+        # self.canvas.br_ax.xaxis.set_major_formatter(
+        #     lib.utils.format_string_to_k
+        # )
+        #
+        # self.canvas.bl_ax_b.axhline(
+        #     0,
+        #     *self.canvas.bl_ax_b.get_xlim(),
+        #     ls="--",
+        #     color="black",
+        #     alpha=0.3,
+        # )
+        # self.canvas.tr_ax_top.set_xlabel(self.dd_label)
+        # self.canvas.tr_ax_top.xaxis.set_label_position("top")
+        #
+        # self.canvas.tr_ax_rgt.set_ylabel(self.da_label)
+        # self.canvas.tr_ax_rgt.yaxis.set_label_position("right")
 
-        self.canvas.bl_ax_b.axhline(
-            0,
-            *self.canvas.bl_ax_b.get_xlim(),
-            ls="--",
-            color="black",
-            alpha=0.3,
-        )
-        self.canvas.tr_ax_top.set_xlabel(self.dd_label)
-        self.canvas.tr_ax_top.xaxis.set_label_position("top")
+        self.canvas.ax_top.set_xlabel(r"$\mathbf{E}_{FRET}$")
+        self.canvas.ax_top.xaxis.set_label_position("top")
 
-        self.canvas.tr_ax_rgt.set_ylabel(self.da_label)
-        self.canvas.tr_ax_rgt.yaxis.set_label_position("right")
+        self.canvas.ax_rgt.set_ylabel(r"$\mathbf{S}$")
+        self.canvas.ax_rgt.yaxis.set_label_position("right")
 
-        self.canvas.tl_ax_top.set_xlabel(r"$\mathbf{E}_{FRET}$")
-        self.canvas.tl_ax_top.xaxis.set_label_position("top")
-
-        self.canvas.tl_ax_rgt.set_ylabel(r"$\mathbf{S}$")
-        self.canvas.tl_ax_rgt.yaxis.set_label_position("right")
-
-        self.canvas.bl_ax_b.set_xlabel("Frames")
-        self.canvas.bl_ax_b.set_ylabel(r"$\operatorname{{E}}[\rho_{{DD, DA}}]$")
+        # self.canvas.bl_ax_b.set_xlabel("Frames")
+        # self.canvas.bl_ax_b.set_ylabel(r"$\operatorname{{E}}[\rho_{{DD, DA}}]$")
 
     def plotTopLeft_TopMarginal(self, corrected):
         """
@@ -406,8 +406,8 @@ class HistogramWindow(BaseWindow):
         E = self.E if corrected else self.E_un
 
         if E is not None:
-            self.canvas.tl_ax_top.clear()
-            self.canvas.tl_ax_top.hist(
+            self.canvas.ax_top.clear()
+            self.canvas.ax_top.hist(
                 E,
                 bins=self.marg_bins,
                 color=gvars.color_orange,
@@ -421,14 +421,14 @@ class HistogramWindow(BaseWindow):
             xpts = self.xpts
             for (m, s, w) in self.gauss_params:
                 _, y = lib.plotting.plot_gaussian(
-                    mean=m, sigma=s, weight=w, x=xpts, ax=self.canvas.tl_ax_top
+                    mean=m, sigma=s, weight=w, x=xpts, ax=self.canvas.ax_top
                 )
                 joint_dist.append(y)
 
             # Sum of all gaussians (joint distribution)
             joint_dist = np.sum(joint_dist, axis=0)
 
-            self.canvas.tl_ax_top.plot(
+            self.canvas.ax_top.plot(
                 xpts,
                 joint_dist,
                 color=gvars.color_grey,
@@ -442,12 +442,12 @@ class HistogramWindow(BaseWindow):
         Plots the top left right marginal histogram (S).
         """
         S = self.S if corrected else self.S_un
-        # self.canvas.tl_ax_rgt : plt.Axes
-        self.canvas.tl_ax_rgt.set_ylabel("Stoichiometry")
-        self.canvas.tl_ax_rgt.yaxis.set_label_position("right")
+        # self.canvas.ax_rgt : plt.Axes
+        self.canvas.ax_rgt.set_ylabel("Stoichiometry")
+        self.canvas.ax_rgt.yaxis.set_label_position("right")
         if S is not None:
-            self.canvas.tl_ax_rgt.clear()
-            self.canvas.tl_ax_rgt.hist(
+            self.canvas.ax_rgt.clear()
+            self.canvas.ax_rgt.hist(
                 S,
                 bins=self.marg_bins,
                 color=gvars.color_purple,
@@ -472,7 +472,7 @@ class HistogramWindow(BaseWindow):
             params
         )
 
-        self.canvas.tl_ax_ctr.clear()
+        self.canvas.ax_ctr.clear()
 
         n_equals_txt = "N = {}\n".format(self.n_samples)
         # if self.data.histData.trace_median_len is not None:
@@ -480,14 +480,14 @@ class HistogramWindow(BaseWindow):
         #         self.data.histData.trace_median_len
         #     )
 
-        self.canvas.tl_ax_ctr.text(
+        self.canvas.ax_ctr.text(
             x=0, y=0.9, s=n_equals_txt, color=gvars.color_gui_text
         )
 
         if self.gauss_params is not None:
             for n, gauss_params in enumerate(self.gauss_params):
                 m, s, w = gauss_params
-                self.canvas.tl_ax_ctr.text(
+                self.canvas.ax_ctr.text(
                     x=0.6,
                     y=0.15 - 0.05 * n,
                     s=r"$\mu_{}$ = {:.2f} $\pm$ {:.2f} ({:.2f})".format(
@@ -504,7 +504,7 @@ class HistogramWindow(BaseWindow):
             )
         ):
             if factor is not None:
-                self.canvas.tl_ax_ctr.text(
+                self.canvas.ax_ctr.text(
                     x=0.0,
                     y=0.15 - 0.05 * n,
                     s=r"$\{}$ = {:.2f}".format(name, factor),
@@ -521,13 +521,13 @@ class HistogramWindow(BaseWindow):
                 kernel="linear",
                 n_colors=n_colors,
             )
-            self.canvas.tl_ax_ctr.contourf(*c, cmap="plasma")
+            self.canvas.ax_ctr.contourf(*c, cmap="plasma")
 
             if overlay_pts:
-                self.canvas.tl_ax_ctr.scatter(
+                self.canvas.ax_ctr.scatter(
                     E, S, s=20, color="black", zorder=1, alpha=pts_alpha / 20
                 )  # Conversion factor, because sliders can't do [0,1]
-            self.canvas.tl_ax_ctr.axhline(
+            self.canvas.ax_ctr.axhline(
                 0.5, color="black", alpha=0.3, lw=0.5, ls="--", zorder=2
             )
 

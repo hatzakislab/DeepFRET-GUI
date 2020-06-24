@@ -832,7 +832,6 @@ class TraceWindow(BaseWindow):
                 ("E", "S"),
             ):
 
-                print("first bleach: ", trace.first_bleach)
                 ax.plot(trace.frames, signal, color=color)
                 ax.axvspan(
                     trace.first_bleach,

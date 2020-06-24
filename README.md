@@ -16,9 +16,52 @@ If you'd like to play around with just the Keras/TensorFlow model, please go to 
 Publication coming soon!
 
 ### Launching the DeepFRET GUI
+From source:
 1. Download the repository contents. Install requirements.txt either globally or in a venv (strongly recommended)
 2. Run `src/main/python/main.py`
 
+With the `.dmg` file:
+1. Installing the `DeepFRET.app` from binary
+2. Double click the `DeepFRET.app` file.
+
+### Using DeepFRET
+
+#### Windows
+The following shortcuts can be used to navigate the different windows, also found in the menu option `Window`:
+
+|Window|Shortcut|
+|---|---|
+|Images |`⌘1`|
+|Traces |`⌘2`|
+|Histogram |`⌘3`|
+|Transition Density |`⌘4`|
+|Trace Simulator |`⌘5`|
+
+##### Images Window
+- To load a video file, use the shortcut `File > Open Files` or the hotkey `⌘O`.
+- To analyze and extract traces, use the options in the menu tab `Analyze`
+
+##### Traces Window
+- To load traces, use the shortcut `File > Open Files` or the hotkey `⌘O`.
+- To use the DeepFRET Deep Learning trace selection model, use the options in `Analyze > Predict` to predict trace types for selected or all traces.
+- To fit a Hidden Markov Model to all traces, highlight all traces with `Edit > Select All` or `⌘A` and analyze by `Analyze > Fit Hidden Markov To Selected`.
+
+##### Histogram Window 
+- View distribution of EFRET and Stoichiometry values for a given number of frames.
+- Fit a Gaussian Mixture by defining the number or press "Auto" to use a BIC-optimized number of Gaussians.
+
+
+##### Transition Density Window
+- View Transition Density of transitions in the Hidden Markov Model fit in the Traces Window. 
+Only works if a Hidden Markov Model has been fit to the traces
+- Set the number of clusters (transitions) per half of the TDP plot to extract lifetimes for each transition. 
+The number of clusters per half is typically equal to the number of states.
+- N.B. In order to see wider distributions, change the Preferences to Idealize traces individually. (requires restart)
+
+##### Trace Simulator Window
+- Choose the parameters with which to simulate traces and press the `Refresh` button. 
+- To export traces, select the number of traces to export, and press the `Export` button. 
+ 
 ### Modifying and compiling the DeepFRET GUI to a standalone executable:
 1. Download all contents to a directory.
 2. Open a terminal and navigate to the root of the directory.

@@ -1,40 +1,32 @@
 import os
+import json
+from lib.utils import git_app_version
+from configobj import ConfigObj
 
-# def create_installer_mac():
-#     app_name = SETTINGS['app_name']
-#     dest = path('target/${installer}')
-#     dest_existed = exists(dest)
-#     if dest_existed:
-#         dest_bu = dest + '.bu'
-#         replace(dest, dest_bu)
-#     try:
-#         pdata = [
-#             join(dirname(__file__), 'create-dmg', 'create-dmg'),
-#             '--volname', app_name,
-#             '--app-drop-link', '170', '10',
-#             '--icon', app_name + '.app', '0', '10',
-#             dest,
-#             path('${freeze_dir}')
-#         ]
-#         if platform.system() == 'Darwin' and int(
-#             platform.platform()[7:][:2]) >= 19:
-#             pdata.insert(1, '--no-internet-enable')
-#
-#             check_call(pdata, stdout = DEVNULL)
-#     except BaseException:
-#         if dest_existed:
-#             replace(dest_bu, dest)
-#         raise
-#     else:
-#         if dest_existed:
-#             remove(dest_bu)
 
-os.system("fbs clean")
-os.system("fbs freeze")
+def write_to_config_ini():
+    config = ConfigObj("src/main/resources/base/config.ini")
+    config["appVersion"] = int(git_app_version())
+    config.write()
 
-# Monkey patch installer
-# import fbs.installer.mac
-# fbs.installer.mac.create_installer_mac = create_installer_mac
-os.system("fbs installer")
 
-print("Application compiled!")
+def write_to_base_json():
+    with open("src/build/settings/base.json", "r+") as base_json:
+        data = json.load(base_json)
+        data["version"] = str(git_app_version()).rstrip("\n")
+
+        base_json.seek(0)
+        base_json.write(json.dumps(data, indent=4, sort_keys=True))
+        base_json.truncate()
+
+
+def compile():
+    os.system("fbs clean")
+    os.system("fbs freeze")
+    os.system("fbs installer")
+
+
+if __name__ == "__main__":
+    write_to_config_ini()
+    write_to_base_json()
+    compile()

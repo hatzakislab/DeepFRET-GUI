@@ -1,0 +1,687 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MenuBar</class>
+ <widget class="QMainWindow" name="MenuBar">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>500</width>
+    <height>500</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Ignored" vsizetype="Ignored">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>500</width>
+    <height>500</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>5000</width>
+    <height>5000</height>
+   </size>
+  </property>
+  <property name="focusPolicy">
+   <enum>Qt::ClickFocus</enum>
+  </property>
+  <property name="windowTitle">
+   <string/>
+  </property>
+  <property name="statusTip">
+   <string notr="true"/>
+  </property>
+  <property name="whatsThis">
+   <string notr="true"/>
+  </property>
+  <property name="accessibleName">
+   <string notr="true"/>
+  </property>
+  <property name="autoFillBackground">
+   <bool>false</bool>
+  </property>
+  <property name="styleSheet">
+   <string notr="true"/>
+  </property>
+  <property name="documentMode">
+   <bool>false</bool>
+  </property>
+  <property name="dockNestingEnabled">
+   <bool>false</bool>
+  </property>
+  <property name="unifiedTitleAndToolBarOnMac">
+   <bool>false</bool>
+  </property>
+  <widget class="QWidget" name="centralWidget">
+   <property name="styleSheet">
+    <string notr="true">background rgb(0,0,0)</string>
+   </property>
+   <layout class="QGridLayout" name="gridLayout_2">
+    <item row="0" column="0">
+     <layout class="QHBoxLayout" name="list_LayoutBox">
+      <property name="sizeConstraint">
+       <enum>QLayout::SetFixedSize</enum>
+      </property>
+     </layout>
+    </item>
+    <item row="0" column="1">
+     <layout class="QHBoxLayout" name="mpl_LayoutBox"/>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>500</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <property name="nativeMenuBar">
+    <bool>true</bool>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <widget class="QMenu" name="menuExport">
+     <property name="title">
+      <string>Export</string>
+     </property>
+     <addaction name="actionExport_Correction_Factors"/>
+     <addaction name="actionExport_Colocalization"/>
+     <addaction name="actionExport_Selected_Traces"/>
+     <addaction name="actionExport_All_Traces"/>
+     <addaction name="actionExport_ES_Histogram_Data"/>
+     <addaction name="actionExport_Transition_Density_Data"/>
+    </widget>
+    <addaction name="actionOpen"/>
+    <addaction name="separator"/>
+    <addaction name="actionClose"/>
+    <addaction name="actionSave"/>
+    <addaction name="separator"/>
+    <addaction name="menuExport"/>
+   </widget>
+   <widget class="QMenu" name="menuEdit">
+    <property name="title">
+     <string>Edit</string>
+    </property>
+    <addaction name="actionRemove_File"/>
+    <addaction name="actionRemove_All_Files"/>
+    <addaction name="actionCheck_All_Traces"/>
+    <addaction name="actionUncheck_All_Traces"/>
+    <addaction name="actionSelect_All"/>
+   </widget>
+   <widget class="QMenu" name="menuAnalyze">
+    <property name="title">
+     <string>Analyze</string>
+    </property>
+    <widget class="QMenu" name="menuManually_Select_Bleaching">
+     <property name="title">
+      <string>Manually Select Bleaching</string>
+     </property>
+     <addaction name="actionSelect_Bleach_Red_Channel"/>
+     <addaction name="actionSelect_Bleach_Green_Channel"/>
+    </widget>
+    <widget class="QMenu" name="menuPredict_Trace_Type">
+     <property name="title">
+      <string>Predict Trace Type</string>
+     </property>
+     <addaction name="actionPredict_Selected_Traces"/>
+     <addaction name="actionPredict_All_traces"/>
+    </widget>
+    <addaction name="actionColocalize_All"/>
+    <addaction name="actionClear_Traces"/>
+    <addaction name="actionFind_Show_Traces"/>
+    <addaction name="actionClear_and_Rerun"/>
+    <addaction name="separator"/>
+    <addaction name="actionColor_Red"/>
+    <addaction name="actionColor_Yellow"/>
+    <addaction name="actionColor_Green"/>
+    <addaction name="actionClear_Color"/>
+    <addaction name="actionClear_All_Colors"/>
+    <addaction name="separator"/>
+    <addaction name="actionCorrectionFactorsWindow"/>
+    <addaction name="actionGet_alphaFactor"/>
+    <addaction name="actionGet_deltaFactor"/>
+    <addaction name="actionClear_Correction_Factors"/>
+    <addaction name="separator"/>
+    <addaction name="menuManually_Select_Bleaching"/>
+    <addaction name="separator"/>
+    <addaction name="actionFit_Hmm_Selected"/>
+    <addaction name="menuPredict_Trace_Type"/>
+    <addaction name="actionClear_All_Predictions"/>
+   </widget>
+   <widget class="QMenu" name="menuWindow">
+    <property name="title">
+     <string>Window</string>
+    </property>
+    <addaction name="actionMinimize"/>
+    <addaction name="separator"/>
+    <addaction name="actionMainWindow"/>
+    <addaction name="actionTraceWindow"/>
+    <addaction name="actionHistogramWindow"/>
+    <addaction name="actionTransitionDensityWindow"/>
+    <addaction name="actionTraceSimulatorWindow"/>
+   </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>Help</string>
+    </property>
+    <addaction name="actionGet_Help_Online"/>
+    <addaction name="separator"/>
+    <addaction name="actionPreferences"/>
+    <addaction name="actionAbout"/>
+    <addaction name="actionDebug"/>
+   </widget>
+   <widget class="QMenu" name="menuView">
+    <property name="title">
+     <string>View</string>
+    </property>
+    <addaction name="actionFormat_Plot"/>
+    <addaction name="separator"/>
+    <addaction name="actionAdvanced_Sort"/>
+    <addaction name="actionSort_by_Ascending"/>
+    <addaction name="actionSort_by_Red_Bleach"/>
+    <addaction name="actionSort_by_Green_Bleach"/>
+    <addaction name="actionSort_by_Equal_Stoichiometry"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuEdit"/>
+   <addaction name="menuView"/>
+   <addaction name="menuAnalyze"/>
+   <addaction name="menuWindow"/>
+   <addaction name="menuHelp"/>
+  </widget>
+  <action name="actionOpen">
+   <property name="text">
+    <string>Open Files</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
+  </action>
+  <action name="actionSave">
+   <property name="text">
+    <string>Save Plot</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
+   </property>
+  </action>
+  <action name="actionRemove_File">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Remove Current Item From List</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Backspace</string>
+   </property>
+  </action>
+  <action name="actionMinimize">
+   <property name="text">
+    <string>Minimize</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+M</string>
+   </property>
+  </action>
+  <action name="actionFind_Show_Traces">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Show Traces</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+T</string>
+   </property>
+  </action>
+  <action name="actionClose">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Close Window</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+W</string>
+   </property>
+  </action>
+  <action name="actionGet_Help_Online">
+   <property name="text">
+    <string>Get Help Online</string>
+   </property>
+  </action>
+  <action name="actionDebug">
+   <property name="text">
+    <string>Debug...</string>
+   </property>
+  </action>
+  <action name="actionPreferences">
+   <property name="text">
+    <string>Preferences</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+,</string>
+   </property>
+  </action>
+  <action name="actionAbout">
+   <property name="text">
+    <string>About</string>
+   </property>
+  </action>
+  <action name="actionColocalize_All">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Colocalize All</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Alt+L</string>
+   </property>
+  </action>
+  <action name="actionColor_Red">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Color Red</string>
+   </property>
+   <property name="shortcut">
+    <string>Meta+Shift+R</string>
+   </property>
+  </action>
+  <action name="actionSort_by_Red_Bleach">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Sort by Red Bleach</string>
+   </property>
+  </action>
+  <action name="actionClear_Color">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Clear Color</string>
+   </property>
+   <property name="shortcut">
+    <string>Meta+Shift+C</string>
+   </property>
+  </action>
+  <action name="actionColor_Yellow">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Color Yellow</string>
+   </property>
+   <property name="shortcut">
+    <string>Meta+Shift+Y</string>
+   </property>
+  </action>
+  <action name="actionColor_Green">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Color Green</string>
+   </property>
+   <property name="toolTip">
+    <string>Color Green</string>
+   </property>
+   <property name="shortcut">
+    <string>Meta+Shift+G</string>
+   </property>
+  </action>
+  <action name="actionClear_All_Colors">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Clear All Colors</string>
+   </property>
+   <property name="shortcut">
+    <string>Meta+Alt+Shift+C</string>
+   </property>
+  </action>
+  <action name="actionSort_by_Ascending">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Sort by Ascending</string>
+   </property>
+  </action>
+  <action name="actionSave_Session">
+   <property name="text">
+    <string>Save Session (Beta)</string>
+   </property>
+  </action>
+  <action name="actionLoad_Session">
+   <property name="text">
+    <string>Load Session (Beta)</string>
+   </property>
+  </action>
+  <action name="actionRemove_All_Files">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Remove All Items From List</string>
+   </property>
+  </action>
+  <action name="actionGet_alphaFactor">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Find ɑ-Factor (for D-only)</string>
+   </property>
+   <property name="shortcut">
+    <string>Meta+Shift+A</string>
+   </property>
+  </action>
+  <action name="actionGet_deltaFactor">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Find δ-Factor (for A-only)</string>
+   </property>
+   <property name="shortcut">
+    <string>Meta+Shift+D</string>
+   </property>
+  </action>
+  <action name="actionClear_Correction_Factors">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Clear Correction Factors</string>
+   </property>
+   <property name="shortcut">
+    <string>Meta+Shift+C</string>
+   </property>
+  </action>
+  <action name="actionTraceWindow">
+   <property name="text">
+    <string>Traces</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+2</string>
+   </property>
+  </action>
+  <action name="actionMainWindow">
+   <property name="text">
+    <string>Images</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+1</string>
+   </property>
+  </action>
+  <action name="actionHistogramWindow">
+   <property name="text">
+    <string>Histogram</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+3</string>
+   </property>
+  </action>
+  <action name="actionExport_Correction_Factors">
+   <property name="text">
+    <string>Correction Factors</string>
+   </property>
+  </action>
+  <action name="actionExport_Colocalization">
+   <property name="text">
+    <string>Colocalization</string>
+   </property>
+  </action>
+  <action name="actionExport_Selected_Traces">
+   <property name="text">
+    <string>Selected Traces</string>
+   </property>
+  </action>
+  <action name="actionExport_All_Traces">
+   <property name="text">
+    <string>All Traces</string>
+   </property>
+  </action>
+  <action name="actionSort_by_Green_Bleach">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Sort by Green Bleach</string>
+   </property>
+  </action>
+  <action name="actionClear_Traces">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Clear Traces</string>
+   </property>
+  </action>
+  <action name="actionExport_ES_Histogram_Data">
+   <property name="text">
+    <string>E-S Histogram Data</string>
+   </property>
+  </action>
+  <action name="actionTransitionDensityWindow">
+   <property name="text">
+    <string>Transition Density</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+4</string>
+   </property>
+  </action>
+  <action name="actionCorrectionFactorsWindow">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Set Correction Factors</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+K</string>
+   </property>
+  </action>
+  <action name="actionFit_Hmm_Current">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Current Trace</string>
+   </property>
+  </action>
+  <action name="actionFit_Hmm_Selected">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Fit Hidden Markov Model to Selected</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+M</string>
+   </property>
+  </action>
+  <action name="actionBatch_analyze">
+   <property name="text">
+    <string>Batch analyze</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+B</string>
+   </property>
+  </action>
+  <action name="actionSort_by_Equal_Stoichiometry">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Sort by Equal Stoichiometry</string>
+   </property>
+  </action>
+  <action name="actionEdit_Plot">
+   <property name="text">
+    <string>Edit Plot</string>
+   </property>
+  </action>
+  <action name="actionFormat_Plot">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Format Plot</string>
+   </property>
+  </action>
+  <action name="actionUncheck_All">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Uncheck All</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Alt+Shift+E</string>
+   </property>
+  </action>
+  <action name="actionClear_and_Rerun">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Clear Traces and Rerun</string>
+   </property>
+  </action>
+  <action name="actionSelect_Bleach_Red_Channel">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Red Channel</string>
+   </property>
+  </action>
+  <action name="actionSelect_Bleach_Green_Channel">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Green Channel</string>
+   </property>
+  </action>
+  <action name="actionAdvanced_Sort">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Advanced Sort</string>
+   </property>
+  </action>
+  <action name="actionCheck_All">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Check All</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Alt+Shift+E</string>
+   </property>
+  </action>
+  <action name="actionExport_Transition_Density_Data">
+   <property name="text">
+    <string>Transition Density Data</string>
+   </property>
+  </action>
+  <action name="actionCheck_All_Traces">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Check All Traces</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+E</string>
+   </property>
+  </action>
+  <action name="actionUncheck_All_Traces">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Uncheck All Traces</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Alt+E</string>
+   </property>
+  </action>
+  <action name="actionLifetimes">
+   <property name="text">
+    <string>Transition Lifetimes</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+5</string>
+   </property>
+  </action>
+  <action name="actionPredict_Selected_Traces">
+   <property name="text">
+    <string>Selected Traces</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+P</string>
+   </property>
+  </action>
+  <action name="actionPredict_All_traces">
+   <property name="text">
+    <string>All traces</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Alt+P</string>
+   </property>
+  </action>
+  <action name="actionClear_All_Predictions">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Clear All Predictions</string>
+   </property>
+   <property name="shortcut">
+    <string>Meta+Ctrl+P</string>
+   </property>
+  </action>
+  <action name="actionTraceSimulatorWindow">
+   <property name="text">
+    <string>Trace Simulator</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+5</string>
+   </property>
+  </action>
+  <action name="actionSelect_All">
+   <property name="text">
+    <string>Select All</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+A</string>
+   </property>
+  </action>
+ </widget>
+ <layoutdefault spacing="6" margin="11"/>
+ <resources/>
+ <connections/>
+</ui>

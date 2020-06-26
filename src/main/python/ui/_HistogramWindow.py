@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'ui/_HistogramWindow.ui'
+# Form implementation generated from reading ui file 'src/main/python/ui/HistogramWindow.ui'
 #
-# Created by: PyQt5 UI code generator 5.13.1
+# Created by: PyQt5 UI code generator 5.14.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -13,15 +13,19 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_HistogramWindow(object):
     def setupUi(self, HistogramWindow):
         HistogramWindow.setObjectName("HistogramWindow")
-        HistogramWindow.resize(700, 700)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
+        HistogramWindow.resize(1200, 1200)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(HistogramWindow.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            HistogramWindow.sizePolicy().hasHeightForWidth()
+        )
         HistogramWindow.setSizePolicy(sizePolicy)
-        HistogramWindow.setMinimumSize(QtCore.QSize(700, 700))
+        HistogramWindow.setMinimumSize(QtCore.QSize(800, 800))
         HistogramWindow.setMaximumSize(QtCore.QSize(5000, 2000))
-        HistogramWindow.setBaseSize(QtCore.QSize(700, 700))
+        HistogramWindow.setBaseSize(QtCore.QSize(1200, 1200))
         HistogramWindow.setWindowOpacity(1.0)
         HistogramWindow.setAutoFillBackground(False)
         HistogramWindow.setDocumentMode(False)
@@ -36,6 +40,7 @@ class Ui_HistogramWindow(object):
         self.mpl_LayoutBox = QtWidgets.QVBoxLayout()
         self.mpl_LayoutBox.setSizeConstraint(QtWidgets.QLayout.SetNoConstraint)
         self.mpl_LayoutBox.setContentsMargins(0, 0, 0, 0)
+        self.mpl_LayoutBox.setSpacing(6)
         self.mpl_LayoutBox.setObjectName("mpl_LayoutBox")
         self.gridLayout_2.addLayout(self.mpl_LayoutBox, 2, 0, 1, 1)
         self.gridLayout = QtWidgets.QGridLayout()
@@ -47,7 +52,9 @@ class Ui_HistogramWindow(object):
         self.gaussianSpinBox = QtWidgets.QSpinBox(self.centralWidget)
         self.gaussianSpinBox.setMinimumSize(QtCore.QSize(0, 21))
         self.gaussianSpinBox.setFrame(True)
-        self.gaussianSpinBox.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
+        self.gaussianSpinBox.setButtonSymbols(
+            QtWidgets.QAbstractSpinBox.NoButtons
+        )
         self.gaussianSpinBox.setKeyboardTracking(True)
         self.gaussianSpinBox.setMinimum(1)
         self.gaussianSpinBox.setMaximum(5)
@@ -57,7 +64,9 @@ class Ui_HistogramWindow(object):
         self.gaussianAutoButton.setObjectName("gaussianAutoButton")
         self.gridLayout.addWidget(self.gaussianAutoButton, 0, 2, 1, 1)
         self.framesSpinBox = QtWidgets.QSpinBox(self.centralWidget)
-        self.framesSpinBox.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
+        self.framesSpinBox.setButtonSymbols(
+            QtWidgets.QAbstractSpinBox.NoButtons
+        )
         self.framesSpinBox.setKeyboardTracking(False)
         self.framesSpinBox.setMinimum(1)
         self.framesSpinBox.setMaximum(100)
@@ -74,7 +83,12 @@ class Ui_HistogramWindow(object):
         self.label_2 = QtWidgets.QLabel(self.centralWidget)
         self.label_2.setObjectName("label_2")
         self.gridLayout.addWidget(self.label_2, 1, 0, 1, 1)
-        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        spacerItem = QtWidgets.QSpacerItem(
+            40,
+            20,
+            QtWidgets.QSizePolicy.Expanding,
+            QtWidgets.QSizePolicy.Minimum,
+        )
         self.gridLayout.addItem(spacerItem, 0, 3, 1, 1)
         self.gridLayout_2.addLayout(self.gridLayout, 0, 0, 1, 1)
         HistogramWindow.setCentralWidget(self.centralWidget)
@@ -84,15 +98,24 @@ class Ui_HistogramWindow(object):
 
     def retranslateUi(self, HistogramWindow):
         _translate = QtCore.QCoreApplication.translate
-        HistogramWindow.setWindowTitle(_translate("HistogramWindow", "Histogram"))
-        self.label.setText(_translate("HistogramWindow", "Number of Gaussians:"))
+        HistogramWindow.setWindowTitle(
+            _translate("HistogramWindow", "Histogram")
+        )
+        self.label.setText(
+            _translate("HistogramWindow", "Number of Gaussians:")
+        )
         self.gaussianAutoButton.setText(_translate("HistogramWindow", "Auto"))
-        self.applyCorrectionsCheckBox.setText(_translate("HistogramWindow", "Apply β / ɣ Corrections"))
-        self.label_2.setText(_translate("HistogramWindow", "Max number of frames:"))
+        self.applyCorrectionsCheckBox.setText(
+            _translate("HistogramWindow", "Apply β / ɣ Corrections")
+        )
+        self.label_2.setText(
+            _translate("HistogramWindow", "Max number of frames:")
+        )
 
 
 if __name__ == "__main__":
     import sys
+
     app = QtWidgets.QApplication(sys.argv)
     HistogramWindow = QtWidgets.QMainWindow()
     ui = Ui_HistogramWindow()

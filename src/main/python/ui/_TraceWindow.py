@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'ui/_TraceWindow.ui'
+# Form implementation generated from reading ui file 'src/main/python/ui/TraceWindow.ui'
 #
-# Created by: PyQt5 UI code generator 5.13.1
+# Created by: PyQt5 UI code generator 5.14.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -14,10 +14,14 @@ class Ui_TraceWindow(object):
     def setupUi(self, TraceWindow):
         TraceWindow.setObjectName("TraceWindow")
         TraceWindow.resize(1200, 500)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(TraceWindow.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            TraceWindow.sizePolicy().hasHeightForWidth()
+        )
         TraceWindow.setSizePolicy(sizePolicy)
         TraceWindow.setMinimumSize(QtCore.QSize(1200, 500))
         TraceWindow.setMaximumSize(QtCore.QSize(5000, 2000))
@@ -48,6 +52,7 @@ class Ui_TraceWindow(object):
 
 if __name__ == "__main__":
     import sys
+
     app = QtWidgets.QApplication(sys.argv)
     TraceWindow = QtWidgets.QMainWindow()
     ui = Ui_TraceWindow()

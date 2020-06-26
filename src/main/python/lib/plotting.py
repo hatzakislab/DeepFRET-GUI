@@ -5,8 +5,6 @@ multiprocessing.freeze_support()
 from global_variables import GlobalVariables as gvars
 import matplotlib
 
-from lib.math import estimate_bw
-
 matplotlib.use("qt5agg")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -14,8 +12,24 @@ from matplotlib.ticker import MaxNLocator
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Patch
 import sklearn.neighbors
-import lib.misc
+import lib.utils
+from matplotlib.colors import Normalize
 import lib.math
+import scipy.stats
+
+
+def remove_states(classification_dict, color_dict):
+    """
+    Removes states from the expanded classification and color dictionaries
+    to toggle between old and possible newer type models
+    """
+    names = classification_dict.copy()
+    colors = color_dict.copy()
+    remove_states = (6, 7, 8)
+    [names.pop(k) for k in remove_states]
+    [colors.pop(k) for k in remove_states]
+    names[4], names[5] = "static", "dynamic"
+    return names, colors
 
 
 def empty_imshow(img_ax):
@@ -70,6 +84,7 @@ def set_axis_exp_ylabel(ax, label, values):
     """
     m = np.max(values)
     e = np.floor(np.log10(np.abs(m)))
+
     ax.ticklabel_format(style="sci", scilimits=(0, 0), axis="both")
     ax.yaxis.get_offset_text().set_visible(False)
     ax.yaxis.major.formatter._useMathText = True
@@ -155,7 +170,9 @@ def point_density(xdata, ydata, kernel="gaussian", bandwidth=0.1):
         kernel = "epanechnikov"
 
     if bandwidth == "auto":
-        bandwidth = estimate_bw(n=len(xdata) + len(ydata), d=2, factor=0.25)
+        bandwidth = lib.math.estimate_bw(
+            n=len(xdata) + len(ydata), d=2, factor=0.25
+        )
 
     positions = np.vstack([xdata.ravel(), ydata.ravel()])
     kernel_sk = sklearn.neighbors.KernelDensity(
@@ -164,7 +181,7 @@ def point_density(xdata, ydata, kernel="gaussian", bandwidth=0.1):
     return np.exp(kernel_sk.score_samples(list(zip(*positions))))
 
 
-def plot_shaded_category(y, ax, alpha, colors=None):
+def plot_shaded_category(y, ax, alpha, colors):
     """
     Plots a color for every class segment in a timeseries
 
@@ -179,14 +196,11 @@ def plot_shaded_category(y, ax, alpha, colors=None):
     colors:
         Colors to cycle through
     """
-    if colors is None:
-        colors = ("darkgrey", "red", "green", "orange", "royalblue", "purple")
-
     y_ = y.argmax(axis=1) if len(y.shape) != 1 else y
     if len(colors) < len(set(y_)):
         raise ValueError("Must have at least a color for each class")
 
-    adjs, lns = lib.math.count_adjacent_values(y_)
+    adjs, lns = lib.utils.count_adjacent_values(y_)
     position = range(len(y_))
     for idx, ln in zip(adjs, lns):
         label = y_[idx]
@@ -198,53 +212,81 @@ def plot_shaded_category(y, ax, alpha, colors=None):
         )
 
 
-def plot_predictions(yi_pred, fig, ax):
+def plot_simulation_category(
+    y, ax, alpha=0.2, fontsize=6, model_has_states=False
+):
+    """
+    Plots a color for every class segment in a timeseries
+
+    Parameters
+    ----------
+    y_:
+        One-hot coded or categorical labels
+    ax:
+        Ax for plotting
+    model_has_states:
+        Whether the model is able to predict number of states in a trace.
+        If not, the remaining categories will be merged
+    """
+    names, colors = gvars.model_classes_full, gvars.model_colors_full
+    if not model_has_states:
+        names, colors = remove_states(
+            classification_dict=names, color_dict=colors
+        )
+
+    y_ = y.argmax(axis=1) if len(y.shape) != 1 else y
+    y_ = y_.astype(int)  # type conversion to avoid float type labels
+    if len(colors) < len(set(y_)):
+        raise ValueError("Must have at least a color for each class")
+
+    adjs, lns = lib.utils.count_adjacent_values(y_)
+    position = range(len(y_))
+    for idx, ln in zip(adjs, lns):
+        label = y_[idx]
+        ax.axvspan(
+            xmin=position[idx],
+            xmax=position[idx] + ln,
+            alpha=alpha,
+            facecolor=colors[label],
+        )
+    ax.plot([], label=names[y_[0]], color=colors[y_[0]])
+    ax.legend(loc="lower right", prop={"size": fontsize})
+
+
+def plot_predictions(
+    yi_pred, y_class, confidence, fig, ax, model_has_states=False
+):
     """
     Plots Keras predictions as probabilities with shaded argmax overlays
     """
-    names = ("bleached",
-            "aggregated",
-             "noisy",
-             "scrambled",
-             "1-state",
-             "2-state",
-             "3-state",
-             "4-state",
-             "5-state",)
+    names, colors = gvars.model_classes_full, gvars.model_colors_full
+    if not model_has_states:
+        names, colors = remove_states(
+            classification_dict=names, color_dict=colors
+        )
 
-    clrs = (
-        "darkgrey",
-        "red",
-        "royalblue",
-        "mediumvioletred",
-        "orange",
-        "lightgreen",
-        "springgreen",
-        "limegreen",
-        "green",
-    )
-    probability, confidence = lib.math.seq_probabilities(
-        yi_pred, skip_threshold=0.5
-    )
-    plot_shaded_category(y=yi_pred, ax=ax, colors=clrs, alpha=0.1)
+    plot_shaded_category(y=yi_pred, ax=ax, colors=colors, alpha=0.1)
 
     # Upper right individual %
     patches = []
     for i in range(yi_pred.shape[-1]):
-        p = probability[i] * 100
+
+        # Don't plot bleaching class (confusing)
+        if i == 0:
+            continue
+
+        p = y_class[i] * 100
         label = "{:.0f}% {}".format(p, names[i])
         # Align with monospace if single digit prob
         if p < 10:
             label = " " + label
-        ax.plot(yi_pred[:, i], color=clrs[i])
-        patch = Patch(
-            color=clrs[i],
-            label=label
-        )
+        ax.plot(yi_pred[:, i], color=colors[i])
+        patch = Patch(color=colors[i], label=label)
         patches.append(patch)
 
-    fig.legend(handles=patches, loc='center right', prop = {
-        "family":"monospace"})
+    fig.legend(
+        handles=patches, loc="center right", prop={"family": "monospace"}
+    )
 
     # Upper left confidence %
     ax.annotate(
@@ -262,3 +304,56 @@ def plot_predictions(yi_pred, fig, ax):
         ),
     )
     ax.set_ylabel("$p_i$")
+
+
+def get_colors(cmap, n_colors):
+    """Extracts n colors from a colormap"""
+    norm = Normalize(vmin=0, vmax=n_colors)
+    return [plt.get_cmap(cmap)(norm(i)) for i in range(n_colors)]
+
+
+def plot_gaussian(mean, sigma, ax, x, weight=1, color=None):
+    """
+    Plots a single gaussian and returns the provided ax, along with computed
+    y values
+    """
+    y = weight * scipy.stats.norm.pdf(x, mean, sigma)
+    ax.plot(x, y, color=color)
+    return ax, y
+
+
+def plot_gaussian_mixture_to_ax(
+    mixture_params,
+    ax: plt.Axes,
+    xpts=None,
+    color_means=None,
+    color_joint=None,
+    plot_sum=True,
+    plot_means=True,
+):
+    sum_ = []
+    if xpts is None:
+        xpts = np.linspace(0, 1, 2000)
+    for i, gauss_params in enumerate(mixture_params):
+        m, s, w = gauss_params
+        ax.plot(xpts, w * scipy.stats.norm.pdf(xpts, m, s))
+        sum_.append(np.array(w * scipy.stats.norm.pdf(xpts, m, s)))
+        if plot_means:
+            ax.axvline(
+                m,
+                ls="--",
+                lw=0.5,
+                c="xkcd:dark pink" if color_means is None else color_means,
+                # label=rf'{m:.2f}',
+                # label=rf'$\mu_{i} = {m:.2f}$',
+            )
+    if plot_sum:
+        joint = np.sum(sum_, axis=0)
+        ax.plot(
+            xpts,
+            joint,
+            color="grey" if color_joint is None else color_joint,
+            alpha=1,
+            zorder=10,
+            ls="--",
+        )

@@ -88,6 +88,8 @@ automatically fits transition lifetimes and plots transition density plots (whic
 Windows &rightarrow; Transition Density Plot). One can base the model on the donor/acceptor signal, or directly on the
 FRET signal (though this is less accurate)
 
+
+
 ## 5. Export options
 Export plot automatically exports the current plot for each window. If desired, one can also export the data present
 in each window such as traces, histogram datapoints, etc. available from the File menu.

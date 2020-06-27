@@ -1,6 +1,6 @@
 import os
 import json
-from lib.utils import git_app_version
+from src.main.python.lib.utils import git_app_version
 from configobj import ConfigObj
 
 

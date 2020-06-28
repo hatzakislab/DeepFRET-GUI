@@ -1,4 +1,4 @@
-<img src="screenshots/screenshot.png" height="600">
+<img src="screenshots/screenshot.png" height="400">
 
 # DeepFRET
 A fully open-source, all-inclusive software platform for doing total internal reflection microscopy (TIRFm) single molecule

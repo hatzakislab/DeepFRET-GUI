@@ -2,7 +2,7 @@ import os
 import shutil
 
 
-def fetch_hook_files():
+def fetch_patch_files():
     """
     Fetches entire PyInstaller 'hooks' directory and packages them as hooks.zip
 
@@ -12,11 +12,11 @@ def fetch_hook_files():
     cwd = os.getcwd()
 
     hooks_dir = os.path.join(
-        cwd, "venv/lib/python3.7/site-packages/PyInstaller/hooks"
+        cwd, "venv/lib/python3.7/site-packages/PyInstaller/"
     )
 
-    shutil.make_archive(os.path.join(cwd, "hooks"), "zip", hooks_dir)
+    shutil.make_archive(os.path.join(cwd, "patch"), "zip", hooks_dir)
 
 
 if __name__ == "__main__":
-    fetch_hook_files()
+    fetch_patch_files()

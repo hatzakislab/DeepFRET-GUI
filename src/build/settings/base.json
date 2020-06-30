@@ -2,5 +2,5 @@
     "app_name": "DeepFRET",
     "author": "Johannes Thomsen",
     "main_module": "src/main/python/main.py",
-    "version": "166"
+    "version": "172"
 }

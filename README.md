@@ -130,7 +130,7 @@ The whole process should be cross-platform, but has only been tested on MacOS.
 
 * CSV files are supported with variable empty spaces between columns (1, 2, tabs, etc)
 At the very minimum, your trace must have a `D-Dexc-` column first, as DeepFRET seeks for this to find the rest.
-Background columns can be ommitted or set to 0, and missing `A-Aexc-` columns can be either ommitted.
+Background columns can be ommitted or set to 0, and missing `A-Aexc-` columns can be either ommitted or set to NaN (do not set `A-Aexc-rw` to 0, as this indicates the presence of a channel).
 At the very minimum, DeepFRET is able to load a trace with just the columns `D-Dexc-rw` and `A-Dexc-rw`.
 Other columns not in the specification are simply ignored.
 

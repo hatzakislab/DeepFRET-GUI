@@ -127,6 +127,8 @@ Background columns can be ommitted or set to 0, and missing `A-Aexc-` columns ca
 At the very minimum, DeepFRET is able to load a trace with just the columns `D-Dexc-rw` and `A-Dexc-rw`.
 Other columns not in the specification are simply ignored.
 
+<img src="screenshots/trace.png" height="200">
+
 * When saving traces, they will outputted in DeepFRET format.
 
 * DeepFRET does not support time columns, and works on a per-frame basis.

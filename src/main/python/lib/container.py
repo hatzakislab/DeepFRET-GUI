@@ -318,9 +318,11 @@ class TraceContainer:
                 try:
                     colnames += self.ml_column_names
                     self.y_pred = df[self.ml_column_names].values
-                    self.y_class, self.confidence = lib.math.seq_probabilities(
-                        self.y_pred
-                    )
+                    (
+                        self.y_class,
+                        self.confidence,
+                        _,
+                    ) = lib.math.seq_probabilities(self.y_pred)
                 except KeyError:
                     pass
 

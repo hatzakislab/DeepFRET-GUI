@@ -110,12 +110,32 @@ The whole process should be cross-platform, but has only been tested on MacOS.
 
 ## Supported data formats
 * Traces exported by DeepFRET or iSMS can be loaded by opening the Traces window, and then using the Open Files in the menu.
+* Other traces must support some, or all of the following format:
+|Column|Meaning|
+|---|---|
+|`D-Dexc-rw` | Donor excitation, donor emission signal|
+|`A-Dexc-rw` | Donor excitation, acceptor emission signal|
+|`A-Aexc-rw` | Acceptor excitation, acceptor emission signal|
+|`D-Dexc-bg` | Donor excitation, donor emission background|
+|`A-Dexc-bg` | Donor excitation, acceptor emission background|
+|`A-Aexc-bg` | Acceptor excitation, acceptor emission background|
+
+* CSV files are supported with variable empty spaces between columns (1, 2, tabs, etc)
+At the very minimum, your trace must have a `D-Dexc-` column first, as DeepFRET seeks for this to find the rest.
+Background columns can be ommitted or set to 0, and missing `A-Aexc-` columns can be either ommitted or not included.
+At the very minimum, DeepFRET is able to load a trace with just the columns `D-Dexc-rw` and `A-Dexc-rw`.
+Other columns not in the specification are simply ignored.
+
+* When saving traces, they will outputted in DeepFRET format.
+
+* DeepFRET does not support time columns, and works on a per-frame basis.
+
 * Currently, .tiff videos are supported as either overlaid full frames in the correct sequence or 2-channel QuadView.
 They can be loaded by choosing Open Files when the Images window is active. If batch loading is enable in the preferences,
 you will be able to load an "unlimited" amount of videos and extract a set number of particles, with all video interactivity disabled.
 
 ![video_seq](video_seq.png)
-* If you're having trouble with your image format, please file an Issue and I'll add compatibility.
+* If you're having trouble with your image format, please file an issue and we'll try to add compatibility.
 
 ## Modifying and compiling the DeepFRET GUI to a standalone executable:
 1. Download all contents to a directory.

@@ -111,14 +111,15 @@ The whole process should be cross-platform, but has only been tested on MacOS.
 ## Supported data formats
 * Traces exported by DeepFRET or iSMS can be loaded by opening the Traces window, and then using the Open Files in the menu.
 * Other traces must support some, or all of the following format:
-|Column|Meaning|
-|---|---|
-|`D-Dexc-rw` | Donor excitation, donor emission signal|
-|`A-Dexc-rw` | Donor excitation, acceptor emission signal|
-|`A-Aexc-rw` | Acceptor excitation, acceptor emission signal|
-|`D-Dexc-bg` | Donor excitation, donor emission background|
-|`A-Dexc-bg` | Donor excitation, acceptor emission background|
-|`A-Aexc-bg` | Acceptor excitation, acceptor emission background|
+
+    |Column|Meaning|
+    |---|---|
+    |`D-Dexc-rw` | Donor excitation, donor emission signal|
+    |`A-Dexc-rw` | Donor excitation, acceptor emission signal|
+    |`A-Aexc-rw` | Acceptor excitation, acceptor emission signal|
+    |`D-Dexc-bg` | Donor excitation, donor emission background|
+    |`A-Dexc-bg` | Donor excitation, acceptor emission background|
+    |`A-Aexc-bg` | Acceptor excitation, acceptor emission background|
 
 * CSV files are supported with variable empty spaces between columns (1, 2, tabs, etc)
 At the very minimum, your trace must have a `D-Dexc-` column first, as DeepFRET seeks for this to find the rest.

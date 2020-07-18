@@ -1,0 +1,11 @@
+hiddenimports = ['sklearn.utils.sparsetools._graph_validation',
+                 'sklearn.utils.sparsetools._graph_tools',
+                 'sklearn.utils.lgamma',
+                 'sklearn.utils.weight_vector',
+                 'sklearn.utils._cython_blas',
+                 'sklearn.neighbors.typedefs',
+                 'sklearn.neighbors.quad_tree',
+                 'sklearn.tree',
+                 'sklearn.cluster',
+                 'sklearn.neighbors',
+                 'sklearn.ensemble']

@@ -2,13 +2,6 @@ import os
 import json
 from configobj import ConfigObj
 from src.main.python.lib.utils import git_app_version
-import zipfile
-
-
-def patch_pyinstaller():
-    with zipfile.ZipFile("patch.zip", "r") as zip_ref:
-        zip_ref.extractall("venv/lib/python3.6/site-packages/PyInstaller/")
-
 
 def write_to_config_ini():
     config = ConfigObj("src/main/resources/base/config.ini")
@@ -33,7 +26,6 @@ def compile():
 
 
 if __name__ == "__main__":
-    patch_pyinstaller()
     write_to_config_ini()
     write_to_base_json()
     compile()

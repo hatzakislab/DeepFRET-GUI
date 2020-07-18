@@ -113,7 +113,7 @@ class AppContext(ApplicationContext):
             Window.getConfig = self.getConfig
             Window.setConfig = self.setConfig
 
-        AboutWindow.app_version = self.config["appVersion"]
+        AboutWindow.app_version = self.build_settings["version"]
         BaseWindow.keras_two_channel_model = self.keras_two_channel_model
         BaseWindow.keras_three_channel_model = self.keras_three_channel_model
 

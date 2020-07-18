@@ -1,12 +1,6 @@
 import os
 import json
-from configobj import ConfigObj
 from src.main.python.lib.utils import git_app_version
-
-def write_to_config_ini():
-    config = ConfigObj("src/main/resources/base/config.ini")
-    config["appVersion"] = int(git_app_version())
-    config.write()
 
 
 def write_to_base_json():
@@ -26,6 +20,5 @@ def compile():
 
 
 if __name__ == "__main__":
-    write_to_config_ini()
     write_to_base_json()
     compile()

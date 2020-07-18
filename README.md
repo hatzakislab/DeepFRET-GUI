@@ -24,7 +24,7 @@ bioRxiv 2020.06.26.173260; doi: https://doi.org/10.1101/2020.06.26.173260
 ````
 
 ## Launching the DeepFRET GUI
-Tested on Python 3.7.0 (v3.7.0:1bf9cc5093)
+Tested on Python 3.6.10
 
 From source:
 1. Download the repository contents. Install requirements.txt either globally or in a venv (strongly recommended)

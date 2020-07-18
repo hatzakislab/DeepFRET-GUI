@@ -3,5 +3,5 @@
     "author": "Johannes Thomsen",
     "main_module": "src/main/python/main.py",
     "version": "172",
-    "additional_hooks_dir": ["src/build/pyinstaller-hooks/hooks"]
+    "additional_hooks_dir": ["src/build/pyinstaller-hooks"]
 }

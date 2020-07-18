@@ -1,7 +1,10 @@
+# See the readme for the reason for using this version of fbs and PyInstaller
+https://github.com/NileGraddis/fbs/archive/additional_hooks_dir.zip
+PyInstaller==3.4
+
 astropy==4.0.1
 configobj==5.0.6
 dataclasses
-fbs==0.8.6
 hmmlearn==0.2.3
 matplotlib==3.2.1
 numpy==1.16.3

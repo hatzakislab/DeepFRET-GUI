@@ -160,3 +160,26 @@ If the above steps worked, you can now edit any part of the code, and re-compile
 script, if desired). The `.ui` files for the interface can be edited through Qt Creator and converted with `generate_ui.py`
 
 <img src="screenshots/sorting.png" height="200">
+
+
+## Development
+
+TODO Expand this section.
+
+We want inject some extra hooks into PyInstaller. Unfortunately `fsb` does not
+expose a way to do that. There is a [pull
+request](https://github.com/mherrmann/fbs/pull/157) by NileGraddis that
+introduces such a functionality, but the author of `fsb`has decided not to
+implement it. We therefore use [the fork by
+NileGraddis](https://github.com/NileGraddis/fbs/tree/additional_hooks_dir). It
+enables us to define `additional_hooks_dir` in `src/build/settings/base.json`.
+
+fsb have
+[pinned](https://github.com/mherrmann/fbs/commit/84fe1bc3fb9369000abe03c3c3bc133693d8d9ff)
+PyInstaller to version 3.4 [due to some
+incompatibilities](https://github.com/mherrmann/fbs/issues/169). The NileGraddis
+fork we use does not have the pinning of PyInstaller in it, so we need to pin it
+manually. There is [a issue](https://github.com/mherrmann/fbs/issues/188)
+tracking the support for PyInstaller 3.6. This pinning can be removed when there
+is no reason to use for fork anymore or fsb starts supporting PyInstaller 3.6
+and the fork is updated.

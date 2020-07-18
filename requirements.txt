@@ -6,7 +6,7 @@
 #
 absl-py==0.9.0            # via tensorboard, tensorflow
 altgraph==0.17            # via macholib, pyinstaller
-astor==0.8.1              # via tensorflow
+astor==0.7.1              # via -r requirements.in, tensorflow
 astropy==4.0.1            # via -r requirements.in
 cachetools==4.1.1         # via google-auth
 certifi==2020.6.20        # via requests

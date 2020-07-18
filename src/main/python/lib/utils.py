@@ -15,10 +15,6 @@ import numpy as np
 from typing import Union, Tuple, List
 
 
-def git_app_version():
-    return str(os.popen("git rev-list --count HEAD ").read())
-
-
 def pairwise(array):
     """Unpacks elements of an array (1,2,3,4...) into pairs,
     i.e. (1,2), (3,4), ..."""

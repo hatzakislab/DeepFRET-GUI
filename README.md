@@ -164,7 +164,7 @@ script, if desired). The `.ui` files for the interface can be edited through Qt 
 
 ## Development
 
-TODO Expand this section.
+TODO Expand this section. https://github.com/komodovaran/DeepFRET-GUI/issues/56
 
 We want inject some extra hooks into PyInstaller. Unfortunately `fsb` does not
 expose a way to do that. There is a [pull
@@ -183,3 +183,13 @@ manually. There is [a issue](https://github.com/mherrmann/fbs/issues/188)
 tracking the support for PyInstaller 3.6. This pinning can be removed when there
 is no reason to use for fork anymore or fsb starts supporting PyInstaller 3.6
 and the fork is updated.
+
+## Release
+
+TODO Expand this section. https://github.com/komodovaran/DeepFRET-GUI/issues/56
+
+1. Bump the version in `src/build/settings/base.json`
+2. Use fbs to package the installer with:
+    1. `./venv/bin/fbs clean`
+    2. `./venv/bin/fbs freeze`
+    3. `./venv/bin/fbs installer`

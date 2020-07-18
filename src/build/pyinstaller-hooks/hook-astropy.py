@@ -19,11 +19,15 @@ datas = collect_data_files('astropy')
 # always auto-discovered by pyinstaller, so we always include all submodules.
 hiddenimports = collect_submodules('astropy')
 
-# We now need to include the *_parsetab.py and *_lextab.py files for unit and
-# coordinate parsing, since these are loaded as files rather than imported as
-# sub-modules.
-datas = collect_data_files('astropy', include_py_files=True,
-                           includes=['**/*_parsetab.py', '**/*_lextab.py'])
+# The following comment and the kv-pair `includes=['**/*_parsetab.py',
+# '**/*_lextab.py']` is included in the hook from PyInstaller 3.6. `collect_data_files`
+# from PyInstaller 3.4 does not implement the argument `included`, so it's removed.
+
+# > We now need to include the *_parsetab.py and *_lextab.py files for unit and
+# > coordinate parsing, since these are loaded as files rather than imported as
+# > sub-modules.
+
+datas = collect_data_files('astropy', include_py_files=True)
 
 # In the Cython code, Astropy imports numpy.lib.recfunctions which isn't
 # automatically discovered by pyinstaller, so we add this as a hidden import.

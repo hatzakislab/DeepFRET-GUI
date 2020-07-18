@@ -10,12 +10,12 @@ Some hooks are already comitted to PyInstaller upstream, but is not in version
 
 ## Verbatim copys from newer versions of PyInstaller
 
-- `hook-astropy.py`
 - `hook-pywt.py`
 - `hook-skimage.io.py`
 
 ## Hooks with changes from upstream
 
+- `hook-astropy.py`
 - `hook-sklearn.metrics.cluster.py`
 
 ## Custom written hooks

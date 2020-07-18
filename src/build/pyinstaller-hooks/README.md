@@ -10,8 +10,11 @@ Some hooks are already comitted to PyInstaller upstream, but is not in version
 
 ## Verbatim copys from newer versions of PyInstaller
 
+- `hook-astor.py`
 - `hook-pywt.py`
 - `hook-skimage.io.py`
+- `hook-tensorflow.py`
+- `hook-tensorflow_core.py`
 
 ## Hooks with changes from upstream
 
@@ -26,4 +29,3 @@ Some hooks are already comitted to PyInstaller upstream, but is not in version
 - `hook-sklearn.neighbors.py`
 - `hook-sklearn.py`
 - `hook-sklearn.tree.py`
-- `hook-tensorflow_core.py`

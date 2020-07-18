@@ -21,13 +21,3 @@ scikit-learn==0.21.2
 scipy==1.4.1
 tensorflow==2.0.1
 tqdm==4.32.1
-
-# The requirements above are the primary requirements.
-
-# The tensorflow dependency astor changed its API in version 0.8. This arises
-# the need for a hook in PyInstaller. A hook is added in PyInstaller
-# development, but not in the most resent release 3.6. We pin astor below 0.8.
-# When there is a new release of PyInstall with the hooks and it is possible to
-# update PyInstall, this can be removed.
-# https://github.com/pyinstaller/pyinstaller/commit/96897fc78d9cbb5b8be9d353499b25295badbc9f
-astor<0.8

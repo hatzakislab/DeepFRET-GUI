@@ -9,7 +9,6 @@
 # SPDX-License-Identifier: (GPL-2.0-or-later WITH Bootloader-exception)
 #-----------------------------------------------------------------------------
 
-from PyInstaller.utils.hooks import collect_submodules, collect_data_files
+from PyInstaller.utils.hooks import collect_data_files
 
-hiddenimports = collect_submodules('tensorflow_core')
-datas = collect_data_files('tensorflow_core')
+datas = collect_data_files('astor')

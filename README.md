@@ -23,19 +23,15 @@ Johannes Thomsen, Magnus B. Sletfjerding, Stefano Stella, Bijoya Paul, Simon Bo 
 bioRxiv 2020.06.26.173260; doi: https://doi.org/10.1101/2020.06.26.173260
 ````
 
-## Launching the DeepFRET GUI
+## Installing
 
-TODO Fix this section https://github.com/komodovaran/DeepFRET-GUI/issues/56
+The easiest way to run DeepFRET-GUI is to download the newest installer for your
+system from the [releases
+page](https://github.com/komodovaran/DeepFRET-GUI/releases). We currently
+support macOS and Windows.
 
-Tested on Python 3.6.10
-
-From source:
-1. Download the repository contents. Install requirements.txt either globally or in a venv (strongly recommended)
-2. Run `src/main/python/main.py`
-
-With the `.dmg` file:
-1. Installing the `DeepFRET.app` from binary
-2. Double click the `DeepFRET.app` file.
+If you want to change the code, you can also [install from
+source](#development-environment).
 
 ## Loading data
 1. To load videos, open the application's main window ('Images')
@@ -150,31 +146,35 @@ you will be able to load an "unlimited" amount of videos and extract a set numbe
 ![video_seq](video_seq.png)
 * If you're having trouble with your image format, please file an issue and we'll try to add compatibility.
 
-## Modifying and compiling the DeepFRET GUI to a standalone executable:
-
-TODO Fix this section https://github.com/komodovaran/DeepFRET-GUI/issues/56
-
-1. Download all contents to a directory.
-2. Open a terminal and navigate to the root of the directory.
-3. Create a venv with `python3 -m venv venv` in the current directory.
-4. Activate environment with `source venv/bin/activate` if on MacOS/Linux or `call venv\scripts\activate.bat` if on Windows.
-5. While still in the environment, install all packages with `pip install -r requirements.txt`
-6. Unzip the `hooks.zip` and overwrite the files in `venv/lib/python3.7/site-packages/PyInstaller/hooks/`.
-7. Run `compile.py`
-
-If the above steps worked, you can now edit any part of the code, and re-compile it (or just run it from the main.py
-script, if desired). The `.ui` files for the interface can be edited through Qt Creator and converted with `generate_ui.py`
-
 <img src="screenshots/sorting.png" height="200">
 
 
 # Development
 
+The `.ui` files for the interface can be edited through Qt Creator, and when you
+have a working python development env, converted with `generate_ui.py`.
+
 ## Development environment
 
-This is only needed if you want to change the code. If you only want to run
-DeepFRET-GUI, see Install. (TODO add link.
-https://github.com/komodovaran/DeepFRET-GUI/issues/56)
+This is only needed if you want to change the code. If you just want to run
+DeepFRET-GUI, see [Install](#install).
+
+### Unix
+
+For macOS and Linux.
+
+Make sure you have installed `python3.6` and `git`.
+
+1. Clone the repo with `git clone https://github.com/komodovaran/DeepFRET-GUI.git`.
+2. Change into the directory with `cd DeepFRET-GUI`.
+3. Create a python virtual environment with `python -m venv venv`.
+4. Activate the virtual environment with `source venv/bin/activate`.
+5. Install the python requirements with `pip install -r requirements-unix.txt`.
+
+You should now be able to open the application with `python
+src/main/python/main.py`.
+
+See [New release](#new-release) if you now want to make a binary.
 
 ### Windows
 
@@ -185,12 +185,12 @@ you want to use `fbs` to make a new release. If you only want to change the
 python code, you can skip them.
 
 1. Python:
-    1. Download and open the python 3.6 from [the python
-       webpage](https://www.python.org/downloads/windows/). Version 3.6.8 is the
+    1. Download and open the python 3.6 from [the python web
+       page](https://www.python.org/downloads/windows/). Version 3.6.8 is the
        latest micro version with an executable installer for Windows.
     2. During the installation wizard make sure to check the "Add Python 3.6 to
        PATH" option.
-2. Git from [the git webpage](https://git-scm.com/download/win).
+2. Git from [the git web page](https://git-scm.com/download/win).
 3. (Optional) Microsoft dependencies:
     1. Install [Windows 10
        SDK](https://developer.microsoft.com/en-us/windows/downloads/windows-10-sdk).
@@ -210,7 +210,7 @@ python code, you can skip them.
     guide](https://www.architectryan.com/2018/03/17/add-to-the-path-on-windows-10/).
     Alternatively, you can execute `$env:PATH += "C:\Program Files (x86)\NSIS;"`
     in the PowerShell to set it for the session of the PowerShell.
-5. Normal users on Windows is missing the privileged to execute PowerShell
+5. Normal users on Windows are missing the privileged to execute PowerShell
    scripts. This is needed to enable the Python virtual environment. Open a
    PowerShell and run `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy
    Unrestricted`. Answer `Y` when prompted.
@@ -229,40 +229,107 @@ python code, you can skip them.
 You should now be able to open the application with `python
 .\src\main\python\main.py`.
 
-## Release
+See [New release](#new-release) if you now want to make a binary.
 
-TODO Expand this section. https://github.com/komodovaran/DeepFRET-GUI/issues/56
-
-1. Bump the version in `src/build/settings/base.json`
-2. Use fbs to package the installer with:
-    1. `fbs clean`
-    2. `fbs freeze`
-    3. `fbs installer`
-
-If the correct `fbs` is not in your path, you can call it directly. On Unix, it
-at `./venv/bin/fbs`. On Windows it is at `.\venv\Scripts\fbs.exe`.
 
 ## Requirements files and pip-tools
 
-TODO Expand this section. https://github.com/komodovaran/DeepFRET-GUI/issues/56
+
+The requirements files are generated with
+[pip-tools](https://pypi.org/project/pip-tools/). This ensures that we have
+locked down versions for reproducible environments and still a small and
+manageable list of dependencies.
+
+If you are not changing the dependencies or you pull a new version with updated
+dependencies, you can just run `pip install -r requirements-<your os>.txt` as
+normally.
+
+If however you need to change or update the dependencies you'll have to install
+pip-tools with `pip install pip-tools`. You add your changes to
+`requirements.in` instead of `requirements.txt`.
+
+You then have to generate the locked down versions of `requirements-unix.txt`
+and `requirements-win.txt`. Given the nature of the requirements, [you have to
+generate them on their separate
+systems](https://github.com/jazzband/pip-tools/#cross-environment-usage-of-requirementsinrequirementstxt-and-pip-compile).
+
+Make sure the changes to `requirements.in` are on both systems. Then run
+`pip-compile --output-file=requirements-unix.txt requirements.in` on macOS or
+Linux and `pip-compile --output-file=requirements-win.txt requirements.in` on
+Windows. Copy one of the output files to the other system and commit the changes
+to `requirements.in`, `requirements-unix.txt` and `requirements-win.txt` in the
+same commit.
+
+If you want to update the versions for any of the packages not restricted in
+`requirements.in`, give `pip-compile` the `--upgrade` flag when you run it.
+
+If you have `pip-tools` installed: Instead on running `pip install -r
+requirements-<your os>.txt`, you can run `pip-sync requirements-<your os>.txt`.
+This will both install the versions of any package in `requirements-<your
+os>.txt`, but also remove any package not defined. This is especially useful
+when [making a new release](#new-release) as it ensures the correct version of
+all packages cross both systems and also that no extra packages are included in
+the binary.
+
+## New release
+
+To make a new release there are some considerations. You need access to both a
+macOS and a Windows machine. They can be virtual.
+
+There are no backward compatibility builds made on macOS. Get a machine with an
+older version. See [the fbs
+documentation](https://build-system.fman.io/manual/#releasing-mac).
+
+### Version number
+
+The version number is specified in `src/build/settings/base.json`. Bump it to a
+suitable version and make a `git commit` with the change. `git tag` this commit
+with the tag `v` followed by the same version (ex. `git tag v0.2`) and push it
+to GitHub.
+
+### Creating installers
+
+The following have to happen on both macOS and Windows. 
+
+1. Navigate to your virtual environment and activate it.
+2. Make sure you are on the commit with the tag you just made.
+3. Run `pip-sync` to make sure you have the correct versions of all packages.
+   See [pip-tools](#requirements-files-and-pip-tools) for details.
+2. Clean up any old `fbs` artifacts with `fbs clean`.
+5. Generate a binary with `fbs freeze`.
+6. Generate an installer with `fbs installer`.
+
+The last line should point you to a `target/DeepFRET.dmg` or a
+`target\DeepFRETSetup.exe`. Save that file and repeat the above the other OS
+until you have both.
+
+If the correct `fbs` is not in your path, you can call it directly. On Unix, it
+is at `./venv/bin/fbs`. On Windows it is at `.\venv\Scripts\fbs.exe`.
+
+### Github release
+
+Create a [new GitHub
+release](https://github.com/komodovaran/DeepFRET-GUI/releases/new) pointing to
+your newly created tag. Attach `DeepFRET.dmg` and `DeepFRETSetup.exe` as
+binaries during the release.
 
 ## About fbs and PyInstaller
 
-We want inject some extra hooks into PyInstaller. Unfortunately `fsb` does not
-expose a way to do that. There is a [pull
+We have to inject some extra hooks into PyInstaller. Unfortunately `fbs` does
+not expose a way to do that. There is a [pull
 request](https://github.com/mherrmann/fbs/pull/157) by NileGraddis that
-introduces such a functionality, but the author of `fsb`has decided not to
+introduces such a functionality, but the author of `fbs` has decided not to
 implement it. We therefore use [the fork by
 NileGraddis](https://github.com/NileGraddis/fbs/tree/additional_hooks_dir). It
 enables us to define `additional_hooks_dir` in `src/build/settings/base.json`.
 
-fsb have
+`fbs` have
 [pinned](https://github.com/mherrmann/fbs/commit/84fe1bc3fb9369000abe03c3c3bc133693d8d9ff)
 PyInstaller to version 3.4 [due to some
 incompatibilities](https://github.com/mherrmann/fbs/issues/169). The NileGraddis
-fork we use does not have the pinning of PyInstaller in it, so we need to pin it
-manually. There is [a issue](https://github.com/mherrmann/fbs/issues/188)
+fork we use does not have the pinning of PyInstaller in it. We need to pin it
+manually. There is [an issue](https://github.com/mherrmann/fbs/issues/188)
 tracking the support for PyInstaller 3.6. This pinning can be removed when there
-is no reason to use for fork anymore or fsb starts supporting PyInstaller 3.6
+is no reason to use for fork anymore or `fbs` starts supporting PyInstaller 3.6
 and the fork is updated.
 

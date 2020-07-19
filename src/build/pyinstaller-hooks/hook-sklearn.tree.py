@@ -1,3 +1,1 @@
-hiddenimports = [
-    'sklearn.tree._utils'
-]
+hiddenimports = ["sklearn.tree._utils"]

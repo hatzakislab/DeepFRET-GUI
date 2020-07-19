@@ -24,6 +24,9 @@ bioRxiv 2020.06.26.173260; doi: https://doi.org/10.1101/2020.06.26.173260
 ````
 
 ## Launching the DeepFRET GUI
+
+TODO Fix this section https://github.com/komodovaran/DeepFRET-GUI/issues/56
+
 Tested on Python 3.6.10
 
 From source:
@@ -148,6 +151,9 @@ you will be able to load an "unlimited" amount of videos and extract a set numbe
 * If you're having trouble with your image format, please file an issue and we'll try to add compatibility.
 
 ## Modifying and compiling the DeepFRET GUI to a standalone executable:
+
+TODO Fix this section https://github.com/komodovaran/DeepFRET-GUI/issues/56
+
 1. Download all contents to a directory.
 2. Open a terminal and navigate to the root of the directory.
 3. Create a venv with `python3 -m venv venv` in the current directory.
@@ -162,9 +168,85 @@ script, if desired). The `.ui` files for the interface can be edited through Qt 
 <img src="screenshots/sorting.png" height="200">
 
 
-## Development
+# Development
+
+## Development environment
+
+This is only needed if you want to change the code. If you only want to run
+DeepFRET-GUI, see Install. (TODO add link.
+https://github.com/komodovaran/DeepFRET-GUI/issues/56)
+
+### Windows
+
+#### Install dependencies
+
+This needs to be done only once for the machine. The optional steps is needed if
+you want to use `fbs` to make a new release. If you only want to change the
+python code, you can skip them.
+
+1. Python:
+    1. Download and open the python 3.6 from [the python
+       webpage](https://www.python.org/downloads/windows/). Version 3.6.8 is the
+       latest micro version with an executable installer for Windows.
+    2. During the installation wizard make sure to check the "Add Python 3.6 to
+       PATH" option.
+2. Git from [the git webpage](https://git-scm.com/download/win).
+3. (Optional) Microsoft dependencies:
+    1. Install [Windows 10
+       SDK](https://developer.microsoft.com/en-us/windows/downloads/windows-10-sdk).
+    2. Install [Visual C++ Redistributable for Visual Studio
+       2010](https://www.microsoft.com/en-us/download/details.aspx?id=14632).
+    3. Install [Visual C++ Redistributable for Visual Studio
+       2012](https://www.microsoft.com/en-us/download/details.aspx?id=30679).
+    4. If `fbs freeze` complains about missing DDLs and tells you to install
+       Visual C++ Redistributable for Visual Studio 2012, it could be actually
+       be another version. See [fbs issue
+       147](https://github.com/mherrmann/fbs/issues/147) for details.
+4. (Optional) Nullsoft Install System:
+    1. Download and run the installer from [NSIS](https://nsis.sourceforge.io/Download).
+    2. The installer does not add the executables like `makensis` to the path.
+    You need to add `C:\Program Files (x86)\NSIS` to the path. You can add it
+    permanently by following [this
+    guide](https://www.architectryan.com/2018/03/17/add-to-the-path-on-windows-10/).
+    Alternatively, you can execute `$env:PATH += "C:\Program Files (x86)\NSIS;"`
+    in the PowerShell to set it for the session of the PowerShell.
+5. Normal users on Windows is missing the privileged to execute PowerShell
+   scripts. This is needed to enable the Python virtual environment. Open a
+   PowerShell and run `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy
+   Unrestricted`. Answer `Y` when prompted.
+6. (Optional) If you have installed Windows 10 SDK, a C++ Redistributable or
+   NSIS: Restart the machine.
+
+#### Get the code and install python requirements
+
+1. Open a PowerShell.
+2. Clone the repo with `git clone https://github.com/komodovaran/DeepFRET-GUI.git`.
+3. Change into the directory with `cd .\DeepFRET-GUI\`.
+3. Create a python virtual environment with `python -m venv venv`.
+4. Activate the virtual environment with `.\venv\Scripts\Activate.ps1`.
+5. Install the python requirements with `pip install -r requirements-win.txt`.
+
+You should now be able to open the application with `python
+.\src\main\python\main.py`.
+
+## Release
 
 TODO Expand this section. https://github.com/komodovaran/DeepFRET-GUI/issues/56
+
+1. Bump the version in `src/build/settings/base.json`
+2. Use fbs to package the installer with:
+    1. `fbs clean`
+    2. `fbs freeze`
+    3. `fbs installer`
+
+If the correct `fbs` is not in your path, you can call it directly. On Unix, it
+at `./venv/bin/fbs`. On Windows it is at `.\venv\Scripts\fbs.exe`.
+
+## Requirements files and pip-tools
+
+TODO Expand this section. https://github.com/komodovaran/DeepFRET-GUI/issues/56
+
+## About fbs and PyInstaller
 
 We want inject some extra hooks into PyInstaller. Unfortunately `fsb` does not
 expose a way to do that. There is a [pull
@@ -184,12 +266,3 @@ tracking the support for PyInstaller 3.6. This pinning can be removed when there
 is no reason to use for fork anymore or fsb starts supporting PyInstaller 3.6
 and the fork is updated.
 
-## Release
-
-TODO Expand this section. https://github.com/komodovaran/DeepFRET-GUI/issues/56
-
-1. Bump the version in `src/build/settings/base.json`
-2. Use fbs to package the installer with:
-    1. `./venv/bin/fbs clean`
-    2. `./venv/bin/fbs freeze`
-    3. `./venv/bin/fbs installer`

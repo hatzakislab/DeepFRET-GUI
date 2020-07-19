@@ -39,6 +39,9 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
+from appdirs import user_config_dir
+from pathlib import Path
+
 
 class AppContext(ApplicationContext):
     """
@@ -66,7 +69,29 @@ class AppContext(ApplicationContext):
         self.keras_three_channel_model = load_model(
             self.get_resource("FRET_3C_keras_model.h5")
         )  # type: Model
-        self.config = ConfigObj(self.get_resource("config.ini"))
+
+        userConfigFile = self._create_userConfig()
+
+        self.config = ConfigObj(str(userConfigFile))
+
+    def _create_userConfig(self):
+        """
+        Creates a configuration file in `$XDG_CONFIG_HOME/DeepFRET/config.ini` (or
+        similar) if no exists. Then populates it with the default values.
+        """
+
+        userConfigDir = Path(user_config_dir(gvars.APPNAME, gvars.APPNAME))
+        userConfigFile = userConfigDir.joinpath("config.ini")
+
+        if not userConfigFile.exists():
+            userConfigDir.mkdir(parents=True, exist_ok=True)
+            userConfigFile.touch(exist_ok=False)
+
+            tempConfig = ConfigObj(self.get_resource("config.ini"))
+            tempConfig.filename = userConfigFile
+            tempConfig.write()
+
+        return userConfigFile
 
     def getConfig(self, key: str) -> Union[bool, str, float]:
         """

@@ -2,6 +2,7 @@
 https://github.com/NileGraddis/fbs/archive/additional_hooks_dir.zip
 PyInstaller==3.4
 
+appdirs
 astropy==4.0.1
 configobj==5.0.6
 dataclasses

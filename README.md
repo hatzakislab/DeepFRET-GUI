@@ -27,7 +27,7 @@ bioRxiv 2020.06.26.173260; doi: https://doi.org/10.1101/2020.06.26.173260
 
 The easiest way to run DeepFRET-GUI is to download the newest installer for your
 system from the [releases
-page](https://github.com/komodovaran/DeepFRET-GUI/releases). We currently
+page](https://github.com/hatzakislab/DeepFRET-GUI/releases). We currently
 support macOS and Windows.
 
 If you want to change the code, you can also [install from
@@ -165,7 +165,7 @@ For macOS and Linux.
 
 Make sure you have installed `python3.6` and `git`.
 
-1. Clone the repo with `git clone https://github.com/komodovaran/DeepFRET-GUI.git`.
+1. Clone the repo with `git clone https://github.com/hatzakislab/DeepFRET-GUI.git`.
 2. Change into the directory with `cd DeepFRET-GUI`.
 3. Create a python virtual environment with `python -m venv venv`.
 4. Activate the virtual environment with `source venv/bin/activate`.
@@ -220,7 +220,7 @@ python code, you can skip them.
 #### Get the code and install python requirements
 
 1. Open a PowerShell.
-2. Clone the repo with `git clone https://github.com/komodovaran/DeepFRET-GUI.git`.
+2. Clone the repo with `git clone https://github.com/hatzakislab/DeepFRET-GUI.git`.
 3. Change into the directory with `cd .\DeepFRET-GUI\`.
 3. Create a python virtual environment with `python -m venv venv`.
 4. Activate the virtual environment with `.\venv\Scripts\Activate.ps1`.
@@ -309,7 +309,7 @@ is at `./venv/bin/fbs`. On Windows it is at `.\venv\Scripts\fbs.exe`.
 ### Github release
 
 Create a [new GitHub
-release](https://github.com/komodovaran/DeepFRET-GUI/releases/new) pointing to
+release](https://github.com/hatzakislab/DeepFRET-GUI/releases/new) pointing to
 your newly created tag. Attach `DeepFRET.dmg` and `DeepFRETSetup.exe` as
 binaries during the release.
 

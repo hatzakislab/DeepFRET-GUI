@@ -138,13 +138,13 @@ class TraceContainer:
     ]
 
     def __init__(
-        self,
-        filename=None,
-        name=None,
-        video=None,
-        n=None,
-        hmm_idealized_config=None,
-        loaded_from_ascii=False,
+            self,
+            filename=None,
+            name=None,
+            video=None,
+            n=None,
+            hmm_idealized_config=None,
+            loaded_from_ascii=False,
     ):
         self.filename = filename  # type: str
         self.name = (
@@ -204,9 +204,14 @@ class TraceContainer:
         # TODO: make compatible w pathlib
         # TODO: set flag differently?
         if loaded_from_ascii:
-            try:
-                self.load_from_txt()
-            except (TypeError, FileNotFoundError) as e:
+            if self.filename.endswith("txt"):
+                try:
+                    self.load_from_txt()
+                except (TypeError, FileNotFoundError) as e:
+                    warnings.warn(
+                        "Warning! No data loaded for this trace!", UserWarning
+                    )
+            elif self.filename.endswith("dat"):
                 try:
                     self.load_from_dat()
                 except (TypeError, FileNotFoundError) as e:
@@ -269,7 +274,10 @@ class TraceContainer:
                 try:
                     df.columns = colnames
                 except ValueError:
-                    colnames = colnames[3:]
+                    if len(df.keys()) == 3:  # Non ALEX
+                        colnames = colnames[3:5] + [colnames[-1]]
+                    else:
+                        colnames = colnames[3:]
                     df.columns = colnames
         # Else DeepFRET trace compatibility
         else:
@@ -281,16 +289,29 @@ class TraceContainer:
                 path=self.filename, line_starts="FRET pair"
             )
             self.n = int(pair_n.split("#")[-1])
+        except (ValueError, AttributeError):
+            pass
 
+        try:
             video = lib.utils.seek_line(
                 path=self.filename, line_starts="Video filename"
             )
             self.video = video.split(": ")[-1]
+        except (ValueError, AttributeError):
+            pass
+        try:
+            bleach = lib.utils.seek_line(
+                path=self.filename, line_starts="Bleaches"
+            )
+            bleach_str = bleach.split(" ")[-1]
+            self.first_bleach = int(bleach_str)
+            self.red.bleach = self.first_bleach
+            self.grn.bleach = self.first_bleach
+            self.acc.bleach = self.first_bleach
+            # TODO: consider changing this to be a property of TraceContainer
 
         except (ValueError, AttributeError):
             pass
-
-        self.load_successful = True
 
         # Add flag to see if incomplete trace
         if not any(s.startswith("A-A") for s in df.columns):
@@ -348,6 +369,8 @@ class TraceContainer:
 
         self.frames = np.arange(1, len(self.grn.int) + 1, 1)
         self.frames_max = self.frames.max()
+
+        self.load_successful = True
 
     def load_from_dat(self):
         """
@@ -442,7 +465,8 @@ class TraceContainer:
             # Add predictions column names and values
             df_dict.update(dict(zip(self.ml_column_names, self.y_pred.T)))
 
-        df = pd.DataFrame(df_dict).round(4)
+        df_idx = range(len(self.fret))
+        df = pd.DataFrame(df_dict, index=df_idx).round(4)
 
         if keep_nan_columns is False:
             df.dropna(axis=1, how="all", inplace=True)
@@ -450,15 +474,16 @@ class TraceContainer:
         return df
 
     def get_export_txt(
-        self,
-        df: Union[None, pd.DataFrame] = None,
-        exp_txt: Union[None, str] = None,
-        date_txt: Union[None, str] = None,
-        keep_nan_columns: Union[bool, None] = None,
+            self,
+            df: Union[None, pd.DataFrame] = None,
+            exp_txt: Union[None, str] = None,
+            date_txt: Union[None, str] = None,
+            keep_nan_columns: Union[bool, None] = None,
     ):
         """
         Returns the string to use for saving the trace as a txt.
         Option of passing a DF manually to convert it to a txt added to simplify testing.
+        :param df: DataFrame to convert
         :param exp_txt: string to include in header
         :param date_txt: string to specify date.
         :param keep_nan_columns: bool, whether or not to include columns with NaNs. Passed on to get_export_df
@@ -492,28 +517,33 @@ class TraceContainer:
 
     def get_tracename(self) -> str:
         """
-        Gets and sets the tracename based on the current videoname and the pair number
+        Checks for and sets the tracename, if not defined, based on the current videoname and the pair number
         :return self.tracename: str
         """
-        self.tracename = os.path.basename(
-            lib.utils.remove_newlines(self.filename)
-        )
+        if self.tracename is None:  # define the tracename if it doesn't exist
+            self.tracename = os.path.basename(
+                lib.utils.remove_newlines(self.filename)
+            )
         return self.tracename
 
-    def get_savename(self, dir_to_join: str):
+    def get_savename(self, dir_to_join: Union[None, str] = None):
         """
         Returns the name with which the trace should be saved.
         Option for specifying output directory.
         :param dir_to_join: output directory, optional
         :return self.savename: str
         """
-        self.savename = os.path.join(dir_to_join, self.get_tracename())
+        self.savename = (
+            os.path.join(dir_to_join, self.get_tracename())
+            if dir_to_join is not None
+            else self.get_tracename()
+        )
         return self.savename
 
     def export_trace_to_txt(
-        self,
-        dir_to_join: Union[None, str] = None,
-        keep_nan_columns: Union[bool, None] = None,
+            self,
+            dir_to_join: Union[None, str] = None,
+            keep_nan_columns: Union[bool, None] = None,
     ):
         """
         Exports the trace to the file location specified by self.savename.
@@ -522,7 +552,7 @@ class TraceContainer:
         """
         savename = self.get_savename(dir_to_join=dir_to_join)
         if not savename.endswith(".txt"):
-            savename += ".txt"
+            savename = ".".join(savename.split(".")[:-1] + ["txt"])
 
         with open(savename, "w") as f:
             f.write(self.get_export_txt(keep_nan_columns=keep_nan_columns))
@@ -640,12 +670,12 @@ class DataContainer:
             return self.videos[self.currName]
 
     def load_video_data(
-        self,
-        path: str,
-        name: str,
-        donor_is_left: bool = True,
-        donor_is_first: bool = True,
-        bg_correction: bool = False,
+            self,
+            path: str,
+            name: str,
+            donor_is_left: bool = True,
+            donor_is_first: bool = True,
+            bg_correction: bool = False,
     ):
         """
         Loads video and extracts all parameters depending on the number of
@@ -761,8 +791,8 @@ class DataContainer:
                 # Crop 2% of sides to avoid messing up background detection
                 crop_h = int(h // 50)
                 crop_w = int(w // 50)
-                c.raw = c.raw[:, crop_h : h - crop_h, crop_w : w - crop_w]
-                c.mean = c.raw[0 : t // 20, :, :].mean(axis=0)
+                c.raw = c.raw[:, crop_h: h - crop_h, crop_w: w - crop_w]
+                c.mean = c.raw[0: t // 20, :, :].mean(axis=0)
                 c.mean = lib.imgdata.zero_one_scale(c.mean)
                 if bg_correction:
                     c.mean_nobg = lib.imgdata.subtract_background(
@@ -791,8 +821,8 @@ class DataContainer:
 
         # Old Fiji format
         if (
-            len(meta_dict) == 10
-            and meta_dict["ImageWidth"] == meta_dict["ImageLength"]
+                len(meta_dict) == 10
+                and meta_dict["ImageWidth"] == meta_dict["ImageLength"]
         ):
             detected = True
 

@@ -3,7 +3,7 @@ Date: 2020-02-22, 14:08
 Movie filename: None
 
 FRET pair #0
-Donor bleaches at: 57 - Acceptor bleaches at: 57
+Bleaches at 57
 
 D-Dexc-bg	A-Dexc-bg	D-Dexc-rw	A-Dexc-rw	E
 0.0	0.0	-0.0043	0.2793	1.0156

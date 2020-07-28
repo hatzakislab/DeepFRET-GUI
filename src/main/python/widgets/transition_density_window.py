@@ -144,7 +144,7 @@ class TransitionDensityWindow(BaseWindow):
                 {
                     "e_before": self.data.tdpData.state_before,
                     "e_after": self.data.tdpData.state_after,
-                    "lifetime": self.data.tdpData.state_after,
+                    "lifetime": self.data.tdpData.state_lifetime,
                 }
             )
 
@@ -312,6 +312,7 @@ class TransitionDensityWindow(BaseWindow):
                     bins=bins,
                     color=self.colors[k],
                     density=False,
+                    label="N: {}".format(len(cluster)),
                 )
                 self.hist_axes[k].set_xlim(0, max(bins))
                 self.hist_axes[k].set_ylim(0, max(histy) * 1.1)

@@ -331,8 +331,7 @@ class TraceWindow(BaseWindow):
 
             trace.calculate_transitions()
 
-        if self.windows["TransitionDensityWindow"].isVisible():
-            self.windows["TransitionDensityWindow"].refreshPlot()
+        self.windows["TransitionDensityWindow"].refreshPlot()
 
     @staticmethod
     def setClassifications(trace, yi_pred):

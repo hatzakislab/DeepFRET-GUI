@@ -94,7 +94,7 @@ The following shortcuts can be used to navigate the different windows, also foun
 Only works if a Hidden Markov Model has been fit to the traces
 - Set the number of clusters (transitions) per half of the TDP plot to extract lifetimes for each transition. 
 The number of clusters per half is typically equal to the number of states.
-- N.B. In order to see wider distributions, change the Preferences to Idealize traces individually. (requires restart)
+- N.B. In order to see wider distributions, change the Preferences to Idealize traces individually. (will only apply to new traces, so might require restart.)
 
 ## Trace Simulator Window
 - Choose the parameters with which to simulate traces and press the `Refresh` button. 

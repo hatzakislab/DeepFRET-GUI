@@ -222,7 +222,7 @@ def fit_gaussian_mixture(
         min(min_n_components, max_n_components),
         max(min_n_components, max_n_components) + 1,
     )
-    cv_types = ["spherical", "tied", "diag", "full"]
+    cv_types = ["full"]
 
     for cv_type in cv_types:
         for n_components in n_components_range:

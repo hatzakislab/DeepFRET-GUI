@@ -135,10 +135,10 @@ class Ui_Preferences(object):
         self.radioButton_hmm_fitDD.setObjectName("radioButton_hmm_fitDD")
         self.gridLayout_4.addWidget(self.radioButton_hmm_fitDD, 1, 0, 1, 1)
         self.doubleSpinBox_hmm_BIC = QtWidgets.QDoubleSpinBox(self.hmmGroup)
-        self.doubleSpinBox_hmm_BIC.setMinimum(0.5)
+        self.doubleSpinBox_hmm_BIC.setMinimum(0.0)
         self.doubleSpinBox_hmm_BIC.setMaximum(5.0)
-        self.doubleSpinBox_hmm_BIC.setSingleStep(0.5)
-        self.doubleSpinBox_hmm_BIC.setProperty("value", 2.0)
+        self.doubleSpinBox_hmm_BIC.setSingleStep(0.05)
+        self.doubleSpinBox_hmm_BIC.setProperty("value", 0.5)
         self.doubleSpinBox_hmm_BIC.setObjectName("doubleSpinBox_hmm_BIC")
         self.gridLayout_4.addWidget(self.doubleSpinBox_hmm_BIC, 5, 0, 1, 1)
         spacerItem = QtWidgets.QSpacerItem(

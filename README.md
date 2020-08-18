@@ -84,7 +84,7 @@ The following shortcuts can be used to navigate the different windows, also foun
 - To load traces, use the shortcut `File > Open Files` or the hotkey `⌘O`.
 - To use the DeepFRET Deep Learning trace selection model, use the options in `Analyze > Predict` to predict trace types for selected or all traces.
 - To fit a Hidden Markov Model to all traces, highlight all traces with `Edit > Select All` or `⌘E` and analyze by `Analyze > Fit Hidden Markov To Selected`.
-- Hidden Markov Model advanced settings can be tuned in `Preferences > HMM settings`. Options allow to fit each trace individually or all traces globally, to use either EFRET or DD/DA intensities for HMM fitting, and set a BIC strictness parameter to change the sensitivity of the Hidden Markov Model. (NB. Lower BIC strictness, individual trace fitting and EFRET fitting will all be more prone to pick up noise as transitions).
+- Hidden Markov Model advanced settings can be tuned in `Preferences > HMM settings`. Options allow to fit each trace individually or all traces globally, to use either EFRET or DD/DA intensities for HMM fitting, and set a BIC strictness parameter to change the sensitivity of the Hidden Markov Model. (NB. Lower BIC strictness, individual trace fitting and EFRET fitting will be more prone to pick up noise as transitions).
 - Traces can be exported as `.txt` files for further analysis.
 
 ## Histogram Window 

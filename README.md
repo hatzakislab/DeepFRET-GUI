@@ -84,13 +84,13 @@ The following shortcuts can be used to navigate the different windows, also foun
 - To load traces, use the shortcut `File > Open Files` or the hotkey `⌘O`.
 - To use the DeepFRET Deep Learning trace selection model, use the options in `Analyze > Predict` to predict trace types for selected or all traces.
 - To fit a Hidden Markov Model to all traces, highlight all traces with `Edit > Select All` or `⌘E` and analyze by `Analyze > Fit Hidden Markov To Selected`.
-- Hidden Markov Model advanced settings are found in `Preferences > HMM settings`. DeepFRET provides options to fit each trace individually or all traces globally, to use either EFRET or DD/DA intensities for HMM fitting, and set a BIC strictness parameter to change the sensitivity (number of states) of the Hidden Markov Model.
+- Hidden Markov Model advanced settings can be tuned in `Preferences > HMM settings`. Options allow to fit each trace individually or all traces globally, to use either EFRET or DD/DA intensities for HMM fitting, and set a BIC strictness parameter to change the sensitivity of the Hidden Markov Model. NB. Lower BIC strictness, individual trace fitting and EFRET fitting will be more prone to pick up noise.
 - Traces can be exported as `.txt` files for further analysis.
 
 ## Histogram Window 
 - View distribution of EFRET and Stoichiometry values for a given number of frames.
 - Fit a Gaussian Mixture by defining the number or press "Auto" to use a BIC-optimized number of Gaussians.
-- Histograms can be exported in `.pdf` format for publication quality figures.
+- Histograms can be exported in `.pdf` format (publication quality).
 
 ## Transition Density Window
 - View Transition Density of transitions in the Hidden Markov Model fit in the Traces Window.
@@ -98,7 +98,7 @@ Only works if a Hidden Markov Model has been fit to the traces.
 - Set the number of clusters (transitions) per half of the TDP plot to extract lifetimes for each transition. 
 The number of clusters per half is typically equal to the number of states.
 - N.B. In order to see wider distributions, change the Preferences to Idealize traces individually. (will only apply to new traces, so might require restart.)
-- Transition Density plots and lifetime distributions can be exported in `.pdf` format for publication quality figures.
+- Transition Density plots and lifetime distributions can be exported in `.pdf` format (publication quality).
 
 ## Trace Simulator Window
 - Choose the parameters with which to simulate traces and press the `Refresh` button. 

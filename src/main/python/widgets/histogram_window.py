@@ -94,7 +94,10 @@ class HistogramWindow(BaseWindow):
                 E, S = self.E_un, self.S_un
 
             if E is not None:
-                df = pd.DataFrame({"E": E, "S": S}).round(4)
+                if np.all(np.isnan(S)): # Exports Non-ALEX data
+                    df = pd.DataFrame({"E": E}).round(4)
+                else:
+                    df = pd.DataFrame({"E": E, "S": S}).round(4) # Exports ALEX data
             else:
                 df = pd.DataFrame({"E": [], "S": []})
 

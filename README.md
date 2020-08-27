@@ -300,7 +300,7 @@ The following have to happen on both macOS and Windows.
 3. Run `pip-sync` to make sure you have the correct versions of all packages.
    See [pip-tools](#requirements-files-and-pip-tools) for details.
 2. Clean up any old `fbs` artifacts with `fbs clean`.
-5. Generate a binary with `fbs freeze`.
+5. Generate a binary with `fbs freeze`. If you get an error about tk/tcl at this point, see https://github.com/hatzakislab/DeepFRET-GUI/issues/12
 6. Generate an installer with `fbs installer`.
 
 The last line should point you to a `target/DeepFRET.dmg` or a

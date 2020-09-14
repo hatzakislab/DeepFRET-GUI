@@ -25,7 +25,7 @@ class BaseWindow(QMainWindow):
     """
 
     # Place here to share state between all windows
-    data = DataContainer()
+    data: DataContainer = DataContainer()
 
     # Every window is tracked globally, so they can all reference each other
     windows = {}
@@ -988,12 +988,18 @@ class PreferencesWindow(QDialog):
             self.ui.checkBox_hmm_local,
             self.ui.checkBox_firstFrameIsDonor,
             self.ui.checkBox_donorLeft,
-            self.ui.checkBox_medianPearsonCorr,
+            self.ui.checkBox_alexEnabled,
         )
 
         self.hmmRadioButtons = (
             self.ui.radioButton_hmm_fitE,
             self.ui.radioButton_hmm_fitDD,
+        )
+
+        self.viewSetupRadioButtons = (
+            self.ui.radioButton_dualViewSetup,
+            self.ui.radioButton_quadViewSetup,
+            self.ui.radioButton_interleavedSetup,
         )
 
         if len(self.globalCheckBoxes) != len(gvars.keys_globalCheckBoxes):
@@ -1013,6 +1019,13 @@ class PreferencesWindow(QDialog):
             gvars.keys_globalCheckBoxes, self.globalCheckBoxes
         ):
             self.setConfig(key=key, value=checkBox.isChecked())
+
+        # ViewSetup radio buttons
+        for viewSetup, radioButton in zip(
+            gvars.keys_viewSetups, self.viewSetupRadioButtons
+        ):
+            if radioButton.isChecked():
+                self.setConfig(key=gvars.key_viewSetup, value=viewSetup)
 
         # HMM radio buttons
         for hmmMode, radioButton in zip(
@@ -1039,6 +1052,36 @@ class PreferencesWindow(QDialog):
             value=self.ui.doubleSpinBox_hmm_BIC.value(),
         )
 
+        alex = self.ui.checkBox_alexEnabled.isChecked()
+        interleaved = self.ui.radioButton_interleavedSetup.isChecked()
+
+        if interleaved:
+            # Disable donor left/right for full-frame
+            self.ui.checkBox_donorLeft.setEnabled(False)
+
+            # If ALEX is enabled we can't be sure what the first frame is because
+            # it's a weird format with four different channels that we keep
+            if alex:
+                self.ui.checkBox_firstFrameIsDonor.setEnabled(False)
+            # otherwise, there's only DD/DA channels and firstFrameIsDonor
+            # makes sense
+            else:
+                self.ui.checkBox_firstFrameIsDonor.setEnabled(True)
+        else:
+            # Enable all controls for dual/quad setup
+            self.ui.checkBox_donorLeft.setEnabled(True)
+            self.ui.checkBox_firstFrameIsDonor.setEnabled(True)
+
+        # for dual/quad without ALEX, disable first-frame because it's all
+        # in one frame
+        if not alex and not interleaved:
+            self.ui.checkBox_firstFrameIsDonor.setEnabled(False)
+        else:
+            self.ui.checkBox_firstFrameIsDonor.setEnabled(True)
+
+        self.ui.checkBox_donorLeft.repaint()
+        self.ui.checkBox_firstFrameIsDonor.repaint()
+
     def connectUi(self):
         """
         Connect widgets to config write functions
@@ -1049,8 +1092,9 @@ class PreferencesWindow(QDialog):
         ):
             checkBox.clicked.connect(self.writeUiToConfig)
 
-        # TODO: add that changing the hmmLocal checkbox should change the parameters for all traces
-        #  both existing and new traces
+        # Image setup radio buttons
+        for radioButton in self.viewSetupRadioButtons:
+            radioButton.clicked.connect(self.writeUiToConfig)
 
         # HMM type radio buttons
         for radioButton in self.hmmRadioButtons:
@@ -1077,11 +1121,20 @@ class PreferencesWindow(QDialog):
         """
         self.config.reload()
 
+        # Checkboxes
         for configKey, checkBox in zip(
             gvars.keys_globalCheckBoxes, self.globalCheckBoxes
         ):
             checkBox.setChecked(bool(self.getConfig(configKey)))
 
+        # ViewSetups
+        for radioButton, viewSetup in zip(
+            self.viewSetupRadioButtons, gvars.keys_viewSetups
+        ):
+            if self.getConfig(gvars.key_viewSetup) == viewSetup:
+                radioButton.setChecked(True)
+
+        # HMM radio buttons
         for radioButton, hmmMode in zip(
             self.hmmRadioButtons, gvars.keys_hmmModes
         ):

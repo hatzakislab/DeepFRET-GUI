@@ -11,7 +11,6 @@ class GlobalVariables:
     APPNAME = "DeepFRET"
     AUTHORS = "created by Johannes Thomsen"
     LICENSE = "DeepFRET is free software, distributed under the terms of the MIT open source license"
-    CONFIGNAME = "config.ini"
 
     # Window instance keys
     VideoWindow = "VideoWindow"
@@ -40,11 +39,12 @@ class GlobalVariables:
         "hmmLocal"  # Whether to use global or local hmm, gets passed to traces
     )
 
+    # Image loading setups
     key_firstFrameIsDonor = "firstFrameIsDonor"
     key_donorLeft = "donorLeft"
-    key_medianPearsonCorr = "medianPearsonCorr"
-    key_lagsPearsonCorr = "lagsPearsonCorr"
+    key_alexEnabled = "alexEnabled"
 
+    # Add all checkboxes here to auto-load
     keys_globalCheckBoxes = (
         key_batchLoadingMode,
         key_unColocRed,
@@ -53,7 +53,18 @@ class GlobalVariables:
         key_hmmLocal,
         key_firstFrameIsDonor,
         key_donorLeft,
-        key_medianPearsonCorr,
+        key_alexEnabled,
+    )
+
+    key_viewSetup = "viewSetup"
+    key_viewSetupDual = "dual"
+    key_viewSetupQuad = "quad"
+    key_viewsetupInterleaved = "interleaved"
+
+    keys_viewSetups = (
+        key_viewSetupDual,
+        key_viewSetupQuad,
+        key_viewsetupInterleaved,
     )
 
     key_hmmMode = "hmmMode"

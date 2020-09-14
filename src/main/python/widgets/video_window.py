@@ -129,7 +129,7 @@ class VideoWindow(BaseWindow):
         tracename = self.currName + "_" + str(n)
         if tracename not in self.data.traces:
             self.data.traces[tracename] = TraceContainer(
-                filename=tracename, video=self.currName, n=n
+                filename=tracename, video=self.currName, n=n,
             )
         return self.data.traces[tracename]
 
@@ -175,6 +175,8 @@ class VideoWindow(BaseWindow):
                     self.data.load_video_data(
                         path=full_filename,
                         name=uniqueName,
+                        alex=self.getConfig(gvars.key_alexEnabled),
+                        view_setup=self.getConfig(gvars.key_viewSetup),
                         donor_is_first=self.donor_first,
                         donor_is_left=self.donor_is_left,
                         bg_correction=self.bg_correction,
@@ -234,6 +236,8 @@ class VideoWindow(BaseWindow):
                 self.data.load_video_data(
                     path=full_filename,
                     name=os.path.basename(full_filename),
+                    view_setup=self.getConfig(gvars.key_viewSetup),
+                    alex=self.getConfig(gvars.key_alexEnabled),
                     donor_is_first=self.donor_first,
                     donor_is_left=self.donor_is_left,
                     bg_correction=self.bg_correction,
@@ -432,19 +436,25 @@ class VideoWindow(BaseWindow):
                     vid.red.raw, *masks_red, raw=True
                 )
 
+                trace.frames = np.arange(1, len(trace.grn.int) + 1)
+                trace.frames_max = max(trace.frames)
+
+                (
+                    trace.acc.int,
+                    trace.acc.bg,
+                ) = lib.imgdata.tiff_stack_intensity(
+                    vid.acc.raw, *masks_red, raw=True
+                )
+
                 # Acceptor (if FRET)
-                if vid.acc.exists:
-                    (
-                        trace.acc.int,
-                        trace.acc.bg,
-                    ) = lib.imgdata.tiff_stack_intensity(
-                        vid.acc.raw, *masks_red, raw=True
-                    )
+                if vid.alex:
                     trace.fret = lib.math.calc_E(trace.get_intensities())
                     trace.stoi = lib.math.calc_S(trace.get_intensities())
-
-                trace.frames = np.arange(1, len(trace.red.int) + 1)
-                trace.frames_max = max(trace.frames)
+                else:
+                    # If not ALEX, discard previous vid.red data
+                    nanvals = np.zeros(trace.frames_max) * np.nan
+                    trace.red.int = nanvals
+                    trace.red.bg = nanvals
 
     def getTracesAllVideos(self):
         """

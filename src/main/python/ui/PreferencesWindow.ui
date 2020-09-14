@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>491</width>
-    <height>773</height>
+    <height>837</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -71,62 +71,10 @@
         </property>
        </widget>
       </item>
-      <item row="13" column="0">
-       <widget class="QCheckBox" name="checkBox_medianPearsonCorr">
-        <property name="text">
-         <string>Use Median Trace Length for plotting Pearson Correlations (std. 30)</string>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="0">
-       <widget class="QLabel" name="label_4">
-        <property name="font">
-         <font>
-          <pointsize>11</pointsize>
-         </font>
-        </property>
-        <property name="text">
-         <string>      Disables interactivity to avoid consuming memory</string>
-        </property>
-       </widget>
-      </item>
-      <item row="11" column="0">
-       <widget class="QCheckBox" name="checkBox_fitSpots">
-        <property name="text">
-         <string>Detect spots using Laplacian of Gaussian fitting</string>
-        </property>
-       </widget>
-      </item>
-      <item row="10" column="0">
-       <widget class="QLabel" name="label_2">
-        <property name="font">
-         <font>
-          <pointsize>11</pointsize>
-         </font>
-        </property>
-        <property name="text">
-         <string>      Improves spot detection but may increase video loading time</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="0">
-       <widget class="QCheckBox" name="checkBox_batchLoadingMode">
-        <property name="text">
-         <string>Batch loading mode</string>
-        </property>
-       </widget>
-      </item>
       <item row="9" column="0">
        <widget class="QCheckBox" name="checkBox_illuCorrect">
         <property name="text">
          <string>Correct for illumination background</string>
-        </property>
-       </widget>
-      </item>
-      <item row="7" column="0">
-       <widget class="QCheckBox" name="checkBox_unColocRed">
-        <property name="text">
-         <string>Detect uncolocalized red</string>
         </property>
        </widget>
       </item>
@@ -142,15 +90,48 @@
         </property>
        </widget>
       </item>
-      <item row="14" column="0">
-       <widget class="QLabel" name="label_3">
+      <item row="10" column="0">
+       <widget class="QLabel" name="label_2">
         <property name="font">
          <font>
           <pointsize>11</pointsize>
          </font>
         </property>
         <property name="text">
-         <string>     Makes Histogram Window load slower</string>
+         <string>      Improves spot detection but may increase video loading time</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="label_4">
+        <property name="font">
+         <font>
+          <pointsize>11</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>      Disables interactivity to avoid consuming memory</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QCheckBox" name="checkBox_batchLoadingMode">
+        <property name="text">
+         <string>Batch loading mode</string>
+        </property>
+       </widget>
+      </item>
+      <item row="7" column="0">
+       <widget class="QCheckBox" name="checkBox_unColocRed">
+        <property name="text">
+         <string>Detect uncolocalized red</string>
+        </property>
+       </widget>
+      </item>
+      <item row="11" column="0">
+       <widget class="QCheckBox" name="checkBox_fitSpots">
+        <property name="text">
+         <string>Detect spots using Laplacian of Gaussian fitting</string>
         </property>
        </widget>
       </item>
@@ -181,7 +162,31 @@
       <property name="topMargin">
        <number>12</number>
       </property>
+      <item row="8" column="0">
+       <widget class="QCheckBox" name="checkBox_firstFrameIsDonor">
+        <property name="text">
+         <string>First frame is donor excitation</string>
+        </property>
+       </widget>
+      </item>
       <item row="2" column="0">
+       <widget class="QRadioButton" name="radioButton_quadViewSetup">
+        <property name="text">
+         <string>Quad view setup</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QRadioButton" name="radioButton_dualViewSetup">
+        <property name="text">
+         <string>Dual view setup</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="0">
        <widget class="QLabel" name="label_7">
         <property name="font">
          <font>
@@ -189,21 +194,55 @@
          </font>
         </property>
         <property name="text">
-         <string>      Assuming left/right chip allocation</string>
+         <string>      Assuming left/right chip allocation. For quad view, empty row is ignored</string>
         </property>
        </widget>
       </item>
-      <item row="0" column="0">
-       <widget class="QCheckBox" name="checkBox_firstFrameIsDonor">
+      <item row="7" column="0">
+       <widget class="QLabel" name="label_8">
+        <property name="font">
+         <font>
+          <pointsize>11</pointsize>
+         </font>
+        </property>
         <property name="text">
-         <string>First frame is donor excitation</string>
+         <string>      Every second frame is acceptor-only excitation</string>
         </property>
        </widget>
       </item>
-      <item row="1" column="0">
+      <item row="9" column="0">
+       <widget class="QLabel" name="label_9">
+        <property name="font">
+         <font>
+          <pointsize>11</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>      Ignored if not using ALEX</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
        <widget class="QCheckBox" name="checkBox_donorLeft">
         <property name="text">
          <string>Donor is left side</string>
+        </property>
+       </widget>
+      </item>
+      <item row="6" column="0">
+       <widget class="QCheckBox" name="checkBox_alexEnabled">
+        <property name="text">
+         <string>ALEX-enabled</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QRadioButton" name="radioButton_interleavedSetup">
+        <property name="text">
+         <string>Interleaved full-frame setup</string>
+        </property>
+        <property name="checked">
+         <bool>false</bool>
         </property>
        </widget>
       </item>
@@ -219,37 +258,14 @@
       <item row="0" column="0">
        <widget class="QRadioButton" name="radioButton_hmm_fitE">
         <property name="text">
-         <string>E_FRET Fitting</string>
+         <string>E-FRET Fitting</string>
         </property>
         <property name="checked">
          <bool>true</bool>
         </property>
        </widget>
       </item>
-      <item row="1" column="0">
-       <widget class="QRadioButton" name="radioButton_hmm_fitDD">
-        <property name="text">
-         <string>DD/DA Fitting</string>
-        </property>
-       </widget>
-      </item>
-      <item row="5" column="0">
-       <widget class="QDoubleSpinBox" name="doubleSpinBox_hmm_BIC">
-        <property name="minimum">
-         <double>0.500000000000000</double>
-        </property>
-        <property name="maximum">
-         <double>5.000000000000000</double>
-        </property>
-        <property name="singleStep">
-         <double>0.500000000000000</double>
-        </property>
-        <property name="value">
-         <double>2.000000000000000</double>
-        </property>
-       </widget>
-      </item>
-      <item row="5" column="1">
+      <item row="4" column="1">
        <spacer name="horizontalSpacer_2">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
@@ -263,20 +279,6 @@
        </spacer>
       </item>
       <item row="6" column="0">
-       <widget class="QCheckBox" name="checkBox_hmm_local">
-        <property name="text">
-         <string>Idealize HMM for each trace individually (Advanced)</string>
-        </property>
-       </widget>
-      </item>
-      <item row="4" column="0">
-       <widget class="QLabel" name="label_hmm_bic">
-        <property name="text">
-         <string>BIC Strictness (raise this to detect fewer states)</string>
-        </property>
-       </widget>
-      </item>
-      <item row="7" column="0">
        <widget class="QLabel" name="label_hmm_checkbox">
         <property name="font">
          <font>
@@ -286,6 +288,43 @@
         <property name="text">
          <string>     N.B. This compromises the statistical assumptions of the Hidden Markov Model 
     and could lead to bad results! Try with more states instead!</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QRadioButton" name="radioButton_hmm_fitDD">
+        <property name="text">
+         <string>DD/DA Fitting</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="0">
+       <widget class="QCheckBox" name="checkBox_hmm_local">
+        <property name="text">
+         <string>Idealize HMM for each trace individually (Advanced)</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="label_hmm_bic">
+        <property name="text">
+         <string>BIC Strictness (raise this to detect fewer states)</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QDoubleSpinBox" name="doubleSpinBox_hmm_BIC">
+        <property name="minimum">
+         <double>0.500000000000000</double>
+        </property>
+        <property name="maximum">
+         <double>5.000000000000000</double>
+        </property>
+        <property name="singleStep">
+         <double>0.500000000000000</double>
+        </property>
+        <property name="value">
+         <double>2.000000000000000</double>
         </property>
        </widget>
       </item>
@@ -397,9 +436,7 @@
   <tabstop>checkBox_unColocRed</tabstop>
   <tabstop>checkBox_illuCorrect</tabstop>
   <tabstop>checkBox_fitSpots</tabstop>
-  <tabstop>checkBox_medianPearsonCorr</tabstop>
   <tabstop>checkBox_firstFrameIsDonor</tabstop>
-  <tabstop>checkBox_donorLeft</tabstop>
   <tabstop>radioButton_hmm_fitE</tabstop>
   <tabstop>radioButton_hmm_fitDD</tabstop>
   <tabstop>doubleSpinBox_hmm_BIC</tabstop>

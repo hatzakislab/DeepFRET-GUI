@@ -13,7 +13,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_Preferences(object):
     def setupUi(self, Preferences):
         Preferences.setObjectName("Preferences")
-        Preferences.resize(491, 773)
+        Preferences.resize(491, 837)
         sizePolicy = QtWidgets.QSizePolicy(
             QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred
         )
@@ -48,51 +48,38 @@ class Ui_Preferences(object):
         self.label.setFont(font)
         self.label.setObjectName("label")
         self.gridLayout_2.addWidget(self.label, 8, 0, 1, 1)
-        self.checkBox_medianPearsonCorr = QtWidgets.QCheckBox(self.generalGroup)
-        self.checkBox_medianPearsonCorr.setObjectName(
-            "checkBox_medianPearsonCorr"
-        )
-        self.gridLayout_2.addWidget(
-            self.checkBox_medianPearsonCorr, 13, 0, 1, 1
-        )
-        self.label_4 = QtWidgets.QLabel(self.generalGroup)
-        font = QtGui.QFont()
-        font.setPointSize(11)
-        self.label_4.setFont(font)
-        self.label_4.setObjectName("label_4")
-        self.gridLayout_2.addWidget(self.label_4, 3, 0, 1, 1)
-        self.checkBox_fitSpots = QtWidgets.QCheckBox(self.generalGroup)
-        self.checkBox_fitSpots.setObjectName("checkBox_fitSpots")
-        self.gridLayout_2.addWidget(self.checkBox_fitSpots, 11, 0, 1, 1)
-        self.label_2 = QtWidgets.QLabel(self.generalGroup)
-        font = QtGui.QFont()
-        font.setPointSize(11)
-        self.label_2.setFont(font)
-        self.label_2.setObjectName("label_2")
-        self.gridLayout_2.addWidget(self.label_2, 10, 0, 1, 1)
-        self.checkBox_batchLoadingMode = QtWidgets.QCheckBox(self.generalGroup)
-        self.checkBox_batchLoadingMode.setObjectName(
-            "checkBox_batchLoadingMode"
-        )
-        self.gridLayout_2.addWidget(self.checkBox_batchLoadingMode, 1, 0, 1, 1)
         self.checkBox_illuCorrect = QtWidgets.QCheckBox(self.generalGroup)
         self.checkBox_illuCorrect.setObjectName("checkBox_illuCorrect")
         self.gridLayout_2.addWidget(self.checkBox_illuCorrect, 9, 0, 1, 1)
-        self.checkBox_unColocRed = QtWidgets.QCheckBox(self.generalGroup)
-        self.checkBox_unColocRed.setObjectName("checkBox_unColocRed")
-        self.gridLayout_2.addWidget(self.checkBox_unColocRed, 7, 0, 1, 1)
         self.label_5 = QtWidgets.QLabel(self.generalGroup)
         font = QtGui.QFont()
         font.setPointSize(11)
         self.label_5.setFont(font)
         self.label_5.setObjectName("label_5")
         self.gridLayout_2.addWidget(self.label_5, 12, 0, 1, 1)
-        self.label_3 = QtWidgets.QLabel(self.generalGroup)
+        self.label_2 = QtWidgets.QLabel(self.generalGroup)
         font = QtGui.QFont()
         font.setPointSize(11)
-        self.label_3.setFont(font)
-        self.label_3.setObjectName("label_3")
-        self.gridLayout_2.addWidget(self.label_3, 14, 0, 1, 1)
+        self.label_2.setFont(font)
+        self.label_2.setObjectName("label_2")
+        self.gridLayout_2.addWidget(self.label_2, 10, 0, 1, 1)
+        self.label_4 = QtWidgets.QLabel(self.generalGroup)
+        font = QtGui.QFont()
+        font.setPointSize(11)
+        self.label_4.setFont(font)
+        self.label_4.setObjectName("label_4")
+        self.gridLayout_2.addWidget(self.label_4, 3, 0, 1, 1)
+        self.checkBox_batchLoadingMode = QtWidgets.QCheckBox(self.generalGroup)
+        self.checkBox_batchLoadingMode.setObjectName(
+            "checkBox_batchLoadingMode"
+        )
+        self.gridLayout_2.addWidget(self.checkBox_batchLoadingMode, 1, 0, 1, 1)
+        self.checkBox_unColocRed = QtWidgets.QCheckBox(self.generalGroup)
+        self.checkBox_unColocRed.setObjectName("checkBox_unColocRed")
+        self.gridLayout_2.addWidget(self.checkBox_unColocRed, 7, 0, 1, 1)
+        self.checkBox_fitSpots = QtWidgets.QCheckBox(self.generalGroup)
+        self.checkBox_fitSpots.setObjectName("checkBox_fitSpots")
+        self.gridLayout_2.addWidget(self.checkBox_fitSpots, 11, 0, 1, 1)
         self.verticalLayout.addWidget(self.generalGroup)
         self.imagingGroup = QtWidgets.QGroupBox(Preferences)
         font = QtGui.QFont()
@@ -108,20 +95,58 @@ class Ui_Preferences(object):
         )
         self.gridLayout.setContentsMargins(-1, 12, -1, -1)
         self.gridLayout.setObjectName("gridLayout")
+        self.checkBox_firstFrameIsDonor = QtWidgets.QCheckBox(self.imagingGroup)
+        self.checkBox_firstFrameIsDonor.setObjectName(
+            "checkBox_firstFrameIsDonor"
+        )
+        self.gridLayout.addWidget(self.checkBox_firstFrameIsDonor, 8, 0, 1, 1)
+        self.radioButton_quadViewSetup = QtWidgets.QRadioButton(
+            self.imagingGroup
+        )
+        self.radioButton_quadViewSetup.setObjectName(
+            "radioButton_quadViewSetup"
+        )
+        self.gridLayout.addWidget(self.radioButton_quadViewSetup, 2, 0, 1, 1)
+        self.radioButton_dualViewSetup = QtWidgets.QRadioButton(
+            self.imagingGroup
+        )
+        self.radioButton_dualViewSetup.setChecked(True)
+        self.radioButton_dualViewSetup.setObjectName(
+            "radioButton_dualViewSetup"
+        )
+        self.gridLayout.addWidget(self.radioButton_dualViewSetup, 1, 0, 1, 1)
         self.label_7 = QtWidgets.QLabel(self.imagingGroup)
         font = QtGui.QFont()
         font.setPointSize(11)
         self.label_7.setFont(font)
         self.label_7.setObjectName("label_7")
-        self.gridLayout.addWidget(self.label_7, 2, 0, 1, 1)
-        self.checkBox_firstFrameIsDonor = QtWidgets.QCheckBox(self.imagingGroup)
-        self.checkBox_firstFrameIsDonor.setObjectName(
-            "checkBox_firstFrameIsDonor"
-        )
-        self.gridLayout.addWidget(self.checkBox_firstFrameIsDonor, 0, 0, 1, 1)
+        self.gridLayout.addWidget(self.label_7, 5, 0, 1, 1)
+        self.label_8 = QtWidgets.QLabel(self.imagingGroup)
+        font = QtGui.QFont()
+        font.setPointSize(11)
+        self.label_8.setFont(font)
+        self.label_8.setObjectName("label_8")
+        self.gridLayout.addWidget(self.label_8, 7, 0, 1, 1)
+        self.label_9 = QtWidgets.QLabel(self.imagingGroup)
+        font = QtGui.QFont()
+        font.setPointSize(11)
+        self.label_9.setFont(font)
+        self.label_9.setObjectName("label_9")
+        self.gridLayout.addWidget(self.label_9, 9, 0, 1, 1)
         self.checkBox_donorLeft = QtWidgets.QCheckBox(self.imagingGroup)
         self.checkBox_donorLeft.setObjectName("checkBox_donorLeft")
-        self.gridLayout.addWidget(self.checkBox_donorLeft, 1, 0, 1, 1)
+        self.gridLayout.addWidget(self.checkBox_donorLeft, 4, 0, 1, 1)
+        self.checkBox_alexEnabled = QtWidgets.QCheckBox(self.imagingGroup)
+        self.checkBox_alexEnabled.setObjectName("checkBox_alexEnabled")
+        self.gridLayout.addWidget(self.checkBox_alexEnabled, 6, 0, 1, 1)
+        self.radioButton_interleavedSetup = QtWidgets.QRadioButton(
+            self.imagingGroup
+        )
+        self.radioButton_interleavedSetup.setChecked(False)
+        self.radioButton_interleavedSetup.setObjectName(
+            "radioButton_interleavedSetup"
+        )
+        self.gridLayout.addWidget(self.radioButton_interleavedSetup, 3, 0, 1, 1)
         self.verticalLayout.addWidget(self.imagingGroup)
         self.hmmGroup = QtWidgets.QGroupBox(Preferences)
         self.hmmGroup.setObjectName("hmmGroup")
@@ -131,35 +156,35 @@ class Ui_Preferences(object):
         self.radioButton_hmm_fitE.setChecked(True)
         self.radioButton_hmm_fitE.setObjectName("radioButton_hmm_fitE")
         self.gridLayout_4.addWidget(self.radioButton_hmm_fitE, 0, 0, 1, 1)
-        self.radioButton_hmm_fitDD = QtWidgets.QRadioButton(self.hmmGroup)
-        self.radioButton_hmm_fitDD.setObjectName("radioButton_hmm_fitDD")
-        self.gridLayout_4.addWidget(self.radioButton_hmm_fitDD, 1, 0, 1, 1)
-        self.doubleSpinBox_hmm_BIC = QtWidgets.QDoubleSpinBox(self.hmmGroup)
-        self.doubleSpinBox_hmm_BIC.setMinimum(0.0)
-        self.doubleSpinBox_hmm_BIC.setMaximum(5.0)
-        self.doubleSpinBox_hmm_BIC.setSingleStep(0.05)
-        self.doubleSpinBox_hmm_BIC.setProperty("value", 0.5)
-        self.doubleSpinBox_hmm_BIC.setObjectName("doubleSpinBox_hmm_BIC")
-        self.gridLayout_4.addWidget(self.doubleSpinBox_hmm_BIC, 5, 0, 1, 1)
         spacerItem = QtWidgets.QSpacerItem(
             40,
             20,
             QtWidgets.QSizePolicy.Expanding,
             QtWidgets.QSizePolicy.Minimum,
         )
-        self.gridLayout_4.addItem(spacerItem, 5, 1, 1, 1)
-        self.checkBox_hmm_local = QtWidgets.QCheckBox(self.hmmGroup)
-        self.checkBox_hmm_local.setObjectName("checkBox_hmm_local")
-        self.gridLayout_4.addWidget(self.checkBox_hmm_local, 6, 0, 1, 1)
-        self.label_hmm_bic = QtWidgets.QLabel(self.hmmGroup)
-        self.label_hmm_bic.setObjectName("label_hmm_bic")
-        self.gridLayout_4.addWidget(self.label_hmm_bic, 4, 0, 1, 1)
+        self.gridLayout_4.addItem(spacerItem, 4, 1, 1, 1)
         self.label_hmm_checkbox = QtWidgets.QLabel(self.hmmGroup)
         font = QtGui.QFont()
         font.setPointSize(11)
         self.label_hmm_checkbox.setFont(font)
         self.label_hmm_checkbox.setObjectName("label_hmm_checkbox")
-        self.gridLayout_4.addWidget(self.label_hmm_checkbox, 7, 0, 1, 1)
+        self.gridLayout_4.addWidget(self.label_hmm_checkbox, 6, 0, 1, 1)
+        self.radioButton_hmm_fitDD = QtWidgets.QRadioButton(self.hmmGroup)
+        self.radioButton_hmm_fitDD.setObjectName("radioButton_hmm_fitDD")
+        self.gridLayout_4.addWidget(self.radioButton_hmm_fitDD, 1, 0, 1, 1)
+        self.checkBox_hmm_local = QtWidgets.QCheckBox(self.hmmGroup)
+        self.checkBox_hmm_local.setObjectName("checkBox_hmm_local")
+        self.gridLayout_4.addWidget(self.checkBox_hmm_local, 5, 0, 1, 1)
+        self.label_hmm_bic = QtWidgets.QLabel(self.hmmGroup)
+        self.label_hmm_bic.setObjectName("label_hmm_bic")
+        self.gridLayout_4.addWidget(self.label_hmm_bic, 3, 0, 1, 1)
+        self.doubleSpinBox_hmm_BIC = QtWidgets.QDoubleSpinBox(self.hmmGroup)
+        self.doubleSpinBox_hmm_BIC.setMinimum(0.5)
+        self.doubleSpinBox_hmm_BIC.setMaximum(5.0)
+        self.doubleSpinBox_hmm_BIC.setSingleStep(0.5)
+        self.doubleSpinBox_hmm_BIC.setProperty("value", 2.0)
+        self.doubleSpinBox_hmm_BIC.setObjectName("doubleSpinBox_hmm_BIC")
+        self.gridLayout_4.addWidget(self.doubleSpinBox_hmm_BIC, 4, 0, 1, 1)
         self.verticalLayout.addWidget(self.hmmGroup)
         self.groupBox = QtWidgets.QGroupBox(Preferences)
         self.groupBox.setFlat(True)
@@ -226,16 +251,10 @@ class Ui_Preferences(object):
             self.checkBox_illuCorrect, self.checkBox_fitSpots
         )
         Preferences.setTabOrder(
-            self.checkBox_fitSpots, self.checkBox_medianPearsonCorr
+            self.checkBox_fitSpots, self.checkBox_firstFrameIsDonor
         )
         Preferences.setTabOrder(
-            self.checkBox_medianPearsonCorr, self.checkBox_firstFrameIsDonor
-        )
-        Preferences.setTabOrder(
-            self.checkBox_firstFrameIsDonor, self.checkBox_donorLeft
-        )
-        Preferences.setTabOrder(
-            self.checkBox_donorLeft, self.radioButton_hmm_fitE
+            self.checkBox_firstFrameIsDonor, self.radioButton_hmm_fitE
         )
         Preferences.setTabOrder(
             self.radioButton_hmm_fitE, self.radioButton_hmm_fitDD
@@ -257,22 +276,12 @@ class Ui_Preferences(object):
                 "Preferences", "      For determining acceptor bleedthrough"
             )
         )
-        self.checkBox_medianPearsonCorr.setText(
-            _translate(
-                "Preferences",
-                "Use Median Trace Length for plotting Pearson Correlations (std. 30)",
-            )
+        self.checkBox_illuCorrect.setText(
+            _translate("Preferences", "Correct for illumination background")
         )
-        self.label_4.setText(
+        self.label_5.setText(
             _translate(
-                "Preferences",
-                "      Disables interactivity to avoid consuming memory",
-            )
-        )
-        self.checkBox_fitSpots.setText(
-            _translate(
-                "Preferences",
-                "Detect spots using Laplacian of Gaussian fitting",
+                "Preferences", "      Leave off for local maxima detection"
             )
         )
         self.label_2.setText(
@@ -281,40 +290,70 @@ class Ui_Preferences(object):
                 "      Improves spot detection but may increase video loading time",
             )
         )
+        self.label_4.setText(
+            _translate(
+                "Preferences",
+                "      Disables interactivity to avoid consuming memory",
+            )
+        )
         self.checkBox_batchLoadingMode.setText(
             _translate("Preferences", "Batch loading mode")
-        )
-        self.checkBox_illuCorrect.setText(
-            _translate("Preferences", "Correct for illumination background")
         )
         self.checkBox_unColocRed.setText(
             _translate("Preferences", "Detect uncolocalized red")
         )
-        self.label_5.setText(
+        self.checkBox_fitSpots.setText(
             _translate(
-                "Preferences", "      Leave off for local maxima detection"
+                "Preferences",
+                "Detect spots using Laplacian of Gaussian fitting",
             )
-        )
-        self.label_3.setText(
-            _translate("Preferences", "     Makes Histogram Window load slower")
         )
         self.imagingGroup.setTitle(
             _translate("Preferences", "Imaging Setup (restart required!)")
         )
-        self.label_7.setText(
-            _translate(
-                "Preferences", "      Assuming left/right chip allocation"
-            )
-        )
         self.checkBox_firstFrameIsDonor.setText(
             _translate("Preferences", "First frame is donor excitation")
+        )
+        self.radioButton_quadViewSetup.setText(
+            _translate("Preferences", "Quad view setup")
+        )
+        self.radioButton_dualViewSetup.setText(
+            _translate("Preferences", "Dual view setup")
+        )
+        self.label_7.setText(
+            _translate(
+                "Preferences",
+                "      Assuming left/right chip allocation. For quad view, empty row is ignored",
+            )
+        )
+        self.label_8.setText(
+            _translate(
+                "Preferences",
+                "      Every second frame is acceptor-only excitation",
+            )
+        )
+        self.label_9.setText(
+            _translate("Preferences", "      Ignored if not using ALEX")
         )
         self.checkBox_donorLeft.setText(
             _translate("Preferences", "Donor is left side")
         )
+        self.checkBox_alexEnabled.setText(
+            _translate("Preferences", "ALEX-enabled")
+        )
+        self.radioButton_interleavedSetup.setText(
+            _translate("Preferences", "Interleaved full-frame setup")
+        )
         self.hmmGroup.setTitle(_translate("Preferences", "HMM Settings"))
         self.radioButton_hmm_fitE.setText(
-            _translate("Preferences", "E_FRET Fitting")
+            _translate("Preferences", "E-FRET Fitting")
+        )
+        self.label_hmm_checkbox.setText(
+            _translate(
+                "Preferences",
+                "     N.B. This compromises the statistical assumptions of the Hidden Markov Model \n"
+                "    and could lead to bad results! Try with more states instead!",
+            )
         )
         self.radioButton_hmm_fitDD.setText(
             _translate("Preferences", "DD/DA Fitting")
@@ -329,13 +368,6 @@ class Ui_Preferences(object):
             _translate(
                 "Preferences",
                 "BIC Strictness (raise this to detect fewer states)",
-            )
-        )
-        self.label_hmm_checkbox.setText(
-            _translate(
-                "Preferences",
-                "     N.B. This compromises the statistical assumptions of the Hidden Markov Model \n"
-                "    and could lead to bad results! Try with more states instead!",
             )
         )
         self.groupBox.setTitle(

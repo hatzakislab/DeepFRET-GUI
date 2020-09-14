@@ -12,7 +12,7 @@ import itertools
 import pandas as pd
 
 
-def image_quadrants(height, width):
+def quadrant_indices(height, width):
     """
     Returns indices for quadrants of image, given height and width.
     For example, img[top, left] will return the top left quadrant of the image
@@ -34,7 +34,7 @@ def image_quadrants(height, width):
     return top, bottom, left, right
 
 
-def rectangle_quadrants(width):
+def left_right_indices(width):
     """
     Returns indices for left/right side of image, down the middle, given width.
     """
@@ -42,23 +42,6 @@ def rectangle_quadrants(width):
     left = slice(0, m_xi)
     right = slice(m_xi, width)
     return left, right
-
-
-def image_channels(cmax):
-    """
-    Given a video where images from different channels occur in the sequence
-    frame1: c1_1, c2_1, c3_1, c4_1
-    frame2: c1_2, c2_2, c3_2, c4_2
-    frame3: c1_3, c2_3, c3_3, c4_3
-
-    cmax is 4, so the 4 channels can be extracted with the returned slices
-    [0::4], [1::4], [2::4], [3::4]
-
-    Example:
-    c1, c2, c3, c4 = image_channels(cmax = 4)
-    """
-
-    return [slice(c, None, cmax) for c in range(cmax)]
 
 
 def subtract_background(

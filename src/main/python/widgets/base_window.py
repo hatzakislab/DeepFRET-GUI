@@ -1025,9 +1025,6 @@ class PreferencesWindow(QDialog):
             gvars.keys_viewSetups, self.viewSetupRadioButtons
         ):
             if radioButton.isChecked():
-                print(
-                    "set key {} value {}".format(gvars.key_viewSetup, viewSetup)
-                )
                 self.setConfig(key=gvars.key_viewSetup, value=viewSetup)
 
         # HMM radio buttons
@@ -1054,6 +1051,36 @@ class PreferencesWindow(QDialog):
             key=gvars.key_hmmBICStrictness,
             value=self.ui.doubleSpinBox_hmm_BIC.value(),
         )
+
+        alex = self.ui.checkBox_alexEnabled.isChecked()
+        interleaved = self.ui.radioButton_interleavedSetup.isChecked()
+
+        if interleaved:
+            # Disable donor left/right for full-frame
+            self.ui.checkBox_donorLeft.setEnabled(False)
+
+            # If ALEX is enabled we can't be sure what the first frame is because
+            # it's a weird format with four different channels that we keep
+            if alex:
+                self.ui.checkBox_firstFrameIsDonor.setEnabled(False)
+            # otherwise, there's only DD/DA channels and firstFrameIsDonor
+            # makes sense
+            else:
+                self.ui.checkBox_firstFrameIsDonor.setEnabled(True)
+        else:
+            # Enable all controls for dual/quad setup
+            self.ui.checkBox_donorLeft.setEnabled(True)
+            self.ui.checkBox_firstFrameIsDonor.setEnabled(True)
+
+        # for dual/quad without ALEX, disable first-frame because it's all
+        # in one frame
+        if not alex and not interleaved:
+            self.ui.checkBox_firstFrameIsDonor.setEnabled(False)
+        else:
+            self.ui.checkBox_firstFrameIsDonor.setEnabled(True)
+
+        self.ui.checkBox_donorLeft.repaint()
+        self.ui.checkBox_firstFrameIsDonor.repaint()
 
     def connectUi(self):
         """

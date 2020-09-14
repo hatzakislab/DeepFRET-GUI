@@ -9,7 +9,7 @@ import matplotlib.ticker
 import sklearn.neighbors
 import lib.utils
 from widgets.misc import ProgressBar
-from typing import Union, Tuple, List
+from typing import Optional, Union, Tuple, List
 import scipy.signal
 import scipy.signal
 import scipy.optimize
@@ -1418,7 +1418,7 @@ def loglik_double(x: np.ndarray, _lambda_1: float, _lambda_2: float, _k: float):
 
 def fit_and_compare_exp_funcs(
     arr,
-    x0: Union[None, Tuple[float]] = (2.0, 3.0, 0.55),
+    x0: Optional[Tuple[float]] = (2.0, 3.0, 0.55),
     verbose=False,
     meth="l-bfgs-b",
 ):

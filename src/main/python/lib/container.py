@@ -12,7 +12,7 @@ multiprocessing.freeze_support()
 
 from global_variables import GlobalVariables as gvars
 from matplotlib.colors import LinearSegmentedColormap
-from typing import Union, Tuple
+from typing import Union, Tuple, Optional
 import numpy as np
 import pandas as pd
 import skimage.io
@@ -29,13 +29,14 @@ class VideoContainer:
 
     def __init__(self):
         # stores the raw data
-        self.vid = None  # type: Union[None, np.ndarray]
-        self.indices = None  # type: Union[None, np.ndarray]
-        self.width = None  # type: Union[None, int]
-        self.height = None  # type: Union[None, int]
-        self.roi_radius = None  # type: Union[None, int]
-        self.channels = None  # type: Union[None, Tuple[ImageChannel]]
-        self.coloc_frac = None  # type: Union[None, float]
+        self.array = None  # type: Optional[np.ndarray]
+        self.alex = None  # type: Optional[bool]
+        self.indices = None  # type: Optional[np.ndarray]
+        self.width = None  # type: Optional[int]
+        self.height = None  # type: Optional[int]
+        self.roi_radius = None  # type: Optional[int]
+        self.channels = None  # type: Optional[Tuple[ImageChannel]]
+        self.coloc_frac = None  # type: Optional[float]
 
         # Image color channels
         self.grn = ImageChannel("green")
@@ -47,7 +48,7 @@ class VideoContainer:
         self.coloc_all = ColocalizedAll()
 
         # Blended channels
-        self.grn_red_blend = None  # type: Union[None, np.ndarray]
+        self.grn_red_blend = None  # type: Optional[np.ndarray]
 
         # Create a class to store traces and associated information for every
         # image name
@@ -79,11 +80,11 @@ class ImageChannel:
         self.exists = True  # type: bool
         self.cmap = cmap  # type: LinearSegmentedColormap
         self.color = color  # type: str
-        self.raw = None  # type: Union[None, np.ndarray]
-        self.mean = None  # type: Union[None, np.ndarray]
-        self.mean_nobg = None  # type: Union[None, np.ndarray]
-        self.rgba = None  # type: Union[None, np.ndarray]
-        self.spots = None  # type: Union[None, np.ndarray]
+        self.raw = None  # type: Optional[np.ndarray]
+        self.mean = None  # type: Optional[np.ndarray]
+        self.mean_nobg = None  # type: Optional[np.ndarray]
+        self.rgba = None  # type: Optional[np.ndarray]
+        self.spots = None  # type: Optional[np.ndarray]
         self.n_spots = 0  # type: int
 
 
@@ -96,7 +97,7 @@ class ColocalizedParticles:
         self.color1 = color1  # type: str
         self.color2 = color2  # type: str
 
-        self.spots = None  # type: Union[None, pd.DataFrame]
+        self.spots = None  # type: Optional[pd.DataFrame]
         self.n_spots = 0  # type: int
 
 
@@ -106,7 +107,7 @@ class ColocalizedAll:
     """
 
     def __init__(self):
-        self.spots = None  # type: Union[None, pd.DataFrame]
+        self.spots = None  # type: Optional[pd.DataFrame]
         self.n_spots = 0  # type: int
 
 
@@ -117,9 +118,9 @@ class TraceChannel:
 
     def __init__(self, color):
         self.color = color  # type: str
-        self.int = None  # type: Union[None, np.ndarray]
-        self.bg = None  # type: Union[None, np.ndarray]
-        self.bleach = None  # type: Union[None, int]
+        self.int = None  # type: Optional[np.ndarray]
+        self.bg = None  # type: Optional[np.ndarray]
+        self.bleach = None  # type: Optional[int]
 
 
 class TraceContainer:
@@ -153,8 +154,8 @@ class TraceContainer:
         self.video = video  # type: str
         self.n = n  # type: str
 
-        self.tracename = None  # type: Union[None, str]
-        self.savename = None  # type: Union[None, str]
+        self.tracename = None  # type: Optional[str]
+        self.savename = None  # type: Optional[str]
 
         self.load_successful = False
 
@@ -168,36 +169,36 @@ class TraceContainer:
         self.first_bleach = None  # int
         self.zerobg = None  # type: (None, np.ndarray)
 
-        self.fret = None  # type: Union[None, np.ndarray]
-        self.stoi = None  # type: Union[None, np.ndarray]
+        self.fret = None  # type: Optional[np.ndarray]
+        self.stoi = None  # type: Optional[np.ndarray]
 
         # hmm configuration
         self.hmm_idealized_config = (
             hmm_idealized_config
             if hmm_idealized_config is not None
             else "global"
-        )  # type: Union[None, str]
+        )  # type: Optional[str]
         # hmm predictions here
-        self.hmm = None  # type: Union[None, np.ndarray]
-        self.hmm_idx = None  # type: Union[None, np.ndarray]
-        self.hmm_state = None  # type: Union[None, np.ndarray]
+        self.hmm = None  # type: Optional[np.ndarray]
+        self.hmm_idx = None  # type: Optional[np.ndarray]
+        self.hmm_state = None  # type: Optional[np.ndarray]
         # detailed hmm data here
-        self.hmm_local_raw = None  # type: Union[None, np.ndarray]
-        self.hmm_global_raw = None  # type: Union[None, np.ndarray]
-        self.hmm_local_fret = None  # type: Union[None, np.ndarray]
-        self.hmm_global_fret = None  # type: Union[None, np.ndarray]
-        self.transitions = None  # type: Union[None, pd.DataFrame]
+        self.hmm_local_raw = None  # type: Optional[np.ndarray]
+        self.hmm_global_raw = None  # type: Optional[np.ndarray]
+        self.hmm_local_fret = None  # type: Optional[np.ndarray]
+        self.hmm_global_fret = None  # type: Optional[np.ndarray]
+        self.transitions = None  # type: Optional[pd.DataFrame]
 
         # deep learning data here
-        self.y_pred = None  # type: Union[None, np.ndarray]
-        self.y_class = None  # type: Union[None, np.ndarray]
-        self.confidence = None  # type: Union[None, float]
+        self.y_pred = None  # type: Optional[np.ndarray]
+        self.y_class = None  # type: Optional[np.ndarray]
+        self.confidence = None  # type: Optional[float]
 
         self.a_factor = np.nan  # type: float
         self.d_factor = np.nan  # type: float
-        self.frames = None  # type: Union[None, int]
-        self.frames_max = None  # type: Union[None, int]
-        self.framerate = None  # type: Union[None, float]
+        self.frames = None  # type: Optional[int]
+        self.frames_max = None  # type: Optional[int]
+        self.framerate = None  # type: Optional[float]
 
         self.channels = self.grn, self.red, self.acc
         # file loading
@@ -404,12 +405,12 @@ class TraceContainer:
         """
         Convenience function to return trace get_intensities
         """
-        grn_int = self.grn.int  # type: Union[None, np.ndarray]
-        grn_bg = self.grn.bg  # type: Union[None, np.ndarray]
-        acc_int = self.acc.int  # type: Union[None, np.ndarray]
-        acc_bg = self.acc.bg  # type: Union[None, np.ndarray]
-        red_int = self.red.int  # type: Union[None, np.ndarray]
-        red_bg = self.red.bg  # type: Union[None, np.ndarray]
+        grn_int = self.grn.int  # type: Optional[np.ndarray]
+        grn_bg = self.grn.bg  # type: Optional[np.ndarray]
+        acc_int = self.acc.int  # type: Optional[np.ndarray]
+        acc_bg = self.acc.bg  # type: Optional[np.ndarray]
+        red_int = self.red.int  # type: Optional[np.ndarray]
+        red_bg = self.red.bg  # type: Optional[np.ndarray]
 
         return grn_int, grn_bg, acc_int, acc_bg, red_int, red_bg
 
@@ -417,9 +418,9 @@ class TraceContainer:
         """
         Convenience function to return trace bleaching times
         """
-        grn_bleach = self.grn.bleach  # type: Union[None, int]
-        acc_bleach = self.acc.bleach  # type: Union[None, int]
-        red_bleach = self.red.bleach  # type: Union[None, int]
+        grn_bleach = self.grn.bleach  # type: Optional[int]
+        acc_bleach = self.acc.bleach  # type: Optional[int]
+        red_bleach = self.red.bleach  # type: Optional[int]
         return grn_bleach, acc_bleach, red_bleach
 
     def set_from_df(self, df):
@@ -475,9 +476,9 @@ class TraceContainer:
 
     def get_export_txt(
         self,
-        df: Union[None, pd.DataFrame] = None,
-        exp_txt: Union[None, str] = None,
-        date_txt: Union[None, str] = None,
+        df: Optional[pd.DataFrame] = None,
+        exp_txt: Optional[str] = None,
+        date_txt: Optional[str] = None,
         keep_nan_columns: Union[bool, None] = None,
     ):
         """
@@ -526,7 +527,7 @@ class TraceContainer:
             )
         return self.tracename
 
-    def get_savename(self, dir_to_join: Union[None, str] = None):
+    def get_savename(self, dir_to_join: Optional[str] = None):
         """
         Returns the name with which the trace should be saved.
         Option for specifying output directory.
@@ -542,7 +543,7 @@ class TraceContainer:
 
     def export_trace_to_txt(
         self,
-        dir_to_join: Union[None, str] = None,
+        dir_to_join: Optional[str] = None,
         keep_nan_columns: Union[bool, None] = None,
     ):
         """
@@ -698,8 +699,7 @@ class DataContainer:
         self.name = name
         self.videos[name] = VideoContainer()
 
-        video = self.videos[name]
-
+        video: VideoContainer = self.videos[name]
         video.traces = {}
 
         # Populate metadata
@@ -749,12 +749,9 @@ class DataContainer:
                 # Acceptor (Dexc-Aem)
                 video.acc.raw = video.array[_1::2, ...]
 
-        elif view_setup in (gvars.key_viewSetupDual, gvars.key_viewSetupQuad):
+        else:
             # Remove upper/lower half of quad
-            if (
-                view_setup == gvars.key_viewSetupQuad
-                and video.height == video.width
-            ):
+            if view_setup == gvars.key_viewSetupQuad:
                 top, btm, lft, rgt = lib.imgdata.quadrant_indices(
                     height=video.height, width=video.width
                 )
@@ -764,10 +761,11 @@ class DataContainer:
                     video.array[:, idx, ...].mean(axis=(0, 1, 2))
                     for idx in (top, btm)
                 ]
-                if top_mean > btm_mean:
-                    video.array = video.array[:, top, ...]
-                else:
-                    video.array = video.array[:, btm, ...]
+                video.array = (
+                    video.array[:, top]
+                    if top_mean > btm_mean
+                    else video.array[:, btm]
+                )
 
             # Do this for either dual/quad after preprocessing
             lft, rgt = lib.imgdata.left_right_indices(width=video.width)
@@ -788,17 +786,13 @@ class DataContainer:
 
             # Ignore D/A order and assume no channels
             else:
-                video.array = np.squeeze(video.array)
-
                 # Donor (Dexc-Dem)
-                video.grn.raw = video.array[..., lft]
+                video.grn.raw = video.array[:, :, lft]
 
                 # Acceptor (Dexc-Aem)
-                video.acc.raw = video.array[..., rgt]
+                video.acc.raw = video.array[:, :, rgt]
 
-        video.channels = video.grn, video.red
-
-        for c in video.channels + (video.acc,):
+        for c in video.grn, video.red, video.acc:
             if c.raw is not None:
                 c.raw = np.abs(c.raw)
                 t, h, w = c.raw.shape
@@ -816,7 +810,9 @@ class DataContainer:
                 else:
                     c.mean_nobg = c.mean
 
-        if video.red.exists:
-            video.indices = np.indices(video.red.mean.shape)
-        else:
-            video.indices = np.indices(video.grn.mean.shape)
+        video.alex = alex
+        if not alex:
+            video.red = video.acc
+
+        video.channels = video.grn, video.red
+        video.indices = np.indices(video.grn.mean.shape)

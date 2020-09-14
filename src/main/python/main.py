@@ -70,16 +70,16 @@ class AppContext(ApplicationContext):
             self.get_resource("FRET_3C_keras_model.h5")
         )  # type: Model
 
-        userConfigFile = self._create_userConfig()
+        userConfigFile = self.getUserConfigFile()
 
         self.config = ConfigObj(str(userConfigFile))
 
-    def _create_userConfig(self):
+    def getUserConfigFile(self):
         """
         Creates a configuration file in `$XDG_CONFIG_HOME/DeepFRET/config.ini` (or
-        similar) if no exists. Then populates it with the default values.
+        similar) if no exists. Then populates it with the default values fetched
+        from the default_config.ini in the executable/source.
         """
-
         userConfigDir = Path(user_config_dir(gvars.APPNAME, gvars.APPNAME))
         userConfigFile = userConfigDir.joinpath("config.ini")
 
@@ -87,7 +87,7 @@ class AppContext(ApplicationContext):
             userConfigDir.mkdir(parents=True, exist_ok=True)
             userConfigFile.touch(exist_ok=False)
 
-            tempConfig = ConfigObj(self.get_resource("config.ini"))
+            tempConfig = ConfigObj(self.get_resource("default_config.ini"))
             tempConfig.filename = userConfigFile
             tempConfig.write()
 

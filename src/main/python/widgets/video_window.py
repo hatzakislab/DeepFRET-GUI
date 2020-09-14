@@ -175,6 +175,8 @@ class VideoWindow(BaseWindow):
                     self.data.load_video_data(
                         path=full_filename,
                         name=uniqueName,
+                        alex=self.getConfig(gvars.key_alexEnabled),
+                        view_setup=self.getConfig(gvars.key_viewSetup),
                         donor_is_first=self.donor_first,
                         donor_is_left=self.donor_is_left,
                         bg_correction=self.bg_correction,
@@ -234,6 +236,8 @@ class VideoWindow(BaseWindow):
                 self.data.load_video_data(
                     path=full_filename,
                     name=os.path.basename(full_filename),
+                    view_setup=self.getConfig(gvars.key_viewSetup),
+                    alex=self.getConfig(gvars.key_alexEnabled),
                     donor_is_first=self.donor_first,
                     donor_is_left=self.donor_is_left,
                     bg_correction=self.bg_correction,

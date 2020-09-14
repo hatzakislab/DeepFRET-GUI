@@ -138,13 +138,13 @@ class TraceContainer:
     ]
 
     def __init__(
-            self,
-            filename=None,
-            name=None,
-            video=None,
-            n=None,
-            hmm_idealized_config=None,
-            loaded_from_ascii=False,
+        self,
+        filename=None,
+        name=None,
+        video=None,
+        n=None,
+        hmm_idealized_config=None,
+        loaded_from_ascii=False,
     ):
         self.filename = filename  # type: str
         self.name = (
@@ -474,11 +474,11 @@ class TraceContainer:
         return df
 
     def get_export_txt(
-            self,
-            df: Union[None, pd.DataFrame] = None,
-            exp_txt: Union[None, str] = None,
-            date_txt: Union[None, str] = None,
-            keep_nan_columns: Union[bool, None] = None,
+        self,
+        df: Union[None, pd.DataFrame] = None,
+        exp_txt: Union[None, str] = None,
+        date_txt: Union[None, str] = None,
+        keep_nan_columns: Union[bool, None] = None,
     ):
         """
         Returns the string to use for saving the trace as a txt.
@@ -541,9 +541,9 @@ class TraceContainer:
         return self.savename
 
     def export_trace_to_txt(
-            self,
-            dir_to_join: Union[None, str] = None,
-            keep_nan_columns: Union[bool, None] = None,
+        self,
+        dir_to_join: Union[None, str] = None,
+        keep_nan_columns: Union[bool, None] = None,
     ):
         """
         Exports the trace to the file location specified by self.savename.
@@ -670,12 +670,14 @@ class DataContainer:
             return self.videos[self.currName]
 
     def load_video_data(
-            self,
-            path: str,
-            name: str,
-            donor_is_left: bool = True,
-            donor_is_first: bool = True,
-            bg_correction: bool = False,
+        self,
+        path: str,
+        name: str,
+        view_setup: str,
+        alex: bool,
+        donor_is_left: bool = True,
+        donor_is_first: bool = True,
+        bg_correction: bool = False,
     ):
         """
         Loads video and extracts all parameters depending on the number of
@@ -703,11 +705,9 @@ class DataContainer:
         # Populate metadata
         ext = path.split(".")[-1]
         if ext == "fits":
-            array = astropy.io.fits.open(path, memmap=False)[0].data
+            video.array = astropy.io.fits.open(path, memmap=False)[0].data
         else:
-            array = skimage.io.imread(path)
-
-        video.array = array
+            video.array = skimage.io.imread(path)
 
         # If video channels are not last, make them so:
         if len(video.array.shape) == 4:
@@ -727,30 +727,35 @@ class DataContainer:
         # Scaling factor for ROI
         video.roi_radius = max(video.height, video.width) / 80
 
-        try:
-            # This is an internally used video format, so it gets a special test
-            # not used elsewhere
-            interleaved_dual_cam_video = self.is_interleaved_dual_cam(path)
-            if interleaved_dual_cam_video:
-                c1, c2, c3, _ = lib.imgdata.image_channels(4)
+        # Swap channels
+        _0, _1 = (0, 1) if donor_is_first else (1, 0)
 
-                # Donor (Dexc-Dem)
-                video.grn.raw = video.array[c3, ...]
-
+        if view_setup == gvars.key_viewsetupInterleaved:
+            if alex:
                 # Acceptor (Dexc-Aem)
-                video.acc.raw = video.array[c1, ...]
+                video.acc.raw = video.array[0::4, ...]
 
                 # ALEX (Aexc-Aem)
-                video.red.raw = video.array[c2, ...]
-        except AttributeError:
-            interleaved_dual_cam_video = False
+                video.red.raw = video.array[1::4, ...]
 
-        # Every other video should end up here
-        if not interleaved_dual_cam_video:
-            # If video is quadratic, it was probably recorded by quad view in
-            # the top or bottom row
-            if video.height == video.width:
-                top, btm, lft, rgt = lib.imgdata.image_quadrants(
+                # Donor (Dexc-Dem)
+                video.grn.raw = video.array[2::4, ...]
+
+                # Aexc-Dem [3::4] is ignored because it's ~0
+            else:
+                # Donor (Dexc-Dem)
+                video.grn.raw = video.array[_0::2, ...]
+
+                # Acceptor (Dexc-Aem)
+                video.acc.raw = video.array[_1::2, ...]
+
+        elif view_setup in (gvars.key_viewSetupDual, gvars.key_viewSetupQuad):
+            # Remove upper/lower half of quad
+            if (
+                view_setup == gvars.key_viewSetupQuad
+                and video.height == video.width
+            ):
+                top, btm, lft, rgt = lib.imgdata.quadrant_indices(
                     height=video.height, width=video.width
                 )
                 # Figure out whether intensity is in top or bottom row, and
@@ -764,22 +769,32 @@ class DataContainer:
                 else:
                     video.array = video.array[:, btm, ...]
 
-            lft, rgt = lib.imgdata.rectangle_quadrants(width=video.width)
+            # Do this for either dual/quad after preprocessing
+            lft, rgt = lib.imgdata.left_right_indices(width=video.width)
 
-            _0, _1 = 0, 1
-            if not donor_is_first:
-                _0, _1 = 1, 0
+            # Swap left/right
             if not donor_is_left:
                 lft, rgt = rgt, lft
 
-            # Donor (Dexc-Dem)
-            video.grn.raw = video.array[_0::2, :, lft]
+            if alex:
+                # Donor (Dexc-Dem)
+                video.grn.raw = video.array[_0::2, :, lft]
 
-            # Acceptor (Dexc-Aem)
-            video.acc.raw = video.array[_0::2, :, rgt]
+                # Acceptor (Dexc-Aem)
+                video.acc.raw = video.array[_0::2, :, rgt]
 
-            # ALEX (Aexc-Aem)
-            video.red.raw = video.array[_1::2, :, rgt]
+                # ALEX (Aexc-Aem)
+                video.red.raw = video.array[_1::2, :, rgt]
+
+            # Ignore D/A order and assume no channels
+            else:
+                video.array = np.squeeze(video.array)
+
+                # Donor (Dexc-Dem)
+                video.grn.raw = video.array[..., lft]
+
+                # Acceptor (Dexc-Aem)
+                video.acc.raw = video.array[..., rgt]
 
         video.channels = video.grn, video.red
 
@@ -791,8 +806,8 @@ class DataContainer:
                 # Crop 2% of sides to avoid messing up background detection
                 crop_h = int(h // 50)
                 crop_w = int(w // 50)
-                c.raw = c.raw[:, crop_h: h - crop_h, crop_w: w - crop_w]
-                c.mean = c.raw[0: t // 20, :, :].mean(axis=0)
+                c.raw = c.raw[:, crop_h : h - crop_h, crop_w : w - crop_w]
+                c.mean = c.raw[0 : t // 20, :, :].mean(axis=0)
                 c.mean = lib.imgdata.zero_one_scale(c.mean)
                 if bg_correction:
                     c.mean_nobg = lib.imgdata.subtract_background(
@@ -805,29 +820,3 @@ class DataContainer:
             video.indices = np.indices(video.red.mean.shape)
         else:
             video.indices = np.indices(video.grn.mean.shape)
-
-    @staticmethod
-    def is_interleaved_dual_cam(path):
-        """
-        Detects whether TIFF file is interleaved dual cam video from Hatzakis
-        lab
-        """
-        detected = False
-
-        with PIL.Image.open(path) as img:
-            meta_dict = {
-                PIL.TiffTags.TAGS[key]: img.tag[key] for key in img.tag.keys()
-            }
-
-        # Old Fiji format
-        if (
-                len(meta_dict) == 10
-                and meta_dict["ImageWidth"] == meta_dict["ImageLength"]
-        ):
-            detected = True
-
-        # Newer tifffile.py format
-        elif len(meta_dict) == 16 and meta_dict["Software"][0] == "tifffile.py":
-            detected = True
-
-        return detected

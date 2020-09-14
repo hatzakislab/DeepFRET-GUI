@@ -10,7 +10,7 @@ class SetUp(VideoWindow):
         self.ui.spotsRedSpinBox.setValue(100)
 
     def setFile(self, path, **kwargs):
-        self.data.load_video_data(path=path, name="", **kwargs)
+        self.data.load_video_data(path=path, name="", alex=True, **kwargs)
         self.currName = self.data.currName
 
     def testAlexQuadTIFF(self, **kwargs):

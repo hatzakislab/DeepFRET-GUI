@@ -17,7 +17,6 @@ class HistogramWindow(BaseWindow):
     def __init__(self):
         super().__init__()
         # Histogram data
-        # TODO: these should all be merged to be part of HistogramData container
         self.E = None
         self.E_un = None
         self.S = None
@@ -35,8 +34,8 @@ class HistogramWindow(BaseWindow):
         self.len = None
 
         # Plotting parameters
-        self.marg_bins = np.arange(-0.3, 1.3, 0.02)
-        self.xpts = np.linspace(-0.3, 1.3, 300)
+        self.marg_bins = np.arange(-0.1, 1.1, 0.02)
+        self.xpts = np.linspace(-0.1, 1.1, 300)
 
         self.ui = Ui_HistogramWindow()
         self.ui.setupUi(self)
@@ -94,10 +93,12 @@ class HistogramWindow(BaseWindow):
                 E, S = self.E_un, self.S_un
 
             if E is not None:
-                if np.all(np.isnan(S)): # Exports Non-ALEX data
+                if np.all(np.isnan(S)):  # Exports Non-ALEX data
                     df = pd.DataFrame({"E": E}).round(4)
                 else:
-                    df = pd.DataFrame({"E": E, "S": S}).round(4) # Exports ALEX data
+                    df = pd.DataFrame({"E": E, "S": S}).round(
+                        4
+                    )  # Exports ALEX data
             else:
                 df = pd.DataFrame({"E": [], "S": []})
 
@@ -167,19 +168,6 @@ class HistogramWindow(BaseWindow):
                 spine.set_linewidth(0.5)
             ax.tick_params(axis="both", colors=gvars.color_gui_text, width=0.5)
 
-            # ax.tick_params(
-            #     axis="both",
-            #     which="both",
-            #     bottom=False,
-            #     top=False,
-            #     left=False,
-            #     right=False,
-            #     # labelbottom=False,
-            #     # labeltop=False,
-            #     # labelleft=False,
-            #     # labelright=False,
-            # )
-
     def getHistogramData(self, n_first_frames="spinbox"):
         """
         Returns pooled E and S_app data before bleaching, for each trace.
@@ -194,10 +182,6 @@ class HistogramWindow(BaseWindow):
         else:
             raise ValueError("n_first_frames must be either 'all' or 'spinbox'")
 
-        # TODO: we might use this inline more often, but keep self.attr = None
-        # TODO: in the init, to keep PyCharm inspections
-        # for attr in ("E", "S", "DD", "DA", "corrs", "E_un", "S_un"):
-        #     setattr(self, attr, None)
         self.none_ = (
             None,
             None,
@@ -226,17 +210,6 @@ class HistogramWindow(BaseWindow):
         alpha = self.getConfig(gvars.key_alphaFactor)
         delta = self.getConfig(gvars.key_deltaFactor)
 
-        # self.data.histData.trace_median_len = int(
-        #     np.median(
-        #         [
-        #             trace.first_bleach
-        #             if trace.first_bleach is not None
-        #             else trace.frames_max
-        #             for trace in checkedTraces
-        #         ]
-        #     )
-        # )
-
         DA, DD, E_app, S_app, lengths, corrs = [], [], [], [], [], []
         for trace in checkedTraces:
             E, S = lib.math.drop_bleached_frames(
@@ -253,28 +226,9 @@ class HistogramWindow(BaseWindow):
             DD.append(I_DD[: trace.first_bleach])
             DA.append(I_DA[: trace.first_bleach])
             lengths.append(len(trace.fret[: trace.first_bleach]))
-            # if self.getConfig(gvars.key_medianPearsonCorr):
-            #     n_lags_pcorr = self.data.histData.trace_median_len
-            # else:
-            #     n_lags_pcorr = self.getConfig(gvars.key_lagsPearsonCorr)
-            #
-            # n_lags_pcorr = int(n_lags_pcorr)
-            #
-            # c = lib.math.corrcoef_lags(
-            #     I_DD[: trace.first_bleach],
-            #     I_DA[: trace.first_bleach],
-            #     n_lags=n_lags_pcorr,
-            # )
-            # corrs.append(c)
 
         self.DD = np.concatenate(DD).flatten()
         self.DA = np.concatenate(DA).flatten()
-
-        # self.data.histData.lengths = np.array(lengths)
-        # corrs = np.array(corrs)
-        # if len(corrs.shape) == 1:  # a nested array instead of one big array
-        #     corrs = lib.math.correct_corrs(corrs)
-        # self.corrs = corrs
 
         self.E_un, self.S_un = lib.math.trim_ES(E_app, S_app)
 
@@ -306,29 +260,6 @@ class HistogramWindow(BaseWindow):
         self.alpha = alpha
         self.delta = delta
 
-        # self.updatePooledData()
-
-    # def updatePooledData(self):
-    #     """
-    #     Sets all variables from getHistogramData to be in a HistogramData container.
-    #     This way we can access the data from other windows as well.
-    #     This is only a temporary solution, over time this should be moved to DataContainer and this method should be removed
-    #     """
-    #     self.data.histData.alpha = self.alpha
-    #     self.data.histData.delta = self.delta
-    #     self.data.histData.beta = self.beta
-    #     self.data.histData.gamma = self.gamma
-    #
-    #     (
-    #         self.data.histData.E,
-    #         self.data.histData.S,
-    #         self.data.histData.DD,
-    #         self.data.histData.DA,
-    #         self.data.histData.corrs,
-    #         self.data.histData.E_un,
-    #         self.data.histData.S_un,
-    #     ) = (self.E, self.S, self.DD, self.DA, self.corrs, self.E_un, self.S_un)
-
     def fitGaussians(self, states):
         """
         Fits multiple gaussians to the E data
@@ -350,8 +281,6 @@ class HistogramWindow(BaseWindow):
             self.gauss_params = params
             self.best_k = best_model.n_components
 
-            # self.data.histData.gauss_params = params
-            # self.data.histData.best_k = best_model.n_components
             self.ui.gaussianSpinBox.setValue(self.best_k)
             self.ui.gaussianSpinBox.repaint()
         self.refreshPlot()
@@ -370,39 +299,13 @@ class HistogramWindow(BaseWindow):
             for tk in ax.get_yticklabels():
                 tk.set_visible(False)
 
-        # self.canvas.tr_ax_ctr.yaxis.set_major_formatter(
-        #     lib.utils.format_string_to_k
-        # )
-        # self.canvas.tr_ax_ctr.xaxis.set_major_formatter(
-        #     lib.utils.format_string_to_k
-        # )
-        # self.canvas.br_ax.xaxis.set_major_formatter(
-        #     lib.utils.format_string_to_k
-        # )
-        #
-        # self.canvas.bl_ax_b.axhline(
-        #     0,
-        #     *self.canvas.bl_ax_b.get_xlim(),
-        #     ls="--",
-        #     color="black",
-        #     alpha=0.3,
-        # )
-        # self.canvas.tr_ax_top.set_xlabel(self.dd_label)
-        # self.canvas.tr_ax_top.xaxis.set_label_position("top")
-        #
-        # self.canvas.tr_ax_rgt.set_ylabel(self.da_label)
-        # self.canvas.tr_ax_rgt.yaxis.set_label_position("right")
-
         self.canvas.ax_top.set_xlabel(r"$\mathbf{E}_{FRET}$")
         self.canvas.ax_top.xaxis.set_label_position("top")
 
         self.canvas.ax_rgt.set_ylabel(r"$\mathbf{S}$")
         self.canvas.ax_rgt.yaxis.set_label_position("right")
 
-        # self.canvas.bl_ax_b.set_xlabel("Frames")
-        # self.canvas.bl_ax_b.set_ylabel(r"$\operatorname{{E}}[\rho_{{DD, DA}}]$")
-
-    def plotTopLeft_TopMarginal(self, corrected):
+    def plotTop(self, corrected):
         """
         Plots the top left top marginal histogram (E).
         """
@@ -440,12 +343,13 @@ class HistogramWindow(BaseWindow):
                 ls="--",
             )
 
-    def plotTopLeft_RightMarginal(self, corrected):
+            self.canvas.ax_top.set_xlim(-0.1, 1.1)
+
+    def plotRight(self, corrected):
         """
         Plots the top left right marginal histogram (S).
         """
         S = self.S if corrected else self.S_un
-        # self.canvas.ax_rgt : plt.Axes
         self.canvas.ax_rgt.set_ylabel("Stoichiometry")
         self.canvas.ax_rgt.yaxis.set_label_position("right")
         if S is not None:
@@ -460,7 +364,9 @@ class HistogramWindow(BaseWindow):
                 orientation="horizontal",
             )
 
-    def plotTopLeft_CenterContour(self, corrected):
+        self.canvas.ax_rgt.set_xlim(-0.1, 1.1)
+
+    def plotCenter(self, corrected):
         """
         Plots the top left center E+S contour plot.
         """
@@ -478,10 +384,6 @@ class HistogramWindow(BaseWindow):
         self.canvas.ax_ctr.clear()
 
         n_equals_txt = "N = {}\n".format(self.n_samples)
-        # if self.data.histData.trace_median_len is not None:
-        #     n_equals_txt += "(median length {:.0f})".format(
-        #         self.data.histData.trace_median_len
-        #     )
 
         self.canvas.ax_ctr.text(
             x=0, y=0.9, s=n_equals_txt, color=gvars.color_gui_text
@@ -506,14 +408,13 @@ class HistogramWindow(BaseWindow):
                 ("alpha", "delta", "beta", "gamma"),
             )
         ):
-            if factor is not None:
-                self.canvas.ax_ctr.text(
-                    x=0.0,
-                    y=0.15 - 0.05 * n,
-                    s=r"$\{}$ = {:.2f}".format(name, factor),
-                    color=gvars.color_gui_text,
-                    zorder=10,
-                )
+            self.canvas.ax_ctr.text(
+                x=0.0,
+                y=0.15 - 0.05 * n,
+                s=r"$\{}$ = {:.2f}".format(name, factor),
+                color=gvars.color_gui_text,
+                zorder=10,
+            )
 
         if S is not None:
             c = lib.math.contour_2d(
@@ -527,174 +428,20 @@ class HistogramWindow(BaseWindow):
             self.canvas.ax_ctr.contourf(*c, cmap="plasma")
 
             if overlay_pts:
+                # Conversion factor, because sliders can't do [0,1]
                 self.canvas.ax_ctr.scatter(
                     E, S, s=20, color="black", zorder=1, alpha=pts_alpha / 20
-                )  # Conversion factor, because sliders can't do [0,1]
+                )
             self.canvas.ax_ctr.axhline(
                 0.5, color="black", alpha=0.3, lw=0.5, ls="--", zorder=2
             )
 
-    #
-    # def plotTopRight_RightMarginal(self):
-    #     """
-    #     Plots the top right right marginal histogram (DA).
-    #     """
-    #     self.canvas.tr_ax_rgt.set_ylabel(self.da_label)
-    #     self.canvas.tr_ax_rgt.yaxis.set_label_position("right")
-    #     if self.DA is not None:
-    #         self.canvas.tr_ax_rgt.clear()
-    #         self.canvas.tr_ax_rgt.hist(
-    #             self.DA,
-    #             bins=100,
-    #             density=True,
-    #             alpha=0.5,
-    #             label=self.da_label,
-    #             color=gvars.color_red,
-    #             orientation="horizontal",
-    #         )
-    #
-    # def plotTopRight_TopMarginal(self):
-    #     """
-    #     Plots the top right top marginal histogram (DD).
-    #     """
-    #     if self.DD is not None:
-    #         self.canvas.tr_ax_top.clear()
-    #         self.canvas.tr_ax_top.hist(
-    #             self.DD,
-    #             bins=100,
-    #             density=True,
-    #             alpha=0.5,
-    #             label=self.dd_label,
-    #             color=gvars.color_green,
-    #         )
-    #
-    # def plotTopRight_CenterContour(self):
-    #     da_contour_x = self.DD
-    #     if da_contour_x is not None:
-    #         da_contour_y = self.DA
-    #         cont = lib.math.contour_2d(
-    #             xdata=da_contour_x,
-    #             ydata=da_contour_y,
-    #             # bandwidth='auto',
-    #             extend_grid=0,
-    #             bandwidth=150,
-    #             resolution=50,
-    #             kernel="linear",
-    #             n_colors=20,
-    #             diagonal=True,
-    #         )
-    #         self.canvas.tr_ax_ctr.contourf(
-    #             *cont, cmap="magma"
-    #         )  # cmap="viridis")
-
-    # def plotBottomLeft_Duration(self):
-    #     """
-    #     Plots the bottom left top half Histogram, as well as an exponential fit of lifetimes.
-    #     """
-    #     lengths = self.data.histData.lengths
-    #     if lengths is not None:
-    #         self.canvas.bl_ax_t.clear()
-    #         self.canvas.bl_ax_t.hist(
-    #             lengths, histtype="step", density=True, bins=20,
-    #         )
-    #         lifetime_dict = lib.math.fit_and_compare_exp_funcs(lengths, x0=None)
-    #         xlim = self.canvas.bl_ax_t.get_xlim()
-    #         xarr = np.linspace(0.1, xlim[1], 1000)
-    #
-    #         single_param = lifetime_dict["SINGLE_PARAM"]
-    #         yarr_1 = lib.math.func_exp(xarr, single_param)
-    #         self.canvas.bl_ax_t.plot(
-    #             xarr,
-    #             yarr_1,
-    #             c="r",
-    #             label=f"Lifetimes \n"
-    #             + lib.utils.nice_string_output(
-    #                 [r"$\tau$"], [f"{1. / single_param[0]:.2f}",],
-    #             ),
-    #             alpha=0.5,
-    #         )
-    #         self.canvas.bl_ax_t.legend()
-    #
-    #     for tk in self.canvas.bl_ax_t.get_yticklabels():
-    #         tk.set_visible(False)
-    #
-    # def plotBottomLeft_Pearson(self, plot_errors=False):
-    #     """
-    #     Plots Mean Pearson Correlation Coefficients in bottom left bottom as an errorbar plot.
-    #     """
-    #
-    #     if self.corrs is None:
-    #         return
-    #     self.canvas.bl_ax_b.clear()
-    #     maxlen = len(self.corrs[0])
-    #     pr_xs = np.arange(maxlen // 2 + 1)
-    #     pr_ys = np.zeros(len(pr_xs))
-    #     pr_er = np.zeros_like(pr_ys)
-    #     for i in range(maxlen):
-    #         idx = i - maxlen // 2
-    #         if idx < 0:
-    #             continue
-    #         else:
-    #             _corr = self.corrs[:, i]
-    #             pr_ys[idx] = np.nanmean(_corr)
-    #             pr_er[idx] = np.nanstd(_corr)
-    #
-    #     self.canvas.bl_ax_b.errorbar(
-    #         x=pr_xs,
-    #         y=pr_ys,
-    #         yerr=pr_er if plot_errors else 0,
-    #         label=r"$\operatorname{{E}}[\rho_{{DD, DA}}]$",
-    #     )
-    #     self.canvas.bl_ax_b.legend()
-    #
-    # def plotBottomRight(self):
-    #     """
-    #     Plots 1d histogram of DA and DD for comparison purposes
-    #     """
-    #     if self.DA is not None:
-    #         self.canvas.br_ax.clear()
-    #
-    #         self.canvas.br_ax.hist(
-    #             self.DD,
-    #             bins=100,
-    #             density=True,
-    #             alpha=0.5,
-    #             label=self.dd_label,
-    #             color=gvars.color_green,
-    #         )
-    #         self.canvas.br_ax.hist(
-    #             self.DA,
-    #             bins=100,
-    #             density=True,
-    #             alpha=0.5,
-    #             label=self.da_label,
-    #             color=gvars.color_red,
-    #         )
-    #         self.canvas.br_ax.legend()
-    #
-    #     for tk in self.canvas.br_ax.get_yticklabels():
-    #         tk.set_visible(False)
-    #
-    # def plotBottomLeft(self):
-    #     self.plotBottomLeft_Duration()
-    #     self.plotBottomLeft_Pearson()
-    #
-    def plotTopLeft(self, corrected):
-        self.plotTopLeft_TopMarginal(corrected)
-        if self.S is not None:
-            self.plotTopLeft_CenterContour(corrected)
-            self.plotTopLeft_RightMarginal(corrected)
-
-    # def plotTopRight(self):
-    #     self.plotTopRight_CenterContour()
-    #     self.plotTopRight_TopMarginal()
-    #     self.plotTopRight_RightMarginal()
-
     def plotAll(self, corrected):
-        self.plotTopLeft(corrected)
-        # self.plotTopRight()
-        # self.plotBottomLeft()
-        # self.plotBottomRight()
+        self.plotTop(corrected)
+        if self.S is not None:
+            self.plotCenter(corrected)
+            self.plotRight(corrected)
+
         self.canvas.draw()
 
     def refreshPlot(self, autofit=False):

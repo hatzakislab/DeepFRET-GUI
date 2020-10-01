@@ -38,8 +38,7 @@ source](#development-environment).
 
 <img src="screenshots/window_images.png" height="300">
 
-and go to File &rightarrow; Open files. The current
-version of DeepFRET supports *only* videos made with alternating laser excitation (ALEX). Donor order and appearance
+and go to File &rightarrow; Open files. The latest release of DeepFRET supports *only* videos made with alternating laser excitation (ALEX). However, compatibility with non-ALEX data is implemented in the latest source code (executable files will be released soon). Donor order and appearance
 can be set in Preferences. The rest of the video layout is auto-guessed by the software and doesn't allow for
 fine-tuning, so be sure to set up new experiments properly!
 
@@ -52,7 +51,7 @@ videos.
 
 3. If you've already exported a lot of smFRET traces from another software, but want to do your analysis in DeepFRET,
 you can even load in traces directly, without movies. Simply make sure that the trace window ('Traces') is the active
-window, and follow the same steps as above for loading data. This works both for traces with and without ALEX.
+window, and follow the same steps as above for loading data. This works both for traces with and without ALEX. (NB. the current version supports traces exported by iSMS only; see "supported data formats").
 
 <img src="screenshots/window_traces.png" height="300">
  
@@ -78,7 +77,9 @@ The following shortcuts can be used to navigate the different windows, also foun
 
 ## Images Window
 - To load a video file, use the shortcut `File > Open Files` or the hotkey `⌘O`.
-- To analyze and extract traces, use the options in the menu tab `Analyze`
+- To analyze and extract traces, use the options in the menu tab `Analyze`.
+
+A test movie can be downloaded at: https://drive.google.com/file/d/1yJ19EAQ2fB6vXWdGEJd3bVTBD1sy2Y3D/view?usp=sharing
 
 ## Traces Window
 - To load traces, use the shortcut `File > Open Files` or the hotkey `⌘O`.

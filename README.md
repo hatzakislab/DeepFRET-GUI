@@ -51,7 +51,7 @@ videos.
 
 3. If you've already exported a lot of smFRET traces from another software, but want to do your analysis in DeepFRET,
 you can even load in traces directly, without movies. Simply make sure that the trace window ('Traces') is the active
-window, and follow the same steps as above for loading data. This works both for traces with and without ALEX. (NB. the current version supports traces exported by iSMS only; see "supported data formats").
+window, and follow the same steps as above for loading data. This works both for traces with and without ALEX. NB. The current version only supports traces exported by iSMS; see "supported data formats".
 
 <img src="screenshots/window_traces.png" height="300">
  

@@ -14,13 +14,13 @@ FRET (smFRET) fast and efficiently. The key feature is reverse-loading of ASCII 
 If you'd like to play around with just the Keras/TensorFlow model, please go to https://github.com/komodovaran/DeepFRET-Model
 
 ### How to cite
-Preprint can be found at:
-https://www.biorxiv.org/content/10.1101/2020.06.26.173260v1
+Peer-reviewed article can be found at:
+https://elifesciences.org/articles/60404
 
 ````
 DeepFRET: Rapid and automated single molecule FRET data classification using deep learning
 Johannes Thomsen, Magnus B. Sletfjerding, Stefano Stella, Bijoya Paul, Simon Bo Jensen, Mette G. Malle, Guillermo Montoya, Troels C. Petersen, Nikos S. Hatzakis
-bioRxiv 2020.06.26.173260; doi: https://doi.org/10.1101/2020.06.26.173260
+eLife 2020;9:e60404; doi: 10.7554/eLife.60404
 ````
 
 ## Installing

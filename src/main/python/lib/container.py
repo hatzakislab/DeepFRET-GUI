@@ -391,7 +391,7 @@ class TraceContainer:
         self.acc.bg = zeros
         self.red.bg = zeros * np.nan
 
-        self.framerate = int(1 / (arr[0, 1] - arr[0, 0]))
+        self.framerate = int(1 / (arr[1, 0] - arr[0, 0]))
 
         self.calculate_fret()
         self.calculate_stoi()

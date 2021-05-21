@@ -553,7 +553,7 @@ class TraceContainer:
         """
         savename = self.get_savename(dir_to_join=dir_to_join)
         if not savename.endswith(".txt"):
-            savename = ".".join(savename.split(".")[:-1] + ["txt"])
+            savename = savename + ".txt"
 
         with open(savename, "w") as f:
             f.write(self.get_export_txt(keep_nan_columns=keep_nan_columns))

@@ -27,9 +27,10 @@ from global_variables import GlobalVariables as gvars
 
 matplotlib.use("qt5agg")
 import pandas as pd
-from tensorflow_core.python.keras.models import load_model, Model
+from tensorflow.keras.models import load_model, Model
 
 from fbs_runtime.application_context.PyQt5 import ApplicationContext
+from fbs_runtime import PUBLIC_SETTINGS
 
 pd.set_option("display.max_rows", 500)
 pd.set_option("display.max_columns", 500)
@@ -138,7 +139,7 @@ class AppContext(ApplicationContext):
             Window.getConfig = self.getConfig
             Window.setConfig = self.setConfig
 
-        AboutWindow.app_version = self.build_settings["version"]
+        AboutWindow.app_version = PUBLIC_SETTINGS["version"]
         BaseWindow.keras_two_channel_model = self.keras_two_channel_model
         BaseWindow.keras_three_channel_model = self.keras_three_channel_model
 

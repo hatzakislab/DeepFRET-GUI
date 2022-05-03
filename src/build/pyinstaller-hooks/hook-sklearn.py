@@ -8,4 +8,5 @@ hiddenimports = ['sklearn.utils.sparsetools._graph_validation',
                  'sklearn.tree',
                  'sklearn.cluster',
                  'sklearn.neighbors',
-                 'sklearn.ensemble']
+                 'sklearn.ensemble',
+                 'sklearn.utils._typedefs']

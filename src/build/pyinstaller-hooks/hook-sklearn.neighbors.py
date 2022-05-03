@@ -5,4 +5,6 @@ hiddenimports = [
     "sklearn.utils.weight_vector",
     "sklearn.neighbors.typedefs",
     "sklearn.neighbors.quad_tree",
+    "sklearn.neighbors._partition_nodes",
+    "sklearn.neighbors._quad_tree"
 ]

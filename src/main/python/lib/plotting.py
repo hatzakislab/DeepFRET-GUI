@@ -290,7 +290,7 @@ def plot_predictions(
 
     # Upper left confidence %
     ax.annotate(
-        s="confidence: {:.1f} %".format(confidence * 100),
+        "confidence: {:.1f} %".format(confidence * 100),
         xy=(0, 1),
         xytext=(8, -8),
         va="top",

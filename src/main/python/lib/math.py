@@ -12,6 +12,7 @@ from widgets.misc import ProgressBar
 from typing import Optional, Union, Tuple, List
 import scipy.signal
 import scipy.signal
+from scipy.ndimage import median_filter
 import scipy.optimize
 import scipy.stats
 import sklearn.cluster
@@ -416,7 +417,7 @@ def find_bleach(
     Finds bleaching given a list of frame-wise probabilities.
     The majority of datapoints in a given window must be above the threshold
     """
-    is_bleached = scipy.signal.medfilt(p_bleach > threshold, window)
+    is_bleached = median_filter(p_bleach > threshold, window)
     bleach_frame = np.argmax(is_bleached)
     if bleach_frame == 0:
         bleach_frame = None

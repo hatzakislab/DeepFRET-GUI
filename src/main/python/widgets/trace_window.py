@@ -781,7 +781,7 @@ class TraceWindow(BaseWindow):
                         else ""
                     )
                     ax.annotate(
-                        s=af + "\n" + df,
+                        af + "\n" + df,
                         xy=(0.885, 0.90),
                         xycoords="figure fraction",
                         color=gvars.color_grey,

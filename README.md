@@ -30,6 +30,9 @@ system from the [releases
 page](https://github.com/hatzakislab/DeepFRET-GUI/releases). We currently
 support macOS and Windows.
 
+Be aware that macs with the new M1 chip has a seperate [installer](https://github.com/hatzakislab/DeepFRET-GUI/releases/tag/v3.0.0-M1). If using this installer, it is also necessary to open a terminal and run `sudo xattr -rd com.apple.quarantine /Applications/DeepFRET.app`
+after installing to bring the app out of quarantine and allow it to run. This will prompt for the users password.
+
 If you want to change the code, you can also [install from
 source](#development-environment).
 

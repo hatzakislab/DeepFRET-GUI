@@ -173,5 +173,4 @@ if __name__ == "__main__":
     _AdvancedSortInspector = AdvancedSortInspector(_TraceWindow)
 
     exit_code = _ctxt.run()
-    
     sys.exit(exit_code)

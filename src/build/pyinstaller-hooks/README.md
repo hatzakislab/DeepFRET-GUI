@@ -13,7 +13,7 @@ Some hooks are already comitted to PyInstaller upstream, but is not in version
 - `hook-astor.py`
 - `hook-pywt.py`
 - `hook-skimage.io.py`
-- `hook-tensorflow.py`
+- `hook-tensorflow_core.py`
 - `hook-tensorflow.py`
 
 ## Hooks with changes from upstream

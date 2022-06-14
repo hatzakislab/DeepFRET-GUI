@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
+Finished_installers/
 
 # C extensions
 *.so
@@ -133,3 +134,4 @@ test.py
 pre-commit-hook.sh
 
 .DS_Store
+

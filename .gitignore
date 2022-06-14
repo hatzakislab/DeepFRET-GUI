@@ -1,4 +1,5 @@
 # Byte-compiled / optimized / DLL files
+Finished_installers
 __pycache__/
 *.py[cod]
 *$py.class
@@ -133,3 +134,4 @@ test.py
 pre-commit-hook.sh
 
 .DS_Store
+
